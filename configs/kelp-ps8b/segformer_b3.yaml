@@ -31,8 +31,8 @@ data:
   class_path: "src.data.DataModule"
   init_args:
     train_chip_dir: /home/taylor/data/PlanetScope/pre-chipped-8b/1024_512_20260515/train/
-    val_chip_dir: /home/taylor/data/PlanetScope/pre-chipped-8b/1024_20260515_full/val/
-    test_chip_dir: /home/taylor/data/PlanetScope/pre-chipped-8b/1024_20260515_full/test/
+    val_chip_dir: /home/taylor/data/PlanetScope/pre-chipped-8b/1024_1024_20260515_full/val/
+    test_chip_dir: /home/taylor/data/PlanetScope/pre-chipped-8b/1024_1024_20260515_full/test/
     batch_size: 3
     num_workers: 8
     pin_memory: true
