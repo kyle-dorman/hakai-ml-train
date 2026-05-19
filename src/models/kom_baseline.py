@@ -13,8 +13,8 @@ from torchmetrics import classification as fm
 from src import losses
 from src.models import configure_optimizers as _configure_optimizers
 
-S3_BUCKET = "https://kelp-o-matic.s3.amazonaws.com/pt_jit"
-CACHE_DIR = Path("~/.cache/kelp_o_matic").expanduser()
+S3_BUCKET = "https://habitat-mapper.s3.amazonaws.com/pt_jit"
+CACHE_DIR = Path("~/.cache/habitat_mapper").expanduser()
 
 
 def download_file(url: str, filename: Path):

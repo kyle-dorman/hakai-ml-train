@@ -14,10 +14,10 @@ from . import configure_optimizers as _configure_optimizers
 class SMPBinarySegmentationModel(
     pl.LightningModule,
     PyTorchModelHubMixin,
-    library_name="kelp-o-matic",
+    library_name="habitat_mapper",
     tags=["pytorch", "kelp", "segmentation", "drones", "remote-sensing"],
-    repo_url="https://github.com/HakaiInstitute/kelp-o-matic",
-    docs_url="https://kelp-o-matic.readthedocs.io/",
+    repo_url="https://github.com/HakaiInstitute/habitat-mapper",
+    docs_url="https://habitat-mapper.readthedocs.io/",
 ):
     def __init__(
         self,
