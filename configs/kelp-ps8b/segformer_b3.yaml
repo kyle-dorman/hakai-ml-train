@@ -178,7 +178,7 @@ trainer:
         group: May2026
         log_model: true
         tags:
-          - 1024_20260515
+          - "1024_20260515"
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
