@@ -1,7 +1,7 @@
 seed_everything: 42
 
 model:
-  class_path: "src.models.dofa.DofaDove8bSegmentationModel"
+  class_path: "src.models.terratorch.TerraTorchSegmentationModel"
   init_args:
     num_classes: 1
     ignore_index: &ignore_index -100
@@ -21,6 +21,32 @@ model:
     loss_opts:
       mode: "binary"
       ignore_index: *ignore_index
+    model_opts:
+      backbone: "dofa_base_patch16_224_custom"
+      backbone_pretrained: true
+      backbone_wavelengths:
+        - 0.442  # Coastal
+        - 0.49  # Blue
+        - 0.531  # Green 1
+        - 0.565  # Green 2
+        - 0.610  # Yellow
+        - 0.665  # Red
+        - 0.705  # RE
+        - 0.865  # NIR
+      backbone_out_indices:
+        - 2
+        - 5
+        - 8
+        - 11
+      necks:
+        - name: ReshapeTokensToImage
+          remove_cls_token: true
+        - name: LearnedInterpolateToPyramidal
+      decoder: UperNetDecoder
+      decoder_channels: 256
+      head_channel_list:
+        - 256
+      head_dropout: 0.1
 
 data:
   class_path: "src.data.DataModule"

@@ -37,7 +37,27 @@ def dofa_base_patch16_224_custom(
     return DOFAEncoderWrapper(model, wavelengths, weights, out_indices)
 
 
-class DofaDove8bSegmentationModel(
+@TERRATORCH_BACKBONE_REGISTRY.register
+def dofa_large_patch16_224_custom(
+    wavelengths,
+    pretrained=False,
+    ckpt_data: str | None = None,
+    weights: Weights | None = dofa.DOFALarge16_Weights.DOFA_MAE,
+    out_indices: list | None = None,
+    pos_interpolation_mode: str = "bilinear",
+    **kwargs,
+):
+    model = dofa.dofa_large_patch16_224(**kwargs)
+    input_size = kwargs.get("img_size", 224)
+    if pretrained:
+        model = load_dofa_weights(
+            model, pos_interpolation_mode, ckpt_data, weights, input_size
+        )
+
+    return DOFAEncoderWrapper(model, wavelengths, weights, out_indices)
+
+
+class TerraTorchSegmentationModel(
     pl.LightningModule,
     PyTorchModelHubMixin,
     library_name="habitat_mapper",
@@ -47,6 +67,7 @@ class DofaDove8bSegmentationModel(
 ):
     def __init__(
         self,
+        model_opts: dict[str, Any],
         loss: str,
         loss_opts: dict[str, Any],
         num_classes: int = 2,
@@ -66,28 +87,8 @@ class DofaDove8bSegmentationModel(
 
         self.model = model_factory.build_model(
             task="segmentation",
-            backbone="dofa_base_patch16_224_custom",
-            backbone_pretrained=True,
-            backbone_wavelengths=[
-                0.442,  # Coastal
-                0.49,  # Blue
-                0.531,  # Green 1
-                0.565,  # Green 2
-                0.610,  # Yellow
-                0.665,  # Red
-                0.705,  # RE
-                0.865,  # NIR
-            ],
-            backbone_out_indices=[2, 5, 8, 11],
-            necks=[
-                {"name": "ReshapeTokensToImage", "remove_cls_token": True},
-                {"name": "LearnedInterpolateToPyramidal"},
-            ],
-            decoder="UperNetDecoder",
-            decoder_channels=256,
-            head_channel_list=[256],
-            head_dropout=0.1,
             num_classes=self.hparams.num_classes,
+            **model_opts,
         )
         if ckpt_path is not None:
             ckpt = torch.load(self.hparams.ckpt_path, weights_only=False)
@@ -177,7 +178,7 @@ class DofaDove8bSegmentationModel(
 
 if __name__ == "__main__":
     # Smoke test
-    model = DofaDove8bSegmentationModel(
+    model = TerraTorchSegmentationModel(
         loss="LabelSmoothingLovasz",
         loss_opts=dict(mode="binary", ignore_index=-100),
         num_classes=1,
@@ -188,6 +189,29 @@ if __name__ == "__main__":
         lr_scheduler_opts=dict(max_lr=3e-4, pct_start=0.3),
         lr_scheduler_interval="step",
         freeze_backbone=False,
+        model_opts=dict(
+            backbone="dofa_large_patch16_224_custom",
+            backbone_pretrained=True,
+            backbone_wavelengths=[
+                0.442,  # Coastal
+                0.49,  # Blue
+                0.531,  # Green 1
+                0.565,  # Green 2
+                0.610,  # Yellow
+                0.665,  # Red
+                0.705,  # RE
+                0.865,  # NIR
+            ],
+            backbone_out_indices=[5, 11, 17, 23],
+            necks=[
+                dict(name="ReshapeTokensToImage", remove_cls_token=True),
+                dict(name="LearnedInterpolateToPyramidal"),
+            ],
+            decoder="UperNetDecoder",
+            decoder_channels=512,
+            head_channel_list=[512],
+            head_dropout=0.1,
+        ),
     )
 
     x = torch.zeros(2, 8, 224, 224, dtype=torch.float32)
