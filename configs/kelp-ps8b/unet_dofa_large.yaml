@@ -7,14 +7,14 @@ model:
     ignore_index: &ignore_index -100
     optimizer_class: torch.optim.AdamW
     optimizer_opts:
-      lr: 3e-4
+      lr: 5e-5
       weight_decay: 0.01
       betas:
         - 0.9
         - 0.95
     lr_scheduler_class: torch.optim.lr_scheduler.OneCycleLR
     lr_scheduler_opts:
-      max_lr: 3e-4
+      max_lr: 5e-5
       pct_start: 0.3
     lr_scheduler_interval: step
     loss: "LabelSmoothingLovasz"
@@ -42,10 +42,12 @@ model:
         - name: ReshapeTokensToImage
           remove_cls_token: true
         - name: LearnedInterpolateToPyramidal
-      decoder: UperNetDecoder
-      decoder_channels: 512
-      head_channel_list:
+      decoder: UNetDecoder
+      decoder_channels:
         - 512
+        - 256
+        - 128
+        - 64
       head_dropout: 0.1
 
 data:
@@ -184,7 +186,7 @@ trainer:
   devices: auto
   precision: bf16-mixed
   log_every_n_steps: 20
-  max_epochs: 500
+  max_epochs: 100
   accumulate_grad_batches: 8
   gradient_clip_val: 0.8
   detect_anomaly: false
@@ -195,7 +197,7 @@ trainer:
       init_args:
         entity: hakai
         project: kom-kelp-ps8b-cali
-        name: upernet_dofa_large
+        name: unet_dofa_large
         group: May2026
         log_model: true
         tags:
@@ -204,7 +206,7 @@ trainer:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         auto_insert_metric_name: False
-        filename: kelp_ps8b_upernet_dofa_large_epoch-{epoch:02d}_val-iou-{val/iou_epoch:.4f}
+        filename: kelp_ps8b_unet_dofa_large_epoch-{epoch:02d}_val-iou-{val/iou_epoch:.4f}
         monitor: val/iou_epoch
         mode: max
         save_last: True

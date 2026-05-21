@@ -207,9 +207,8 @@ if __name__ == "__main__":
                 dict(name="ReshapeTokensToImage", remove_cls_token=True),
                 dict(name="LearnedInterpolateToPyramidal"),
             ],
-            decoder="UperNetDecoder",
-            decoder_channels=512,
-            head_channel_list=[512],
+            decoder="UNetDecoder",
+            decoder_channels=[512, 256, 128, 64],
             head_dropout=0.1,
         ),
     )
