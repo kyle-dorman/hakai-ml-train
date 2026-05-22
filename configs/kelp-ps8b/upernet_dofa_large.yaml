@@ -47,6 +47,10 @@ model:
       head_channel_list:
         - 512
       head_dropout: 0.1
+    llrd_opts:
+      decay_rate: 0.75
+      encoder_attr: "model.encoder"
+      vit_attr: "dofa_model"
 
 data:
   class_path: "src.data.DataModule"

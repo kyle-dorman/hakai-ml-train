@@ -80,6 +80,7 @@ class TerraTorchSegmentationModel(
         lr_scheduler_monitor: str | None = None,
         ckpt_path: str | None = None,
         freeze_backbone: bool = False,
+        llrd_opts: dict[str, Any] | None = None,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -216,3 +217,54 @@ if __name__ == "__main__":
     x = torch.zeros(2, 8, 224, 224, dtype=torch.float32)
     out = model(x)
     print(out)
+
+    # Smoke-test the LLRD path: rebuild with llrd_opts and inspect param groups.
+    # Uses UperNetDecoder to match the actual production config; the baseline
+    # smoke test above uses UNetDecoder for historical reasons.
+    from src.models.llrd import build_llrd_param_groups
+
+    model_llrd = TerraTorchSegmentationModel(
+        loss="LabelSmoothingLovasz",
+        loss_opts=dict(mode="binary", ignore_index=-100),
+        num_classes=1,
+        ignore_index=-100,
+        optimizer_class="torch.optim.AdamW",
+        optimizer_opts=dict(lr=1e-4, weight_decay=0.01, betas=[0.9, 0.99]),
+        lr_scheduler_class="torch.optim.lr_scheduler.OneCycleLR",
+        lr_scheduler_opts=dict(max_lr=1e-4, pct_start=0.3),
+        lr_scheduler_interval="step",
+        llrd_opts=dict(
+            decay_rate=0.75,
+            encoder_attr="model.encoder",
+            vit_attr="dofa_model",
+        ),
+        model_opts=dict(
+            backbone="dofa_large_patch16_224_custom",
+            backbone_pretrained=False,
+            backbone_wavelengths=[
+                0.442,
+                0.49,
+                0.531,
+                0.565,
+                0.610,
+                0.665,
+                0.705,
+                0.865,
+            ],
+            backbone_out_indices=[5, 11, 17, 23],
+            necks=[
+                dict(name="ReshapeTokensToImage", remove_cls_token=True),
+                dict(name="LearnedInterpolateToPyramidal"),
+            ],
+            decoder="UperNetDecoder",
+            decoder_channels=512,
+            head_channel_list=[512],
+            head_dropout=0.1,
+        ),
+    )
+
+    assert model_llrd.hparams.llrd_opts is not None
+    groups = build_llrd_param_groups(model_llrd, **model_llrd.hparams.llrd_opts)
+    print(f"LLRD smoke test: {len(groups)} groups")
+    print(f"  smallest lr_scale: {min(g['lr_scale'] for g in groups):.6f}")
+    print(f"  largest  lr_scale: {max(g['lr_scale'] for g in groups):.6f}")
