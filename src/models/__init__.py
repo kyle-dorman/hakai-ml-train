@@ -104,6 +104,13 @@ def configure_optimizers(module):
         scheduler_kwargs["total_steps"] = total
     if "T_max" in sig.parameters and "T_max" not in scheduler_kwargs:
         scheduler_kwargs["T_max"] = total
+    if (
+        "steps_per_epoch" in sig.parameters
+        and "steps_per_epoch" not in scheduler_kwargs
+    ):
+        scheduler_kwargs["steps_per_epoch"] = (
+            module.trainer.estimated_stepping_batches // module.trainer.max_epochs
+        )
 
     scheduler = scheduler_cls(optimizer, **scheduler_kwargs)
 
