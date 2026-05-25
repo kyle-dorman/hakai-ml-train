@@ -61,7 +61,12 @@ class LabelSmoothingLovasz(nn.Module):
     """Combine label-smoothed CE with Lovász loss."""
 
     def __init__(
-        self, mode="multiclass", smoothing=0.1, lovasz_weight=0.5, ignore_index=-100
+        self,
+        mode="multiclass",
+        smoothing=0.1,
+        lovasz_weight=0.5,
+        ce_weight=0.5,
+        ignore_index=-100,
     ):
         super().__init__()
         assert mode in ("binary", "multiclass")
@@ -70,11 +75,12 @@ class LabelSmoothingLovasz(nn.Module):
             mode=mode, from_logits=True, ignore_index=ignore_index
         )
         self.lovasz_weight = lovasz_weight
+        self.ce_weight = ce_weight
 
     def forward(self, logits, targets):
         ce_loss = self.ce(logits, targets)
         lovasz_loss = self.lovasz(logits, targets)
-        return ce_loss + self.lovasz_weight * lovasz_loss
+        return (self.ce_weight * ce_loss) + (self.lovasz_weight * lovasz_loss)
 
 
 class FocalDiceComboLoss(torch.nn.Module):
