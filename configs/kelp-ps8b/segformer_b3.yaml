@@ -25,6 +25,8 @@ model:
     loss: "LabelSmoothingLovasz"
     loss_opts:
       mode: "binary"
+      ce_weight: 0.7
+      lovasz_weight: 0.3
       ignore_index: *ignore_index
 
 data:
