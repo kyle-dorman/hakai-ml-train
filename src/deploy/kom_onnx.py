@@ -22,6 +22,7 @@ def main(
     output_path: Path,
     dynamic_spatial: bool = True,
     dynamo: bool = True,
+    min_image_size: int = 1,
 ) -> None:
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
@@ -61,7 +62,12 @@ def main(
 
     if dynamo:
         if dynamic_spatial:
-            img_shape = (Dim("batch", min=1), Dim.STATIC, Dim("height"), Dim("width"))
+            img_shape = (
+                Dim("batch", min=1),
+                Dim.STATIC,
+                Dim("height", min=min_image_size),
+                Dim("width", min=min_image_size),
+            )
         else:
             img_shape = (Dim("batch", min=1), Dim.STATIC, Dim.STATIC, Dim.STATIC)
         extra_kwargs = dict(dynamic_shapes={"x": img_shape}, dynamo=True)
@@ -107,6 +113,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Disable Dynamo and use TorchScript tracing export (default: False)",
     )
+    parser.add_argument(
+        "--min-image-size",
+        type=int,
+        default=1,
+        help="Minimum image size for spatial dimensions (default: 1)",
+    )
 
     args = parser.parse_args()
 
@@ -116,4 +128,5 @@ if __name__ == "__main__":
         args.output_path,
         dynamic_spatial=not args.no_dynamic_spatial,
         dynamo=not args.no_dynamo,
+        min_image_size=args.min_image_size,
     )

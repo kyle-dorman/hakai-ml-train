@@ -7,11 +7,21 @@ from torch.optim.lr_scheduler import LRScheduler
 class LinearWarmupCosineDecayLR(LRScheduler):
     """Linear warmup followed by cosine decay learning rate scheduler.
 
+    Exactly one of ``warmup_steps`` or ``warmup_epochs`` must be provided.
+    When using ``warmup_epochs``, ``steps_per_epoch`` is also required so the
+    warmup duration can be converted to optimizer steps.
+
     Args:
         optimizer: Wrapped optimizer.
-        warmup_steps: Number of steps for linear warmup from 0 to base lr.
         total_steps: Total number of training steps (auto-injected by
             configure_optimizers when not provided).
+        warmup_steps: Number of steps for linear warmup from 0 to base lr.
+            Mutually exclusive with ``warmup_epochs``.
+        warmup_epochs: Number of epochs for linear warmup from 0 to base lr.
+            Mutually exclusive with ``warmup_steps``. Requires
+            ``steps_per_epoch``.
+        steps_per_epoch: Number of optimizer steps per epoch. Required when
+            ``warmup_epochs`` is provided; ignored otherwise.
         min_lr: Minimum learning rate at the end of cosine decay.
         last_epoch: The index of last epoch.
     """
@@ -19,12 +29,26 @@ class LinearWarmupCosineDecayLR(LRScheduler):
     def __init__(
         self,
         optimizer: Optimizer,
-        warmup_steps: int,
         total_steps: int,
+        warmup_steps: int | None = None,
+        warmup_epochs: int | None = None,
+        steps_per_epoch: int | None = None,
         min_lr: float = 0.0,
         last_epoch: int = -1,
     ) -> None:
-        self.warmup_steps = warmup_steps
+        if (warmup_steps is None) == (warmup_epochs is None):
+            raise ValueError(
+                "Exactly one of warmup_steps or warmup_epochs must be provided."
+            )
+        if warmup_epochs is not None:
+            if steps_per_epoch is None:
+                raise ValueError(
+                    "steps_per_epoch must be provided when using warmup_epochs."
+                )
+            self.warmup_steps = warmup_epochs * steps_per_epoch
+        else:
+            assert warmup_steps is not None
+            self.warmup_steps = warmup_steps
         self.total_steps = total_steps
         self.min_lr = min_lr
         super().__init__(optimizer, last_epoch)

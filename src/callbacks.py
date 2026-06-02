@@ -1,4 +1,6 @@
 import lightning.pytorch as pl
+from lightning.pytorch.callbacks import WeightAveraging
+from torch.optim.swa_utils import get_ema_avg_fn
 
 
 class MaskAnnealingCallback(pl.Callback):
@@ -27,3 +29,12 @@ class MaskAnnealingCallback(pl.Callback):
         model.attn_mask_probs.fill_(prob)
 
         pl_module.log("mask_anneal_prob", prob)
+
+
+class EMAWeightAveraging(WeightAveraging):
+    def __init__(self):
+        super().__init__(avg_fn=get_ema_avg_fn())
+
+    def should_update(self, step_idx=None, epoch_idx=None):
+        # Start after 100 steps.
+        return (step_idx is not None) and (step_idx >= 100)

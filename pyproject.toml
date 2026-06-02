@@ -18,6 +18,7 @@ dependencies = [
     "pydantic>=2.11.7",
     "rich>=14.2.0",
     "segmentation-models-pytorch>=0.5.0",
+    "terratorch>=1.2.7",
     "torch>=2.11.0",
     "torchmetrics>=1.7.3",
     "torchvision>=0.26.0",
