@@ -92,6 +92,75 @@ The default Box link is treated as a static folder containing the two zip files
 above. Reruns skip completed downloads, resume incomplete `.part` files, and
 reuse the existing extraction unless `--force-extract` is passed.
 
+### PlanetScope 8-Band CA+BC Split Organization
+
+If the raw CA and BC GeoTIFFs are extracted but not yet chipped, first organize
+them into the split folder structure expected by the chip generator:
+
+```bash
+uv run python scripts/organize_planet8b_splits.py \
+  --split-csv planet8b_image_splits.csv \
+  --source-root ~/data/Planet8bSR_BC_Labelled/10km_tiles \
+  --image-dir ~/data/images \
+  --label-dir ~/data/labels \
+  --output-root ~/data/PlanetScope/raw-8b/20250814_cali_bc \
+  --dry-run
+```
+
+The organizer matches BC files by exact CSV stem when possible and renamed CA
+files by timestamp plus satellite ID. It writes `manifest.csv` and `issues.csv`
+under the output root and refuses to create links if any rows are missing or
+ambiguous. If the dry run reports zero issue rows, rerun the same command
+without `--dry-run` to create the raw split tree.
+
+Then create the target chip datasets used by
+`configs/kelp-ps8b/california/segformer_b3.yaml`:
+
+```bash
+# Train chips: 1024 px with 512 px stride.
+uv run python -m src.prepare.make_chip_dataset \
+  ~/data/PlanetScope/raw-8b/20250814_cali_bc \
+  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_512_20250814_cali_bc \
+  --splits train \
+  --size 1024 \
+  --stride 512 \
+  --num_bands 8 \
+  --dtype uint16 \
+  --remap 0 1 0 -100 -100
+
+# Validation and test chips: 1024 px with no overlap.
+uv run python -m src.prepare.make_chip_dataset \
+  ~/data/PlanetScope/raw-8b/20250814_cali_bc \
+  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_20250814_cali_bc_full \
+  --splits val test \
+  --size 1024 \
+  --stride 1024 \
+  --num_bands 8 \
+  --dtype uint16 \
+  --remap 0 1 0 -100 -100
+```
+
+Confirm the `--remap` values against the raw label values before running the
+full job. The example above assumes `0=water`, `1=kelp`, `2=land`, `3=nodata`,
+and `4=noise`.
+
+Clean the chips to match the previous training recipe:
+
+```bash
+uv run python -m src.prepare.remove_tiles_with_nodata_areas \
+  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_512_20250814_cali_bc/train \
+  --num_channels 8
+uv run python -m src.prepare.remove_bg_only_tiles \
+  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_512_20250814_cali_bc/train
+
+uv run python -m src.prepare.remove_tiles_with_nodata_areas \
+  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_20250814_cali_bc_full/val \
+  --num_channels 8
+uv run python -m src.prepare.remove_tiles_with_nodata_areas \
+  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_20250814_cali_bc_full/test \
+  --num_channels 8
+```
+
 ## Dataset Preparation
 
 The training pipeline expects preprocessed image chips in NPZ format. Follow these steps to prepare your dataset from GeoTIFF imagery.

@@ -195,6 +195,13 @@ def main():
     )
 
     parser.add_argument("--remap", "-r", type=int, nargs="+", default=[0, 1, 2])
+    parser.add_argument(
+        "--splits",
+        nargs="+",
+        choices=["train", "val", "test"],
+        default=["train", "val", "test"],
+        help="Dataset splits to process.",
+    )
 
     args = parser.parse_args()
 
@@ -205,7 +212,7 @@ def main():
         print(f"{i} -> {v}")
     print("All other values will be set to -100.")
 
-    for split in ["train", "val", "test"]:
+    for split in args.splits:
         process_split(
             args.data_dir,
             split,
