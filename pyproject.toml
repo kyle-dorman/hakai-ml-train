@@ -3,7 +3,7 @@ name = "hakai-ml-train"
 version = "0.1.0"
 description = "Training scripts for segmentation models"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "albumentations>=2.0.8",
     "datasets>=4.5.0",
@@ -37,9 +37,6 @@ dev = [
     "torchgeo>=0.9.0",
 ]
 
-
-[tool.uv]
-exclude-newer = "7 days"
 
 [tool.ruff.lint]
 extend-select = [

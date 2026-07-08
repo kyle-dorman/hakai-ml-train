@@ -31,10 +31,11 @@ This repository provides PyTorch Lightning-based training infrastructure for com
 2. **Install dependencies with uv:**
    ```bash
    # Installs dependencies and creates virtual environment
-   uv sync
+   uv python install 3.12
+   uv sync --python 3.12
 
    # For development (includes Jupyter, pre-commit, etc.)
-   uv sync --all-groups
+   uv sync --python 3.12 --all-groups
    ```
 
 3. **Activate the virtual environment:**
@@ -60,10 +61,11 @@ cd hakai-ml-train
 bash scripts/bootstrap_skypilot.sh
 ```
 
-The script installs/verifies `uv`, runs `uv sync --frozen`, downloads the two
-static zip files from the Box folder, extracts them to `$HOME/data`, and creates
-a compatibility symlink at `/home/taylor/data` so the existing config files can
-keep using their current data paths.
+The script installs/verifies `uv`, installs Python 3.12, runs
+`uv sync --python 3.12 --frozen`, downloads the two static zip files from the
+Box folder, extracts them to `$HOME/data`, and creates a compatibility symlink
+at `/home/taylor/data` so the existing config files can keep using their
+current data paths.
 
 Default Box archives:
 

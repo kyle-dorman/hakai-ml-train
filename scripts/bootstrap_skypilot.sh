@@ -16,6 +16,7 @@ COMPAT_DATA_ROOT="${HAKAI_COMPAT_DATA_ROOT:-/home/taylor/data}"
 DOWNLOAD_DIR="${HAKAI_DOWNLOAD_DIR:-$DATA_ROOT/.downloads}"
 ARCHIVE_NAME="${HAKAI_DATA_ARCHIVE_NAME:-hakai-data-archive}"
 UV_SYNC_ARGS="${HAKAI_UV_SYNC_ARGS:---frozen}"
+PYTHON_VERSION="${HAKAI_PYTHON_VERSION:-3.12}"
 
 STATIC_BOX_ARCHIVES=(
   "2302681616868|Planet8bSR_BC_Labelled.zip|5092052520"
@@ -49,6 +50,7 @@ Environment overrides:
   HAKAI_DATA_ROOT                 Extracted data root. Default: $HOME/data
   HAKAI_COMPAT_DATA_ROOT          Compatibility symlink path. Default: /home/taylor/data
   HAKAI_DOWNLOAD_DIR              Download cache directory. Default: $HAKAI_DATA_ROOT/.downloads
+  HAKAI_PYTHON_VERSION            Python version for uv. Default: 3.12
   HAKAI_UV_SYNC_ARGS              uv sync flags. Default: --frozen
   WANDB_API_KEY                   If set, run wandb login after uv sync.
   HAKAI_FORCE_DOWNLOAD=1          Same as --force-download.
@@ -186,7 +188,8 @@ sync_python_environment() {
 
   # shellcheck disable=SC2206
   local uv_args=($UV_SYNC_ARGS)
-  run uv sync "${uv_args[@]}"
+  run uv python install "$PYTHON_VERSION"
+  run uv sync --python "$PYTHON_VERSION" "${uv_args[@]}"
 }
 
 wandb_login_if_configured() {
