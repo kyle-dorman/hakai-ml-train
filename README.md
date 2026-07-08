@@ -49,6 +49,42 @@ This repository provides PyTorch Lightning-based training infrastructure for com
    pre-commit install
    ```
 
+### SkyPilot Disposable Instance Bootstrap
+
+If you are using a SkyPilot instance where the local disk is discarded between
+runs, clone the repo and run the bootstrap script each time:
+
+```bash
+git clone <repository-url>
+cd hakai-ml-train
+bash scripts/bootstrap_skypilot.sh
+```
+
+The script installs/verifies `uv`, runs `uv sync --frozen`, downloads the data
+archive, extracts it to `$HOME/data`, and creates a compatibility symlink at
+`/home/taylor/data` so the existing config files can keep using their current
+data paths.
+
+Common overrides:
+
+```bash
+# Use a specific data root, such as a mounted SkyPilot volume.
+HAKAI_DATA_ROOT=/mnt/data/hakai bash scripts/bootstrap_skypilot.sh
+
+# Use a direct archive URL if the default Box share is unavailable from the VM.
+HAKAI_DATA_URL="https://..." bash scripts/bootstrap_skypilot.sh --force-download
+
+# Include development dependencies or change uv sync behavior.
+HAKAI_UV_SYNC_ARGS="--frozen --all-groups" bash scripts/bootstrap_skypilot.sh
+
+# Log into Weights & Biases non-interactively.
+WANDB_API_KEY="<your-key>" bash scripts/bootstrap_skypilot.sh
+```
+
+If the Caltech Box link downloads an HTML page instead of a `.zip`/`.tar`
+archive, the script stops with a clear error. In that case, create or request a
+directly downloadable archive link and pass it through `HAKAI_DATA_URL`.
+
 ## Dataset Preparation
 
 The training pipeline expects preprocessed image chips in NPZ format. Follow these steps to prepare your dataset from GeoTIFF imagery.
