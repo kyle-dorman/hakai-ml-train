@@ -7,7 +7,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-DEFAULT_DATA_URL="https://caltech.app.box.com/s/d5vg0b8h613vvlsawms9yo8p2pc3tplw"
+DEFAULT_BOX_SHARED_NAME="d5vg0b8h613vvlsawms9yo8p2pc3tplw"
+DEFAULT_DATA_URL="https://caltech.app.box.com/s/$DEFAULT_BOX_SHARED_NAME"
 
 DATA_URL="${HAKAI_DATA_URL:-$DEFAULT_DATA_URL}"
 DATA_ROOT="${HAKAI_DATA_ROOT:-$HOME/data}"
@@ -15,6 +16,11 @@ COMPAT_DATA_ROOT="${HAKAI_COMPAT_DATA_ROOT:-/home/taylor/data}"
 DOWNLOAD_DIR="${HAKAI_DOWNLOAD_DIR:-$DATA_ROOT/.downloads}"
 ARCHIVE_NAME="${HAKAI_DATA_ARCHIVE_NAME:-hakai-data-archive}"
 UV_SYNC_ARGS="${HAKAI_UV_SYNC_ARGS:---frozen}"
+
+STATIC_BOX_ARCHIVES=(
+  "2302681616868|Planet8bSR_BC_Labelled.zip|5092052520"
+  "2302601053819|ca_data.zip|15966180991"
+)
 
 DRY_RUN=0
 FORCE_DOWNLOAD="${HAKAI_FORCE_DOWNLOAD:-0}"
@@ -42,6 +48,7 @@ Environment overrides:
   HAKAI_DATA_URL                  Data archive/share URL.
   HAKAI_DATA_ROOT                 Extracted data root. Default: $HOME/data
   HAKAI_COMPAT_DATA_ROOT          Compatibility symlink path. Default: /home/taylor/data
+  HAKAI_DOWNLOAD_DIR              Download cache directory. Default: $HAKAI_DATA_ROOT/.downloads
   HAKAI_UV_SYNC_ARGS              uv sync flags. Default: --frozen
   WANDB_API_KEY                   If set, run wandb login after uv sync.
   HAKAI_FORCE_DOWNLOAD=1          Same as --force-download.
@@ -200,7 +207,36 @@ wandb_login_if_configured() {
   run uv run wandb login --relogin "$WANDB_API_KEY"
 }
 
-download_url_for() {
+archive_mime_type() {
+  local archive="$1"
+  if have_cmd file; then
+    file -b --mime-type "$archive"
+  else
+    printf 'application/octet-stream'
+  fi
+}
+
+file_size_bytes() {
+  local file_path="$1"
+  if stat -c '%s' "$file_path" >/dev/null 2>&1; then
+    stat -c '%s' "$file_path"
+  else
+    stat -f '%z' "$file_path"
+  fi
+}
+
+uses_static_box_archives() {
+  [[ "$DATA_URL" == *"$DEFAULT_BOX_SHARED_NAME"* ]]
+}
+
+box_download_url_for() {
+  local file_id="$1"
+  printf 'https://caltech.app.box.com/index.php?rm=box_download_shared_file&shared_name=%s&file_id=f_%s' \
+    "$DEFAULT_BOX_SHARED_NAME" \
+    "$file_id"
+}
+
+direct_download_url_for() {
   local url="$1"
   case "$url" in
     *box.com/s/*)
@@ -216,69 +252,117 @@ download_url_for() {
   esac
 }
 
-archive_mime_type() {
-  local archive="$1"
-  if have_cmd file; then
-    file -b --mime-type "$archive"
-  else
-    printf 'application/octet-stream'
-  fi
-}
-
-download_data_archive() {
-  [[ "$SKIP_DATA" == "1" ]] && return
-
-  run mkdir -p "$DOWNLOAD_DIR"
-
-  local archive_path="$DOWNLOAD_DIR/$ARCHIVE_NAME"
-  local part_path="$archive_path.part"
-  local resolved_url
-  resolved_url="$(download_url_for "$DATA_URL")"
-
-  if [[ -s "$archive_path" && "$FORCE_DOWNLOAD" != "1" ]]; then
-    log "Using existing data archive: $archive_path"
-  else
-    log "Downloading data archive"
-    printf 'URL: %s\n' "$DATA_URL"
-    if ! run curl -fL --retry 5 --retry-delay 5 --continue-at - --output "$part_path" "$resolved_url"; then
-      die "Could not download the data archive. If this is a Box share that returns 404 or requires auth, create/request a direct .zip/.tar archive URL and pass it with HAKAI_DATA_URL."
-    fi
-    run mv "$part_path" "$archive_path"
-  fi
+validate_downloaded_archive() {
+  local archive_path="$1"
+  local expected_size="${2:-}"
 
   if [[ "$DRY_RUN" == "1" ]]; then
     return
   fi
+
+  [[ -s "$archive_path" ]] || die "Downloaded archive is empty or missing: $archive_path"
 
   local mime
   mime="$(archive_mime_type "$archive_path")"
   case "$mime" in
     text/html|text/plain)
-      die "Downloaded $mime instead of a data archive. The Box share may be unavailable or not directly downloadable. Set HAKAI_DATA_URL to a direct .zip/.tar archive URL and rerun with --force-download."
+      die "Downloaded $mime instead of a data archive for $archive_path."
       ;;
   esac
+
+  if [[ -n "$expected_size" ]]; then
+    local actual_size
+    actual_size="$(file_size_bytes "$archive_path")"
+    if [[ "$actual_size" != "$expected_size" ]]; then
+      die "Unexpected size for $archive_path: got $actual_size bytes, expected $expected_size bytes. Rerun with --force-download to try again."
+    fi
+  fi
 }
 
-extract_data_archive() {
+download_file() {
+  local url="$1"
+  local output_path="$2"
+  local expected_size="${3:-}"
+  local label="${4:-$output_path}"
+  local part_path="$output_path.part"
+
+  run mkdir -p "$DOWNLOAD_DIR"
+
+  if [[ -s "$output_path" && "$FORCE_DOWNLOAD" != "1" ]]; then
+    validate_downloaded_archive "$output_path" "$expected_size"
+    log "Using existing data archive: $output_path"
+    return
+  fi
+
+  if [[ "$FORCE_DOWNLOAD" == "1" ]]; then
+    run rm -f "$output_path" "$part_path"
+  fi
+
+  log "Downloading $label"
+  if ! run curl -fL --retry 5 --retry-delay 5 --continue-at - --output "$part_path" "$url"; then
+    die "Could not download $label. Check that the Box share is still public and allows downloads. If an interrupted resume failed, rerun with --force-download."
+  fi
+  run mv "$part_path" "$output_path"
+  validate_downloaded_archive "$output_path" "$expected_size"
+}
+
+download_static_box_archives() {
+  local spec
+  for spec in "${STATIC_BOX_ARCHIVES[@]}"; do
+    local file_id
+    local filename
+    local expected_size
+    IFS='|' read -r file_id filename expected_size <<< "$spec"
+
+    download_file \
+      "$(box_download_url_for "$file_id")" \
+      "$DOWNLOAD_DIR/$filename" \
+      "$expected_size" \
+      "$filename"
+  done
+}
+
+download_direct_archive() {
+  local archive_path="$DOWNLOAD_DIR/$ARCHIVE_NAME"
+  local resolved_url
+  resolved_url="$(direct_download_url_for "$DATA_URL")"
+
+  if [[ -s "$archive_path" && "$FORCE_DOWNLOAD" != "1" ]]; then
+    validate_downloaded_archive "$archive_path"
+    log "Using existing data archive: $archive_path"
+  else
+    printf 'URL: %s\n' "$DATA_URL"
+    download_file "$resolved_url" "$archive_path" "" "$DATA_URL"
+  fi
+}
+
+download_data_archives() {
   [[ "$SKIP_DATA" == "1" ]] && return
 
-  local archive_path="$DOWNLOAD_DIR/$ARCHIVE_NAME"
-  local marker="$DATA_ROOT/.bootstrap-extracted"
-
-  if [[ -f "$marker" && "$FORCE_EXTRACT" != "1" ]]; then
-    log "Data already extracted: $DATA_ROOT"
-    return
+  if uses_static_box_archives; then
+    download_static_box_archives
+  else
+    download_direct_archive
   fi
+}
 
-  [[ -f "$archive_path" || "$DRY_RUN" == "1" ]] || die "Data archive is missing: $archive_path"
-
-  log "Extracting data archive into $DATA_ROOT"
-  run mkdir -p "$DATA_ROOT"
-
-  if [[ "$DRY_RUN" == "1" ]]; then
-    printf '+ extract archive based on file type\n'
-    return
+archive_paths_to_extract() {
+  if uses_static_box_archives; then
+    local spec
+    for spec in "${STATIC_BOX_ARCHIVES[@]}"; do
+      local file_id
+      local filename
+      local expected_size
+      IFS='|' read -r file_id filename expected_size <<< "$spec"
+      printf '%s\n' "$DOWNLOAD_DIR/$filename"
+    done
+  else
+    printf '%s\n' "$DOWNLOAD_DIR/$ARCHIVE_NAME"
   fi
+}
+
+extract_one_archive() {
+  local archive_path="$1"
 
   local mime
   mime="$(archive_mime_type "$archive_path")"
@@ -306,13 +390,39 @@ extract_data_archive() {
       die "Unsupported archive MIME type for $archive_path: $mime"
       ;;
   esac
+}
+
+extract_data_archives() {
+  [[ "$SKIP_DATA" == "1" ]] && return
+
+  local marker="$DATA_ROOT/.bootstrap-extracted"
+
+  if [[ -f "$marker" && "$FORCE_EXTRACT" != "1" && "$FORCE_DOWNLOAD" != "1" ]]; then
+    log "Data already extracted: $DATA_ROOT"
+    return
+  fi
+
+  log "Extracting data archives into $DATA_ROOT"
+  run mkdir -p "$DATA_ROOT"
+
+  if [[ "$DRY_RUN" == "1" ]]; then
+    printf '+ extract downloaded archives based on file type\n'
+    return
+  fi
+
+  local archive_path
+  while IFS= read -r archive_path; do
+    [[ -f "$archive_path" ]] || die "Data archive is missing: $archive_path"
+    validate_downloaded_archive "$archive_path"
+    extract_one_archive "$archive_path"
+  done < <(archive_paths_to_extract)
 
   date -u +%Y-%m-%dT%H:%M:%SZ > "$marker"
 }
 
 ensure_compat_data_root() {
-  [[ "$CREATE_COMPAT_SYMLINK" == "1" ]] || return
-  [[ -n "$COMPAT_DATA_ROOT" ]] || return
+  [[ "$CREATE_COMPAT_SYMLINK" == "1" ]] || return 0
+  [[ -n "$COMPAT_DATA_ROOT" ]] || return 0
 
   if [[ "$COMPAT_DATA_ROOT" == "$DATA_ROOT" ]]; then
     run mkdir -p "$DATA_ROOT"
@@ -410,7 +520,11 @@ Compatibility root used by existing configs:
 Example training command:
   uv run python trainer.py fit --config configs/kelp-rgb/segformer_b3.yaml
 
-To use a fixed direct data archive URL:
+Default Box archives:
+  Planet8bSR_BC_Labelled.zip
+  ca_data.zip
+
+To override with one direct archive URL:
   HAKAI_DATA_URL="https://..." scripts/bootstrap_skypilot.sh --force-download
 EOF
 }
@@ -423,8 +537,8 @@ main() {
   ensure_uv
   sync_python_environment
   wandb_login_if_configured
-  download_data_archive
-  extract_data_archive
+  download_data_archives
+  extract_data_archives
   ensure_compat_data_root
   validate_config_data_paths
   print_next_steps

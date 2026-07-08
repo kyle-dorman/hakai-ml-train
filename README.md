@@ -60,10 +60,15 @@ cd hakai-ml-train
 bash scripts/bootstrap_skypilot.sh
 ```
 
-The script installs/verifies `uv`, runs `uv sync --frozen`, downloads the data
-archive, extracts it to `$HOME/data`, and creates a compatibility symlink at
-`/home/taylor/data` so the existing config files can keep using their current
-data paths.
+The script installs/verifies `uv`, runs `uv sync --frozen`, downloads the two
+static zip files from the Box folder, extracts them to `$HOME/data`, and creates
+a compatibility symlink at `/home/taylor/data` so the existing config files can
+keep using their current data paths.
+
+Default Box archives:
+
+- `Planet8bSR_BC_Labelled.zip` (~5.1 GB)
+- `ca_data.zip` (~16.0 GB)
 
 Common overrides:
 
@@ -71,7 +76,7 @@ Common overrides:
 # Use a specific data root, such as a mounted SkyPilot volume.
 HAKAI_DATA_ROOT=/mnt/data/hakai bash scripts/bootstrap_skypilot.sh
 
-# Use a direct archive URL if the default Box share is unavailable from the VM.
+# Use one direct archive URL if you need to bypass the default Box folder.
 HAKAI_DATA_URL="https://..." bash scripts/bootstrap_skypilot.sh --force-download
 
 # Include development dependencies or change uv sync behavior.
@@ -81,9 +86,9 @@ HAKAI_UV_SYNC_ARGS="--frozen --all-groups" bash scripts/bootstrap_skypilot.sh
 WANDB_API_KEY="<your-key>" bash scripts/bootstrap_skypilot.sh
 ```
 
-If the Caltech Box link downloads an HTML page instead of a `.zip`/`.tar`
-archive, the script stops with a clear error. In that case, create or request a
-directly downloadable archive link and pass it through `HAKAI_DATA_URL`.
+The default Box link is treated as a static folder containing the two zip files
+above. Reruns skip completed downloads, resume incomplete `.part` files, and
+reuse the existing extraction unless `--force-extract` is passed.
 
 ## Dataset Preparation
 
