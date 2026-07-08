@@ -52,7 +52,7 @@ Environment overrides:
   HAKAI_DOWNLOAD_DIR              Download cache directory. Default: $HAKAI_DATA_ROOT/.downloads
   HAKAI_PYTHON_VERSION            Python version for uv. Default: 3.12
   HAKAI_UV_SYNC_ARGS              uv sync flags. Default: --frozen
-  WANDB_API_KEY                   If set, run wandb login after uv sync.
+  WANDB_API_KEY                   If set, run wandb login as the final setup step.
   HAKAI_FORCE_DOWNLOAD=1          Same as --force-download.
   HAKAI_FORCE_EXTRACT=1           Same as --force-extract.
   HAKAI_SKIP_APT=1                Same as --skip-apt.
@@ -539,11 +539,11 @@ main() {
   install_system_packages
   ensure_uv
   sync_python_environment
-  wandb_login_if_configured
   download_data_archives
   extract_data_archives
   ensure_compat_data_root
   validate_config_data_paths
+  wandb_login_if_configured
   print_next_steps
 }
 
