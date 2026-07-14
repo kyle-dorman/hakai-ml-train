@@ -30,9 +30,9 @@ model:
 data:
   class_path: "src.data.DataModule"
   init_args:
-    train_chip_dir: /Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc/train/
-    val_chip_dir: /Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc/val/
-    test_chip_dir: /Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc/test/
+    train_chip_dir: /home/taylor/data/PlanetScope/pre-chipped-8b/1024_512_20250814_cali_bc/train/
+    val_chip_dir: /home/taylor/data/PlanetScope/pre-chipped-8b/1024_512_20250814_cali_bc/val/
+    test_chip_dir: /home/taylor/data/PlanetScope/pre-chipped-8b/1024_512_20250814_cali_bc/test/
     batch_size: 1
     num_workers: 0
     pin_memory: false
@@ -167,26 +167,24 @@ trainer:
   accumulate_grad_batches: 24
   gradient_clip_val: 0.8
   detect_anomaly: false
-  default_root_dir: /Volumes/x10pro/kelpseg/local_training/segformer_b3_local_1epoch
+  default_root_dir: checkpoints/segformer_b3_remote_1epoch
   fast_dev_run: False
   logger:
     - class_path: lightning.pytorch.loggers.WandbLogger
       init_args:
         entity: hakai
-        project: kom-kelp-ps8b-cali-local
-        name: segformer_b3_local_1epoch
-        group: local_smoke_test
-        save_dir: /Volumes/x10pro/kelpseg/local_training/wandb
-        offline: true
+        project: kom-kelp-ps8b-cali
+        name: segformer_b3_remote_1epoch
+        group: remote_smoke_test
         log_model: false
         tags:
-          - local_1epoch
+          - remote_1epoch
           - 1024_512_20250814_cali_bc
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         auto_insert_metric_name: False
-        filename: local_1epoch_kelp_ps8b_segformer_b3_epoch-{epoch:02d}_val-iou-{val/iou_epoch:.4f}
+        filename: remote_1epoch_kelp_ps8b_segformer_b3_epoch-{epoch:02d}_val-iou-{val/iou_epoch:.4f}
         monitor: val/iou_epoch
         mode: max
         save_last: True
