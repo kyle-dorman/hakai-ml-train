@@ -12,9 +12,28 @@ DATASET_NAME="${HAKAI_DATASET_NAME:-1024_512_20250814_cali_bc}"
 ARCHIVE="${HAKAI_DATA_ARCHIVE:-}"
 
 FORCE_EXTRACT=0
+SKIP_SYSTEM_UPGRADE="${HAKAI_SKIP_SYSTEM_UPGRADE:-0}"
+SKIP_NVIDIA_CHECK="${HAKAI_SKIP_NVIDIA_CHECK:-0}"
 SKIP_DATA=0
 SKIP_UV_SYNC=0
 SKIP_WANDB=0
+
+log() {
+  printf '\n==> %s\n' "$*"
+}
+
+warn() {
+  printf 'WARN: %s\n' "$*" >&2
+}
+
+die() {
+  printf 'ERROR: %s\n' "$*" >&2
+  exit 1
+}
+
+have_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
 
 usage() {
   cat <<EOF
@@ -25,6 +44,8 @@ Options:
   --data-root PATH    Data root. Default: \$HOME/data
   --extract-dir PATH  Extraction parent. Default: \$HAKAI_DATA_ROOT/PlanetScope/pre-chipped-8b
   --force-extract     Re-extract even if the dataset directory already exists.
+  --skip-upgrade      Do not run apt-get update/upgrade.
+  --skip-nvidia-check Do not check nvidia-smi or PyTorch CUDA.
   --skip-data         Do not extract the dataset archive.
   --skip-uv-sync      Do not run uv sync.
   --skip-wandb        Do not run wandb login.
@@ -33,6 +54,8 @@ Options:
 Useful environment variables:
   WANDB_API_KEY       Used for non-interactive W&B login.
   HAKAI_UV_SYNC_ARGS  Extra uv sync flags. Default: --frozen
+  HAKAI_SKIP_SYSTEM_UPGRADE=1
+  HAKAI_SKIP_NVIDIA_CHECK=1
 EOF
 }
 
@@ -57,6 +80,12 @@ while [[ $# -gt 0 ]]; do
     --force-extract)
       FORCE_EXTRACT=1
       ;;
+    --skip-upgrade)
+      SKIP_SYSTEM_UPGRADE=1
+      ;;
+    --skip-nvidia-check)
+      SKIP_NVIDIA_CHECK=1
+      ;;
     --skip-data)
       SKIP_DATA=1
       ;;
@@ -79,21 +108,31 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-log() {
-  printf '\n==> %s\n' "$*"
+run_as_root() {
+  if [[ "$(id -u)" -eq 0 ]]; then
+    "$@"
+  elif have_cmd sudo && sudo -n true >/dev/null 2>&1; then
+    sudo "$@"
+  else
+    return 1
+  fi
 }
 
-warn() {
-  printf 'WARN: %s\n' "$*" >&2
-}
+upgrade_system_packages() {
+  [[ "$SKIP_SYSTEM_UPGRADE" == "1" ]] && return
+  have_cmd apt-get || {
+    warn "apt-get not found; skipping system package upgrade."
+    return
+  }
 
-die() {
-  printf 'ERROR: %s\n' "$*" >&2
-  exit 1
-}
-
-have_cmd() {
-  command -v "$1" >/dev/null 2>&1
+  log "Upgrading system packages"
+  if ! run_as_root apt-get update; then
+    warn "Could not run apt-get update; skipping system package upgrade."
+    return
+  fi
+  run_as_root env DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+  run_as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    ca-certificates curl git gzip tar
 }
 
 ensure_uv() {
@@ -117,6 +156,36 @@ sync_python_environment() {
   local uv_args=($UV_SYNC_ARGS)
   uv python install "$PYTHON_VERSION"
   uv sync --python "$PYTHON_VERSION" "${uv_args[@]}"
+}
+
+check_nvidia_setup() {
+  [[ "$SKIP_NVIDIA_CHECK" == "1" ]] && return
+
+  log "Checking NVIDIA driver"
+  have_cmd nvidia-smi || die "nvidia-smi was not found. Use a GPU image/instance or rerun with --skip-nvidia-check."
+  nvidia-smi
+
+  [[ "$SKIP_UV_SYNC" == "1" ]] && {
+    warn "Skipping PyTorch CUDA check because uv sync was skipped."
+    return
+  }
+
+  log "Checking PyTorch CUDA"
+  cd "$REPO_ROOT"
+  uv run python - <<'PY'
+import torch
+
+print("torch:", torch.__version__)
+print("cuda available:", torch.cuda.is_available())
+print("cuda version:", torch.version.cuda)
+print("device count:", torch.cuda.device_count())
+if not torch.cuda.is_available() or torch.cuda.device_count() < 1:
+    raise SystemExit("PyTorch cannot see CUDA.")
+for i in range(torch.cuda.device_count()):
+    print(f"{i}: {torch.cuda.get_device_name(i)}")
+x = torch.randn(1024, 1024, device="cuda")
+print("cuda allocation test:", float(x.mean()))
+PY
 }
 
 default_archive_path() {
@@ -205,8 +274,10 @@ main() {
   log "Bootstrapping Hakai ML Train"
   printf 'Repo: %s\n' "$REPO_ROOT"
 
+  upgrade_system_packages
   ensure_uv
   sync_python_environment
+  check_nvidia_setup
   extract_dataset
   create_compat_symlink
   wandb_login

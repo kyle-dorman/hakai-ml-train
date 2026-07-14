@@ -67,7 +67,8 @@ This repository provides PyTorch Lightning-based training infrastructure for com
    bash scripts/bootstrap_skypilot.sh
    ```
 
-   The script installs/verifies `uv`, syncs Python 3.12 dependencies, extracts
+   The script upgrades apt packages, installs/verifies `uv`, syncs Python 3.12
+   dependencies, checks `nvidia-smi` and PyTorch CUDA, extracts
    `~/1024_512_20250814_cali_bc.tar.gz`, creates `/home/taylor/data` as a
    compatibility symlink, and logs into Weights & Biases. If you do not set
    `WANDB_API_KEY`, it prompts for the key and skips W&B login if left blank.
@@ -106,6 +107,12 @@ explicitly:
 
 ```bash
 bash scripts/bootstrap_skypilot.sh --archive /path/to/1024_512_20250814_cali_bc.tar.gz
+```
+
+If you need to rerun the script without apt upgrades or GPU checks:
+
+```bash
+bash scripts/bootstrap_skypilot.sh --skip-upgrade --skip-nvidia-check
 ```
 
 ## Dataset Preparation

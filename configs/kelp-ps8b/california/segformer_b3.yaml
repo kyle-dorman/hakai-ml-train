@@ -172,8 +172,8 @@ trainer:
   logger:
     - class_path: lightning.pytorch.loggers.WandbLogger
       init_args:
-        entity: hakai
-        project: kom-kelp-ps8b-cali
+        entity: kdorman90-ucla
+        project: kelpseg
         name: segformer_b3
         group: Mar2026
         log_model: true
