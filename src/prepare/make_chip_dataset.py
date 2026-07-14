@@ -79,18 +79,20 @@ def create_chips(
     num_bands=3,
     band_remapping=(0, 1),
     dtype=np.uint8,
+    num_workers=0,
 ):
     out_dir = out_root / name
     out_dir.mkdir(exist_ok=True, parents=True)
 
     sampler = GridGeoSampler(dset, size=chip_size, stride=chip_stride)
-    dataloader = DataLoader(
-        dset,
-        sampler=sampler,
-        num_workers=4,
-        prefetch_factor=2,
-        collate_fn=stack_samples,
-    )
+    dataloader_kwargs = {
+        "sampler": sampler,
+        "num_workers": num_workers,
+        "collate_fn": stack_samples,
+    }
+    if num_workers > 0:
+        dataloader_kwargs["prefetch_factor"] = 2
+    dataloader = DataLoader(dset, **dataloader_kwargs)
 
     for i, batch in enumerate(tqdm(dataloader, desc=img_path.stem)):
         img = batch["image"]
@@ -149,6 +151,7 @@ def process_split(
     num_bands: int = 3,
     band_remapping: tuple[int] = (0, 1),
     dtype: np.dtype = np.uint8,
+    num_workers: int = 0,
 ):
     dir = data_dir / split
     imgs = sorted(dir.glob("images/*.tif", case_sensitive=False))
@@ -167,6 +170,7 @@ def process_split(
             num_bands=num_bands,
             band_remapping=band_remapping,
             dtype=dtype,
+            num_workers=num_workers,
         )
 
 
@@ -192,6 +196,15 @@ def main():
 
     parser.add_argument(
         "--dtype", type=np.dtype, default="uint8", help="Data type of the chips."
+    )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=0,
+        help=(
+            "Number of DataLoader worker processes. Use 0 to avoid repeatedly "
+            "spawning workers while iterating over many rasters."
+        ),
     )
 
     parser.add_argument("--remap", "-r", type=int, nargs="+", default=[0, 1, 2])
@@ -222,6 +235,7 @@ def main():
             args.num_bands,
             args.remap,
             args.dtype,
+            args.num_workers,
         )
 
 

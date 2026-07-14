@@ -119,25 +119,25 @@ Then create the target chip datasets used by
 ```bash
 # Train chips: 1024 px with 512 px stride.
 uv run python -m src.prepare.make_chip_dataset \
-  ~/data/PlanetScope/raw-8b/20250814_cali_bc \
-  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_512_20250814_cali_bc \
+  /Volumes/x10pro/kelpseg/merged_ds \
+  /Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc \
   --splits train \
   --size 1024 \
   --stride 512 \
   --num_bands 8 \
   --dtype uint16 \
-  --remap 0 1 0 -100 -100
+  --remap 0 1 0 -100 0
 
 # Validation and test chips: 1024 px with no overlap.
 uv run python -m src.prepare.make_chip_dataset \
-  ~/data/PlanetScope/raw-8b/20250814_cali_bc \
-  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_20250814_cali_bc_full \
+  /Volumes/x10pro/kelpseg/merged_ds \
+  /Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc \
   --splits val test \
   --size 1024 \
   --stride 1024 \
   --num_bands 8 \
   --dtype uint16 \
-  --remap 0 1 0 -100 -100
+  --remap 0 1 0 -100 0
 ```
 
 Confirm the `--remap` values against the raw label values before running the
@@ -148,16 +148,16 @@ Clean the chips to match the previous training recipe:
 
 ```bash
 uv run python -m src.prepare.remove_tiles_with_nodata_areas \
-  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_512_20250814_cali_bc/train \
+  /Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc/train \
   --num_channels 8
 uv run python -m src.prepare.remove_bg_only_tiles \
-  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_512_20250814_cali_bc/train
+  /Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc/train
 
 uv run python -m src.prepare.remove_tiles_with_nodata_areas \
-  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_20250814_cali_bc_full/val \
+  /Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc/val \
   --num_channels 8
 uv run python -m src.prepare.remove_tiles_with_nodata_areas \
-  /home/taylor/data/PlanetScope/pre-chipped-8b/1024_20250814_cali_bc_full/test \
+  /Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc/test \
   --num_channels 8
 ```
 
