@@ -24,9 +24,9 @@ The copied all-region raw merge is complete and raster-validated at
 collection is complete at
 `/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1`: 6,003 chips from all
 369 source TIFFs with a portable statistics manifest. The transactional,
-manifest-driven nodata filter is complete. Task 006 next analyzes candidate
-thresholds without mutating the collection. See `docs/todo.md` and
-`tasks/README.md`.
+manifest-driven nodata filter is complete, and Task 006 selected a universal
+50% nodata threshold without mutating the collection. Task 007 applies it. See
+`docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 

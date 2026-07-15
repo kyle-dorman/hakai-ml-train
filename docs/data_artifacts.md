@@ -67,6 +67,14 @@ directory and never change the active collection. An applied threshold writes
 completion marker for the quarantined transaction. The active manifest is
 replaced atomically only in explicit apply mode.
 
+Task 006's versioned decision evidence is under
+`/Volumes/x10pro/kelpseg/nodata_threshold_analysis_v1`. The user-approved
+universal policy is `max_nodata_pct = 50`: keep chips at or below 50% all-eight-
+band-zero pixels and remove chips above 50%. The validated dry-run retains
+4,637 of 6,003 chips and removes 1,366; no region is eliminated, while two
+source TIFFs lose all chips. Task 007 has not yet applied this policy, so the
+canonical active manifest and all 6,003 NPZs remain unchanged.
+
 ## Git policy
 
 Tracked:

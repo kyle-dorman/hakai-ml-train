@@ -25,6 +25,27 @@ chips at or below the approved nodata threshold.
 - Task 004 canonical chip root and manifest
 - `docs/data_artifacts.md`
 
+## Approved Task 006 input
+
+The user-approved universal threshold is `max_nodata_pct = 50`. Task 006's
+validated projection is 6,003 total chips, 4,637 retained, and 1,366 removed.
+No region is eliminated; two source TIFFs lose all chips.
+
+The exact production dry-run command is:
+
+```bash
+root=/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1
+uv run python -m src.prepare.remove_tiles_with_nodata_areas \
+  "$root" \
+  --manifest "$root/chip_manifest.csv" \
+  --max-nodata-pct 50 \
+  --report-output "$root/filter_reports/task007_nodata_50_dry_run.csv" \
+  --dry-run
+```
+
+Stop unless this reports exactly 4,637 kept and 1,366 removed. Do not infer a
+different threshold from later inspection.
+
 ## User decisions required
 
 None if Task 006 contains an explicit approved numeric threshold. If it does

@@ -14,8 +14,8 @@ No implementation task is active.
 Next task:
 
 ```text
-Task 006: Choose the universal nodata threshold.
-tasks/006_choose_nodata_threshold.md
+Task 007: Apply the universal nodata filter at the approved 50% threshold.
+tasks/007_apply_nodata_filter.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -35,6 +35,11 @@ manifest-driven dry-run/apply CLI. Fixture rollback/recovery tests and real
 report-only runs at 0% and 50% passed; the canonical manifest and all 6,003
 chips remain unchanged.
 
+Task 006 analyzed global, regional, source-TIFF, class-1, and visual effects of
+candidate nodata thresholds. The user approved `max_nodata_pct = 50`: the
+validated dry-run retains 4,637 chips and removes 1,366 without eliminating a
+region. No filter has been applied.
+
 ## Open queue
 
 Local dataset preparation:
@@ -43,7 +48,8 @@ Local dataset preparation:
 - Task 003: complete; added the restartable manifested chipper and fixture.
 - Task 004: complete; built and validated the unfiltered canonical chips.
 - Task 005: complete; added the transactional manifest-driven nodata filter.
-- Tasks 006–007: analyze, select, and apply the universal threshold.
+- Task 006: complete; selected the universal 50% nodata threshold.
+- Task 007: apply the approved threshold transactionally.
 - Task 008: build non-destructive training-only background selection.
 - Task 009: package and verify the portable dataset archive.
 
