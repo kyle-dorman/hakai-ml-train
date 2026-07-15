@@ -1,0 +1,99 @@
+# Data and artifact contract
+
+For navigation, start with `docs/index.md`. Read this file before creating,
+moving, filtering, deleting, archiving, transferring, or interpreting data and
+generated artifacts.
+
+## Storage boundary
+
+The code repository tracks source, configs, small split metadata, documentation,
+and task contracts. Large or generated artifacts live outside git.
+
+Current local root:
+
+```text
+/Volumes/x10pro/kelpseg
+```
+
+Current verified source families:
+
+```text
+/Volumes/x10pro/kelpseg/ca
+/Volumes/x10pro/kelpseg/bc/Planet8bSR_BC_Labelled/10km_tiles
+```
+
+The old CSV-limited merge and chips are historical inputs, not the new canonical
+dataset:
+
+```text
+/Volumes/x10pro/kelpseg/merged_ds
+/Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc
+```
+
+Task 002 will record the new raw merge path. Task 004 will record the canonical
+chip path. Task 009 will record the portable archive and checksum. Task 010 will
+record the remote extracted path.
+
+## Git policy
+
+Tracked:
+
+- Python and shell source.
+- YAML configs.
+- `planet8b_temporal_image_splits.csv` and its generator.
+- Small hand-authored or decision-support GeoJSON/CSV metadata when a task makes
+  it part of the reproducible contract.
+- Docs and task files.
+
+Not tracked:
+
+- Raw or merged GeoTIFF imagery and labels.
+- NPZ chips.
+- Archives and checksums tied to local generated archives.
+- Checkpoints and W&B run directories.
+- Predictions, large metric tables, figures, and generated reports.
+
+## Canonical artifact families
+
+1. Raw source mirrors: immutable California and BC image/label pairs.
+2. Merged raw dataset: chipper-compatible `all/images` and `all/labels`, plus
+   raster manifest, portable source-grid metadata, and QA report.
+3. Canonical chips: un-split NPZ files plus chip statistics manifest.
+4. Filter evidence: nodata analysis, approved threshold, removal manifest, and
+   background-selection reports.
+5. Portable archive: cleaned canonical chips, manifests, split CSV, parameter
+   note, inventory, and SHA-256 checksum.
+6. Experiment views: hard-linked baseline and LORO train/validation/test folders
+   plus fold manifests.
+7. Run artifacts: checkpoints, run registry, W&B artifacts, predictions, and
+   chip/TIFF metric tables.
+8. Comparison artifacts: matched-TIFF tables, region summaries, and final plots
+   or reports.
+
+## Provenance requirements
+
+Nontrivial artifact-producing steps should record:
+
+- producer command and git commit;
+- input and output paths;
+- manifest or fold version and hash;
+- dataset, region, source TIFF, date, and split where relevant;
+- chip size, stride, bands, dtype, remapping, and ignore index;
+- nodata definition and selected threshold;
+- retained, removed, and excluded counts with reasons;
+- seed and model config for training artifacts;
+- run ID and checkpoint for prediction artifacts;
+- warnings and unresolved validation issues.
+
+Paths inside the portable archive and chip/fold manifests must be relative to an
+explicit dataset root. Local absolute paths may appear in raw-merge provenance,
+but must not be required after remote extraction.
+
+## Mutation rules
+
+- Never modify or delete raw source TIFFs.
+- Use dry-run before large merge, filtering, archive, or materialization steps.
+- Refuse partial manifest updates and silent overwrites.
+- Preserve removal manifests when canonical chips are filtered.
+- Background-only selection must not delete canonical chips.
+- Verify archive checksum and inventory before and after transfer.

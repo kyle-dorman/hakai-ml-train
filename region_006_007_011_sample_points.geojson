@@ -1,0 +1,54 @@
+{
+  "type": "FeatureCollection",
+  "name": "region_006_007_011_sample_points",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "region_id": "006",
+        "region_name": "channelIslands",
+        "sample_tif": "006_20210611_175346_2235.tif",
+        "source_crs": "EPSG:32611",
+        "point_method": "raster_bounds_center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-119.65387454, 33.97187059]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region_id": "007",
+        "region_name": "refugioStateBeach",
+        "sample_tif": "007_20200517_175815_2277.tif",
+        "source_crs": "EPSG:32610",
+        "point_method": "raster_bounds_center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-120.05241343, 34.459533]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region_id": "011",
+        "region_name": "calvertIsland",
+        "sample_tif": "011_20201107_185022_222f.tif",
+        "source_crs": "EPSG:32609",
+        "point_method": "raster_bounds_center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-128.15290535, 51.65073602]
+      }
+    }
+  ]
+}
