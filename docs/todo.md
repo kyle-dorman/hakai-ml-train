@@ -14,12 +14,14 @@ No implementation task is active.
 Next task:
 
 ```text
-Task 001: Build the raw merge organizer.
-tasks/001_build_raw_merge_organizer.md
+Task 002: Create and validate the raw merge.
+tasks/002_create_and_validate_raw_merge.md
 ```
 
-Task 000 completed the deterministic temporal source-TIFF split. The current
-tracked output is `planet8b_temporal_image_splits.csv`.
+Task 001 completed the dry-run-first raw merge organizer. Its full-source dry
+run found 339 California and 30 BC pairs across 12 region IDs without creating
+the merged dataset. The current tracked split output is
+`planet8b_temporal_image_splits.csv`.
 
 ## Open queue
 

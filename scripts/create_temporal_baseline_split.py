@@ -11,28 +11,12 @@ from __future__ import annotations
 
 import argparse
 import csv
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-CA_REGION_NAMES = {
-    "001": "baja_islaNavidad",
-    "002": "baja_puntaEugenia",
-    "003": "sanDiego",
-    "004": "palosVerdes",
-    "005": "channelIslands",
-    "006": "channelIslands",
-    "007": "refugioStateBeach",
-    "008": "bigSur",
-    "009": "monterey",
-    "010": "northernCalifornia",
-    "011": "calvertIsland",
-}
-
-DATE_RE = re.compile(r"^(?P<date>\d{8})_")
-CA_RE = re.compile(r"^(?P<region>\d{3})_(?P<date>\d{8})_")
+from planet8b_metadata import parse_bc_stem, parse_ca_stem
 
 
 @dataclass(frozen=True)
@@ -44,10 +28,6 @@ class RasterRecord:
     acquisition_date: date
     source_image: Path
     source_label: Path
-
-
-def parse_date(value: str) -> date:
-    return date.fromisoformat(f"{value[:4]}-{value[4:6]}-{value[6:8]}")
 
 
 def tif_files(directory: Path) -> dict[str, Path]:
@@ -84,19 +64,14 @@ def paired_tifs(images_dir: Path, labels_dir: Path) -> list[tuple[Path, Path]]:
 def load_california(ca_root: Path) -> list[RasterRecord]:
     records = []
     for image, label in paired_tifs(ca_root / "images", ca_root / "labels"):
-        match = CA_RE.match(image.stem)
-        if match is None:
-            raise ValueError(f"Cannot parse California region/date: {image.name}")
-        region_id = f"ca_{match['region']}"
+        metadata = parse_ca_stem(image.stem)
         records.append(
             RasterRecord(
                 image_name_stem=image.stem,
                 dataset="ca",
-                region_id=region_id,
-                region_name=CA_REGION_NAMES.get(
-                    match["region"], f"region_{match['region']}"
-                ),
-                acquisition_date=parse_date(match["date"]),
+                region_id=metadata.region_id,
+                region_name=metadata.region_name,
+                acquisition_date=metadata.acquisition_date,
                 source_image=image.resolve(),
                 source_label=label.resolve(),
             )
@@ -118,16 +93,14 @@ def load_bc(bc_tiles_root: Path) -> list[RasterRecord]:
                     f"Duplicate BC TIFF stem across source splits: {image.stem}"
                 )
             seen_stems.add(stem_key)
-            match = DATE_RE.match(image.stem)
-            if match is None:
-                raise ValueError(f"Cannot parse BC acquisition date: {image.name}")
+            metadata = parse_bc_stem(image.stem)
             records.append(
                 RasterRecord(
                     image_name_stem=image.stem,
                     dataset="bc",
-                    region_id="bc",
-                    region_name="british_columbia",
-                    acquisition_date=parse_date(match["date"]),
+                    region_id=metadata.region_id,
+                    region_name=metadata.region_name,
+                    acquisition_date=metadata.acquisition_date,
                     source_image=image.resolve(),
                     source_label=label.resolve(),
                 )

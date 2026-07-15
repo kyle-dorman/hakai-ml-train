@@ -1,6 +1,6 @@
 # Task 001: Build the raw all-region merge organizer
 
-Status: Pending
+Status: Complete
 
 Depends on: Task 000
 
@@ -144,6 +144,23 @@ Before editing, add a short `## Implementation plan` to this file covering:
 - atomic output behavior and dry-run behavior;
 - focused fixture layout and failure cases.
 
+## Implementation plan
+
+- Discover California pairs from the root `images`/`labels` directories and BC
+  pairs from each historical split directory, matching TIFF stems
+  case-insensitively and reporting all pairing and duplicate-stem failures.
+- Move the region-name and source-filename parsing contract into a small shared
+  script module used by both this organizer and the temporal split generator;
+  neither script will import the other.
+- Build and validate the planned manifest entirely in memory during dry runs.
+  For materialization, require an empty/new output root, stage links or copies
+  and both CSVs in a temporary sibling directory, then atomically rename the
+  complete tree into place.
+- Add isolated two-CA/two-BC fixtures covering dry-run and hard-link success,
+  duplicate stems, missing labels, nonempty output refusal, cross-filesystem
+  hard-link guidance, and Rasterio georeferencing with and without world-file
+  sidecars.
+
 ## Smoke test
 
 Create a temporary fixture with two CA pairs and two BC pairs. Exercise dry-run,
@@ -193,3 +210,61 @@ pairs without writing the output tree.
 Add `## Outcome` with an abstract, changed files, exact dry-run result,
 validation commands, deviations from this contract, and the Task 002 command
 template.
+
+## Outcome
+
+Implemented a deterministic, dry-run-first raw organizer with structured fatal
+issues, case-insensitive pairing, shared CA/BC metadata parsing, and atomic
+hard-link or copy materialization. No merged dataset was created.
+
+Changed repository files:
+
+- `scripts/merge_planet8b_regions.py`: discovery, validation, manifest, issue,
+  dry-run, and atomic materialization CLI.
+- `scripts/planet8b_metadata.py` and
+  `scripts/create_temporal_baseline_split.py`: shared region/date parsing without
+  script-to-script imports; regenerating the temporal split remained
+  byte-for-byte identical.
+- `tests/test_merge_planet8b_regions.py`: two-CA/two-BC fixture coverage for
+  dry-run, hard links, duplicate stems, missing labels, destination collisions,
+  nonempty output, cross-filesystem guidance, and world-file independence.
+- `pyproject.toml` and `uv.lock`: declared pytest and its test import path.
+- `docs/todo.md`, `tasks/README.md`, and this task file: task status and handoff.
+
+Full-source dry-run result:
+
+```text
+Dry run complete: 339 CA, 30 BC, 369 total, 12 region IDs
+```
+
+Isolated copies of a real CA image/label and BC image/label retained identical
+Rasterio CRS and transforms without world files. The selected BC image had a
+`.tfw`; its internal georeferencing matched with and without that file. The
+other selected TIFFs had no world file. No world-file materialization is
+required.
+
+Validation completed:
+
+```text
+uv run ruff format --check scripts tests
+uv run ruff check scripts tests
+uv run pytest tests/test_merge_planet8b_regions.py  # 9 passed
+git diff --check
+uv run pre-commit run --files <Task-001-changed-files>
+```
+
+The intended files passed all pre-commit hooks. A repository-wide pre-commit
+pass was also run; its end-of-file hook proposed an unrelated newline change to
+`planet8b_image_splits.csv`; that incidental change was removed to preserve
+scope. There are no durable external artifacts or unresolved Task 001 issues.
+
+Task 002 should first record the approved output root and mode, then run:
+
+```bash
+uv run python scripts/merge_planet8b_regions.py \
+  --ca-root /Volumes/x10pro/kelpseg/ca \
+  --bc-tiles-root /Volumes/x10pro/kelpseg/bc/Planet8bSR_BC_Labelled/10km_tiles \
+  --output-root <approved-canonical-raw-root> \
+  --mode <hardlink-or-copy> \
+  --dry-run
+```
