@@ -14,8 +14,8 @@ No implementation task is active.
 Next task:
 
 ```text
-Task 003: Extend the chipper and write the chip manifest.
-tasks/003_extend_chipper_and_write_manifest.md
+Task 004: Chip all regions locally.
+tasks/004_chip_all_regions_locally.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -30,7 +30,8 @@ passed for all 369 rows.
 Local dataset preparation:
 
 - Tasks 001–002: complete; built and validated the all-region raw merge.
-- Tasks 003–004: extend the chipper and create canonical chips/statistics.
+- Task 003: complete; added the restartable manifested chipper and fixture.
+- Task 004: run the full canonical chipping job and write summary statistics.
 - Tasks 005–007: analyze, select, and apply universal nodata filtering.
 - Task 008: build non-destructive training-only background selection.
 - Task 009: package and verify the portable dataset archive.

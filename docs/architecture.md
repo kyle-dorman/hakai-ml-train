@@ -80,6 +80,13 @@ The baseline joins chips to `planet8b_temporal_image_splits.csv` through source
 TIFF ID. LORO views use region ID. Hard links avoid duplicating canonical chip
 content.
 
+The canonical chip grid uses 1024-pixel square windows at 512-pixel stride,
+anchored at the source raster's top-left pixel. Training views retain all
+eligible overlapping chips. Validation views select the non-overlapping subset
+where both pixel offsets are multiples of 1024; edge strips outside that grid
+remain uncovered and validation coverage must be reported. This is a manifest
+selection from one canonical chip family, not a second evaluation artifact.
+
 The current planned LORO policy is:
 
 - test: all retained chips from the held-out region;
@@ -102,7 +109,9 @@ overlapping chips, reconstruct one probability per covered source pixel before
 thresholding and calculating TIFF confusion counts. Region and test-set metrics
 then sum the non-overlapping TIFF confusion counts. Do not sum overlapping chip
 confusion counts into TIFF metrics. Ignore-index and uncovered pixels do not
-contribute, and coverage must be reported.
+contribute, and coverage must be reported. Final test evaluation uses every
+retained overlapping chip; the non-overlapping subset policy applies only to
+validation used for model selection.
 
 ## Compatibility boundary
 

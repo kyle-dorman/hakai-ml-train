@@ -42,7 +42,7 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [000](000_temporal_baseline_split.md) | Local | Complete | — | Reproducible temporal raster split |
 | [001](001_build_raw_merge_organizer.md) | Local | Complete | 000 | Organizer and raw-manifest writer |
 | [002](002_create_and_validate_raw_merge.md) | Local | Complete | 001 | Complete merged raw dataset |
-| [003](003_extend_chipper_and_write_manifest.md) | Local | Pending | 002 | Chipper emits per-chip statistics |
+| [003](003_extend_chipper_and_write_manifest.md) | Local | Complete | 002 | Restartable chipper emits per-chip statistics |
 | [004](004_chip_all_regions_locally.md) | Local | Pending | 003 | Canonical unfiltered chip collection |
 | [005](005_build_manifest_nodata_filter.md) | Local | Pending | 004 | Configurable manifest-driven nodata tool |
 | [006](006_choose_nodata_threshold.md) | Local | Pending | 005 | Evidence-backed universal threshold |

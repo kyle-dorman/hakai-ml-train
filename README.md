@@ -20,9 +20,9 @@ The temporal source-raster split is complete:
   region.
 
 The copied all-region raw merge is complete and raster-validated at
-`/Volumes/x10pro/kelpseg/merged_all_regions_v1`. Task 003 next extends the
-chipper and defines the portable chip manifest. See `docs/todo.md` and
-`tasks/README.md`.
+`/Volumes/x10pro/kelpseg/merged_all_regions_v1`. The restartable chipper and
+portable chip-manifest contract are complete; Task 004 next performs the full
+canonical chip run. See `docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 

@@ -35,8 +35,8 @@ Confirm these run parameters after reviewing Task 002 dtype/label QA and Task
 1. Canonical chip output root. Recommendation:
    `/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1` if size/stride below
    are accepted.
-2. Chip size. Current recommendation: `1024`.
-3. Stride. Current recommendation: `512` for 50% overlap.
+2. Chip size: `1024`, approved during Task 003.
+3. Stride: `512` for 50% overlap, approved during Task 003.
 4. Retained bands: `8`.
 5. Output dtype. Recommendation must be based on Task 002 range; do not default
    to `uint8` for PlanetScope reflectance.
