@@ -2,8 +2,8 @@
 
 ## Current phase
 
-Status: expanded-data temporal baseline and leave-one-region-out generalization
-is planned; local data preparation is next.
+Status: the cleaned canonical chip collection is ready; training-only
+background selection is next.
 
 Current active task:
 
@@ -14,8 +14,8 @@ No implementation task is active.
 Next task:
 
 ```text
-Task 007: Apply the universal nodata filter at the approved 50% threshold.
-tasks/007_apply_nodata_filter.md
+Task 008: Build non-destructive training-only background selection.
+tasks/008_build_background_filter.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -32,13 +32,19 @@ source fragments across all 12 regions. Manifest/filesystem validation, a
 
 Task 005 replaced the any-nodata deletion script with a required-threshold,
 manifest-driven dry-run/apply CLI. Fixture rollback/recovery tests and real
-report-only runs at 0% and 50% passed; the canonical manifest and all 6,003
-chips remain unchanged.
+report-only runs at 0% and 50% passed; at Task 005 completion the canonical
+manifest and all 6,003 chips remained unchanged.
 
 Task 006 analyzed global, regional, source-TIFF, class-1, and visual effects of
 candidate nodata thresholds. The user approved `max_nodata_pct = 50`: the
 validated dry-run retains 4,637 chips and removes 1,366 without eliminating a
-region. No filter has been applied.
+region.
+
+Task 007 transactionally applied the approved threshold. The active manifest
+now contains 4,637 chips from 367 source TIFFs across all 12 regions, with
+44,912,049,410 compressed NPZ bytes. The immutable 6,003-row pre-filter
+manifest, 1,366-row removal manifest, completion metadata, apply log, and
+global/region/source summary are preserved under `filter_history/nodata_50`.
 
 ## Open queue
 
@@ -49,7 +55,7 @@ Local dataset preparation:
 - Task 004: complete; built and validated the unfiltered canonical chips.
 - Task 005: complete; added the transactional manifest-driven nodata filter.
 - Task 006: complete; selected the universal 50% nodata threshold.
-- Task 007: apply the approved threshold transactionally.
+- Task 007: complete; applied the approved threshold transactionally.
 - Task 008: build non-destructive training-only background selection.
 - Task 009: package and verify the portable dataset archive.
 

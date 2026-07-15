@@ -29,12 +29,14 @@ compaction or in a new window, reread this file, `docs/index.md`,
 
 ## Current Status
 
-Tasks 000–006 established the 369-TIFF temporal baseline assignment, validated
-copied raw merge, restartable manifested chipper, canonical unfiltered chip
-collection at `/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1`, and the
-manifest-driven nodata filter, then selected the universal 50% nodata threshold.
-The next task is Task 007, which applies that threshold transactionally. The
-complete ordered queue is in `docs/todo.md`; detailed contracts are in `tasks/`.
+Tasks 000–007 established the 369-TIFF temporal baseline assignment, validated
+copied raw merge, restartable manifested chipper, canonical chip collection at
+`/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1`, and the transactional
+manifest-driven nodata filter, then selected and applied the universal 50%
+nodata threshold. The active collection contains 4,637 chips from 367 source
+TIFFs across all 12 regions. The next task is Task 008, which builds the
+non-destructive training-only background selector. The complete ordered queue
+is in `docs/todo.md`; detailed contracts are in `tasks/`.
 
 Do not start multiple numbered tasks in one window. Close the selected task,
 update its outcome and `docs/todo.md`, and stop.

@@ -33,7 +33,7 @@ the next stage without inferring identity from folder order.
 - `src/prepare/remove_tiles_with_nodata_areas.py`: manifest-driven nodata
   selection with a required percentage threshold, report-only dry runs, and a
   quarantined transactional apply path that preserves filter history. Task 006
-  selects the threshold; Task 007 applies it.
+  selected the universal 50% threshold, and Task 007 applied it.
 - `src/prepare/remove_bg_only_tiles.py`: current destructive filter; Task 008
   turns background removal into a training-view selection.
 - `src/data.py`: NPZ-backed Lightning data module.

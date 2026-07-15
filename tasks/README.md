@@ -46,7 +46,7 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [004](004_chip_all_regions_locally.md) | Local | Complete | 003 | Canonical unfiltered chip collection |
 | [005](005_build_manifest_nodata_filter.md) | Local | Complete | 004 | Configurable manifest-driven nodata tool |
 | [006](006_choose_nodata_threshold.md) | Local | Complete | 005 | Approved universal 50% threshold |
-| [007](007_apply_nodata_filter.md) | Local | Pending | 006 | Cleaned canonical chip collection |
+| [007](007_apply_nodata_filter.md) | Local | Complete | 006 | Cleaned canonical chip collection |
 | [008](008_build_background_filter.md) | Local | Pending | 004, 007 | Non-destructive training-only selector |
 | [009](009_package_dataset_archive.md) | Local | Pending | 007, 008 | Portable verified archive |
 | [010](010_transfer_and_verify_remote.md) | Remote | Pending | 009 | Verified remote dataset copy |

@@ -43,37 +43,48 @@ training ignore index. `raster_manifest.csv`, `copy_verification.csv`,
 `label_alignment.csv`, `raster_metadata.csv`, and the raster QA artifacts own
 its provenance.
 
-The Task 004 unfiltered canonical chip collection is:
+The canonical chip collection built by Task 004 and filtered by Task 007 is:
 
 ```text
 /Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1
 ```
 
-It contains 6,003 NPZ chips from all 369 source TIFFs. The regular grid is
-1,024 pixels at 512-pixel stride; 52 chips use true source dimensions where an
-entire source dimension is below 1,024 pixels. Images are eight-band `uint16`;
-labels remap KATE classes with `0 1 0 -100 0`. `chip_manifest.csv` has SHA-256
-`7fd2316ae07c4c5277ff33a62ae4c1ee60ced14a528e6a153a6489a7e457d9c8`.
-`chip_counts_by_source.csv`, `chip_qa_summary.json`,
-`creation_command.txt`, and `chipping.log` own its counts, validation,
-parameters, and execution provenance. This collection is unfiltered: no
-nodata or background chips have been removed. Task 009 will record the
-portable archive and checksum. Task 010 will record the remote extracted path.
+Task 004 created 6,003 NPZ chips from all 369 source TIFFs. The regular grid is
+1,024 pixels at 512-pixel stride; 52 original chips use true source dimensions
+where an entire source dimension is below 1,024 pixels. Images are eight-band
+`uint16`; labels remap KATE classes with `0 1 0 -100 0`.
+`chip_counts_by_source.csv`, `chip_qa_summary.json`, `creation_command.txt`,
+and `chipping.log` retain the original chipping counts, validation, parameters,
+and execution provenance.
+
+Task 007 applied `max_nodata_pct = 50`, retaining 4,637 NPZ chips and
+44,912,049,410 compressed bytes from 367 source TIFFs across all 12 regions.
+The active collection contains 47 true-size partial chips and preserves all
+521 clean background-only chips. Active `chip_manifest.csv` has SHA-256
+`edf754888dea183f12873594b546b980f350b5b4e293ff62ca7eca64a2c39a39`.
+Task 009 will record the portable archive and checksum. Task 010 will record the
+remote extracted path.
 
 Nodata dry-run reports belong under an explicit analysis or `filter_reports`
 directory and never change the active collection. An applied threshold writes
 `filter_history/nodata_<threshold>/pre_filter_manifest.csv`,
 `removal_manifest.csv`, and `filter_metadata.json`; the metadata is the
-completion marker for the quarantined transaction. The active manifest is
-replaced atomically only in explicit apply mode.
+completion marker for the quarantined transaction. Task 007 also records
+`post_filter_summary.csv` and `apply.log` there. The active manifest is replaced
+atomically only in explicit apply mode.
 
 Task 006's versioned decision evidence is under
 `/Volumes/x10pro/kelpseg/nodata_threshold_analysis_v1`. The user-approved
 universal policy is `max_nodata_pct = 50`: keep chips at or below 50% all-eight-
-band-zero pixels and remove chips above 50%. The validated dry-run retains
-4,637 of 6,003 chips and removes 1,366; no region is eliminated, while two
-source TIFFs lose all chips. Task 007 has not yet applied this policy, so the
-canonical active manifest and all 6,003 NPZs remain unchanged.
+band-zero pixels and remove chips above 50%. Task 007 applied that exact policy:
+4,637 of 6,003 chips are active and 1,366 were removed, representing
+3,245,804,422 compressed bytes. No region was eliminated. Source TIFFs
+`006_20210805_184050_240c` and
+`20210811_185433_06_2262_3B_AnalyticMS_SR_8b_harmonized_clip5` lost all chips.
+The immutable pre-filter manifest has SHA-256
+`7fd2316ae07c4c5277ff33a62ae4c1ee60ced14a528e6a153a6489a7e457d9c8`;
+the removal manifest has SHA-256
+`37fd56e8f679aebe370a187528dbfb646e09e3c349211d2208b0177fef8f7bcb`.
 
 ## Git policy
 

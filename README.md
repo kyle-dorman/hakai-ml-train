@@ -20,13 +20,13 @@ The temporal source-raster split is complete:
   region.
 
 The copied all-region raw merge is complete and raster-validated at
-`/Volumes/x10pro/kelpseg/merged_all_regions_v1`. The unfiltered canonical chip
-collection is complete at
-`/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1`: 6,003 chips from all
-369 source TIFFs with a portable statistics manifest. The transactional,
-manifest-driven nodata filter is complete, and Task 006 selected a universal
-50% nodata threshold without mutating the collection. Task 007 applies it. See
-`docs/todo.md` and `tasks/README.md`.
+`/Volumes/x10pro/kelpseg/merged_all_regions_v1`. The canonical chip collection
+at `/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1` was built with 6,003
+chips from all 369 source TIFFs, then transactionally filtered at the approved
+50% nodata threshold. Its active manifest now contains 4,637 chips from 367
+source TIFFs across all 12 regions; the unfiltered manifest and complete
+removal evidence are preserved under `filter_history/nodata_50`. Task 008 is
+next. See `docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 
