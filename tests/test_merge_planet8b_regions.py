@@ -12,6 +12,7 @@ import pytest
 import rasterio
 from merge_planet8b_regions import (
     InventoryError,
+    derive_aligned_label,
     discover_inventory,
     materialize,
 )
@@ -77,7 +78,7 @@ def test_hardlink_materialization_and_manifest(
     ca_root, bc_root = source_fixture
     output_root = tmp_path / "merged"
     rows = discover_inventory(ca_root, bc_root, output_root, "hardlink")
-    materialize(output_root, rows, "hardlink")
+    materialize(output_root, rows, "hardlink", "uv run python organizer.py")
 
     assert len(rows) == 4
     for row in rows:
@@ -92,6 +93,9 @@ def test_hardlink_materialization_and_manifest(
     ]
     with (output_root / "merge_issues.csv").open(newline="") as stream:
         assert list(csv.DictReader(stream)) == []
+    assert (output_root / "creation_command.txt").read_text() == (
+        "uv run python organizer.py\n"
+    )
 
 
 def test_duplicate_stem_is_fatal(
@@ -203,3 +207,60 @@ def test_internal_georeferencing_does_not_require_world_file(
         == without_metadata
         == (rasterio.crs.CRS.from_epsg(32610), transform)
     )
+
+
+def test_derived_label_aligns_and_assigns_kate_nodata(tmp_path: Path) -> None:
+    image_path = tmp_path / "source" / "image.tif"
+    label_path = tmp_path / "source" / "label.tif"
+    output_path = tmp_path / "output" / "label.tif"
+    image_path.parent.mkdir(parents=True)
+    output_path.parent.mkdir(parents=True)
+    image = np.ones((8, 4, 4), dtype=np.uint16)
+    image[:, 1, 1] = 0
+    with rasterio.open(
+        image_path,
+        "w",
+        driver="GTiff",
+        width=4,
+        height=4,
+        count=8,
+        dtype="uint16",
+        crs="EPSG:32610",
+        transform=from_origin(0, 4, 1, 1),
+    ) as dataset:
+        dataset.write(image)
+    with rasterio.open(
+        label_path,
+        "w",
+        driver="GTiff",
+        width=2,
+        height=2,
+        count=1,
+        dtype="uint8",
+        crs="EPSG:32610",
+        transform=from_origin(1, 3, 1, 1),
+        nodata=0,
+    ) as dataset:
+        dataset.write(np.array([[[0, 1], [1, 0]]], dtype=np.uint8))
+
+    alignment = derive_aligned_label(
+        image_path, label_path, output_path, "001_20210101_fixture"
+    )
+
+    with rasterio.open(output_path) as output:
+        result = output.read(1)
+        assert output.shape == (4, 4)
+        assert output.transform == from_origin(0, 4, 1, 1)
+        assert output.nodata == 3
+    assert result.tolist() == [
+        [3, 3, 3, 3],
+        [3, 3, 1, 3],
+        [3, 1, 0, 3],
+        [3, 3, 3, 3],
+    ]
+    assert alignment.source_label_values == "[0, 1]"
+    assert alignment.output_label_values == "[0, 1, 3]"
+    assert alignment.image_nodata_pixels == 1
+    assert alignment.outside_source_label_pixels == 12
+    assert alignment.assigned_nodata_pixels == 13
+    assert alignment.outside_source_label_not_nodata_pixels == 0

@@ -30,9 +30,20 @@ dataset:
 /Volumes/x10pro/kelpseg/pre-chipped-8b/1024_512_20250814_cali_bc
 ```
 
-Task 002 will record the new raw merge path. Task 004 will record the canonical
-chip path. Task 009 will record the portable archive and checksum. Task 010 will
-record the remote extracted path.
+The Task 002 canonical raw merge is:
+
+```text
+/Volumes/x10pro/kelpseg/merged_all_regions_v1
+```
+
+It contains independent image copies and exact-image-grid derived labels. Raw
+label class `3` means nodata wherever all eight image bands are zero or source
+label coverage is absent; later chipping/remapping converts that class to the
+training ignore index. `raster_manifest.csv`, `copy_verification.csv`,
+`label_alignment.csv`, `raster_metadata.csv`, and the raster QA artifacts own
+its provenance. Task 004 will record the canonical chip path. Task 009 will
+record the portable archive and checksum. Task 010 will record the remote
+extracted path.
 
 ## Git policy
 
@@ -56,8 +67,9 @@ Not tracked:
 ## Canonical artifact families
 
 1. Raw source mirrors: immutable California and BC image/label pairs.
-2. Merged raw dataset: chipper-compatible `all/images` and `all/labels`, plus
-   raster manifest, portable source-grid metadata, and QA report.
+2. Merged raw dataset: independent copied images and exact-grid derived labels
+   under `all/images` and `all/labels`, plus raster manifest, copy/alignment
+   provenance, portable source-grid metadata, and QA report.
 3. Canonical chips: un-split NPZ files plus chip statistics manifest.
 4. Filter evidence: nodata analysis, approved threshold, removal manifest, and
    background-selection reports.

@@ -8,7 +8,8 @@ prediction, or metric aggregation.
 
 ```text
 California images/labels + BC 10-km tile images/labels
-  -> merged raw `all/images` + `all/labels`
+  -> independent image copies + exact-grid derived labels
+  -> KATE class 3 for image nodata or missing label coverage
   -> raster manifest
   -> overlapping NPZ chips under `all/`
   -> chip manifest with dimensions, class counts, and nodata counts
@@ -61,8 +62,11 @@ manifest field exists.
 ## Manifest contracts
 
 The raster manifest owns source/merged paths, dataset, region, acquisition date,
-and image/label pairing. Portable raster metadata owns source grid shape, CRS,
-affine transform, and bounds after raw TIFFs are left out of the remote archive.
+image/label pairing, image copy mode, and label-preparation mode. Label
+alignment provenance owns source/output grids and class-3 assignment counts;
+copy provenance owns source/output image checksums and inode independence.
+Portable raster metadata owns source grid shape, CRS, affine transform, and
+bounds after raw TIFFs are left out of the remote archive.
 The chip manifest owns chip path, source TIFF, region, date, source-window
 offsets/bounds, width, height, class pixel counts, ignore count, nodata count,
 and nodata percentage. Fold manifests own experiment split and selection reason.

@@ -19,8 +19,10 @@ The temporal source-raster split is complete:
 - Acquisition dates stay intact and splits are chronological within each
   region.
 
-The current implementation queue begins with building the all-region raw merge.
-See `docs/todo.md` and `tasks/README.md`.
+The copied all-region raw merge is complete and raster-validated at
+`/Volumes/x10pro/kelpseg/merged_all_regions_v1`. Task 003 next extends the
+chipper and defines the portable chip manifest. See `docs/todo.md` and
+`tasks/README.md`.
 
 ## Documentation
 
@@ -59,7 +61,7 @@ old archive path as the new experiment contract.
 
 ```text
 paired 8-band GeoTIFF imagery and labels
-  -> all-region raw merge plus raster manifest
+  -> copied raw images plus exact-grid derived labels and raster manifest
   -> overlapping NPZ chips plus per-chip statistics manifest
   -> universal nodata-percentage filter
   -> portable canonical chip archive

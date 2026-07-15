@@ -14,20 +14,22 @@ No implementation task is active.
 Next task:
 
 ```text
-Task 002: Create and validate the raw merge.
-tasks/002_create_and_validate_raw_merge.md
+Task 003: Extend the chipper and write the chip manifest.
+tasks/003_extend_chipper_and_write_manifest.md
 ```
 
-Task 001 completed the dry-run-first raw merge organizer. Its full-source dry
-run found 339 California and 30 BC pairs across 12 region IDs without creating
-the merged dataset. The current tracked split output is
-`planet8b_temporal_image_splits.csv`.
+Task 002 created the 26 GB canonical raw merge at
+`/Volumes/x10pro/kelpseg/merged_all_regions_v1`: 339 CA and 30 BC pairs across
+12 region IDs. All 369 independent image copies passed checksum verification;
+all derived labels match their image grids and use KATE class `3` for image
+nodata or missing label coverage. Raster QA and the temporal-split join both
+passed for all 369 rows.
 
 ## Open queue
 
 Local dataset preparation:
 
-- Tasks 001–002: build and validate the all-region raw merge.
+- Tasks 001–002: complete; built and validated the all-region raw merge.
 - Tasks 003–004: extend the chipper and create canonical chips/statistics.
 - Tasks 005–007: analyze, select, and apply universal nodata filtering.
 - Task 008: build non-destructive training-only background selection.

@@ -12,8 +12,8 @@ The active project is expanded-region PlanetScope 8-band binary kelp
 segmentation. It will compare a temporally separated standard baseline with
 leave-one-region-out models and evaluate them on matching source TIFFs.
 
-Task 000 completed the temporal raster split. Task 001 is the next
-implementation task. `docs/todo.md` owns the current queue and status.
+Tasks 000–002 completed the temporal raster split and canonical raw merge. Task
+003 is next. `docs/todo.md` owns the current queue and status.
 
 ## Document roles
 
@@ -41,6 +41,8 @@ The current workflow primarily touches:
 
 ```text
 scripts/create_temporal_baseline_split.py
+scripts/merge_planet8b_regions.py
+scripts/validate_planet8b_raw_merge.py
 src/prepare/make_chip_dataset.py
 src/prepare/remove_bg_only_tiles.py
 src/prepare/remove_tiles_with_nodata_areas.py

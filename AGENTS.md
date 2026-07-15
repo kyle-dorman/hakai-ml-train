@@ -29,10 +29,11 @@ compaction or in a new window, reread this file, `docs/index.md`,
 
 ## Current Status
 
-Task 000 established the 369-TIFF temporal baseline assignment in
-`planet8b_temporal_image_splits.csv`. The next implementation task is Task 001,
-which builds the raw all-region merge organizer. The complete ordered queue is
-in `docs/todo.md`; detailed contracts are in `tasks/`.
+Tasks 000–002 established the 369-TIFF temporal baseline assignment and the
+validated copied raw merge at
+`/Volumes/x10pro/kelpseg/merged_all_regions_v1`. The next implementation task is
+Task 003, which extends the chipper and defines the chip manifest. The complete
+ordered queue is in `docs/todo.md`; detailed contracts are in `tasks/`.
 
 Do not start multiple numbered tasks in one window. Close the selected task,
 update its outcome and `docs/todo.md`, and stop.
