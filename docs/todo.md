@@ -14,8 +14,8 @@ No implementation task is active.
 Next task:
 
 ```text
-Task 004: Chip all regions locally.
-tasks/004_chip_all_regions_locally.md
+Task 005: Build the manifest-driven nodata filter.
+tasks/005_build_manifest_nodata_filter.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -25,13 +25,18 @@ all derived labels match their image grids and use KATE class `3` for image
 nodata or missing label coverage. Raster QA and the temporal-split join both
 passed for all 369 rows.
 
+Task 004 created the 45 GB unfiltered canonical chip collection at
+`/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1`: 6,003 chips and 369
+source fragments across all 12 regions. Manifest/filesystem validation, a
+74-chip stratified NPZ/raster audit, and a zero-work resume check passed.
+
 ## Open queue
 
 Local dataset preparation:
 
 - Tasks 001–002: complete; built and validated the all-region raw merge.
 - Task 003: complete; added the restartable manifested chipper and fixture.
-- Task 004: run the full canonical chipping job and write summary statistics.
+- Task 004: complete; built and validated the unfiltered canonical chips.
 - Tasks 005–007: analyze, select, and apply universal nodata filtering.
 - Task 008: build non-destructive training-only background selection.
 - Task 009: package and verify the portable dataset archive.

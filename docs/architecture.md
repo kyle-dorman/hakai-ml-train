@@ -28,8 +28,8 @@ the next stage without inferring identity from folder order.
 
 - `scripts/create_temporal_baseline_split.py`: deterministic baseline raster
   assignment.
-- `src/prepare/make_chip_dataset.py`: GeoTIFF alignment and NPZ chip creation;
-  Tasks 003–004 extend it with canonical chip statistics.
+- `src/prepare/make_chip_dataset.py`: restartable GeoTIFF-to-NPZ chip creation
+  with portable source-window identity and canonical chip statistics.
 - `src/prepare/remove_tiles_with_nodata_areas.py`: current overly aggressive
   nodata filter; Tasks 005–007 replace its policy with a manifest-driven
   percentage threshold.
@@ -80,12 +80,18 @@ The baseline joins chips to `planet8b_temporal_image_splits.csv` through source
 TIFF ID. LORO views use region ID. Hard links avoid duplicating canonical chip
 content.
 
-The canonical chip grid uses 1024-pixel square windows at 512-pixel stride,
-anchored at the source raster's top-left pixel. Training views retain all
-eligible overlapping chips. Validation views select the non-overlapping subset
-where both pixel offsets are multiples of 1024; edge strips outside that grid
-remain uncovered and validation coverage must be reported. This is a manifest
-selection from one canonical chip family, not a second evaluation artifact.
+The canonical chip grid uses 1024-pixel windows at 512-pixel stride, anchored
+at the source raster's top-left pixel. A source dimension below 1024 pixels is
+represented by one true-size window spanning that dimension; canonical NPZs
+are not padded, and their manifest width, height, and bounds describe only real
+source pixels. Dimensions at least 1024 pixels retain full windows only, so
+trailing edge strips outside the regular grid remain uncovered. Training views
+retain all eligible overlapping chips. Validation views select the
+non-overlapping subset where both pixel offsets are multiples of 1024;
+validation coverage must be reported. This is a manifest selection from one
+canonical chip family, not a second evaluation artifact. Any later transform
+that pads a small canonical chip must fill its mask with the `-100` ignore
+index, not class-0 background.
 
 The current planned LORO policy is:
 

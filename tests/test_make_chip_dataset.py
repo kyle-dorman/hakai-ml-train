@@ -9,6 +9,7 @@ import pytest
 import rasterio
 from rasterio.transform import from_origin
 
+from scripts.validate_chip_dataset import validate_chip_dataset
 from src.prepare.make_chip_dataset import run_manifested_split
 
 
@@ -99,7 +100,7 @@ def _run(
         chip_size=4,
         chip_stride=2,
         num_bands=8,
-        band_remapping=(0, 1, -100, -100),
+        band_remapping=(0, 1, 0, -100, 0),
         dtype=np.dtype("uint16"),
         resume=resume,
         num_workers=num_workers,
@@ -215,3 +216,83 @@ def test_failed_source_writes_issue_without_fragment(tmp_path: Path) -> None:
     assert json.loads(issue_path.read_text())["source_tiff_id"] == "fixture"
     assert not (output_root / "manifest_parts" / "all" / "fixture.csv").exists()
     assert not list((output_root / "all").glob("fixture__*.npz"))
+
+
+@pytest.mark.parametrize(
+    (
+        "height",
+        "width",
+        "expected_shapes",
+        "expected_offsets",
+        "expected_positive_counts",
+    ),
+    [
+        (3, 6, [(3, 4), (3, 4)], [(0, 0), (0, 2)], [1, 0]),
+        (3, 2, [(3, 2)], [(0, 0)], [1]),
+    ],
+)
+def test_sources_smaller_than_chip_use_true_size_windows(
+    tmp_path: Path,
+    height: int,
+    width: int,
+    expected_shapes: list[tuple[int, int]],
+    expected_offsets: list[tuple[int, int]],
+    expected_positive_counts: list[int],
+) -> None:
+    raw_root = tmp_path / "raw"
+    output_root = tmp_path / "chips"
+    source_manifest = raw_root / "raster_manifest.csv"
+    image = np.full((8, height, width), 10, dtype=np.uint16)
+    label = np.zeros((height, width), dtype=np.uint8)
+    label[0, 0] = 1
+    _write_raster(raw_root / "all" / "images" / "fixture.tif", image)
+    _write_raster(raw_root / "all" / "labels" / "fixture.tif", label)
+    _write_source_manifest(source_manifest)
+
+    manifest = _run(raw_root, output_root, source_manifest, resume=False)
+    with manifest.open(newline="") as file:
+        rows = list(csv.DictReader(file))
+
+    assert [
+        (int(row["chip_height"]), int(row["chip_width"])) for row in rows
+    ] == expected_shapes
+    assert [
+        (int(row["row_off"]), int(row["col_off"])) for row in rows
+    ] == expected_offsets
+    for row, shape, positive_count in zip(
+        rows, expected_shapes, expected_positive_counts, strict=True
+    ):
+        assert row["chip_id"].endswith(f"_h{shape[0]}_w{shape[1]}")
+        with np.load(output_root / row["chip_path"]) as chip:
+            assert chip["image"].shape == (*shape, 8)
+            assert chip["label"].shape == shape
+        assert int(row["total_pixel_count"]) == shape[0] * shape[1]
+        assert int(row["class_1_pixel_count"]) == positive_count
+        assert float(row["maxy"]) - float(row["miny"]) == 10 * shape[0]
+        assert float(row["maxx"]) - float(row["minx"]) == 10 * shape[1]
+
+    original_manifest = manifest.read_bytes()
+    _run(raw_root, output_root, source_manifest, resume=True)
+    assert manifest.read_bytes() == original_manifest
+
+
+def test_validation_writes_required_summaries(tmp_path: Path) -> None:
+    raw_root, output_root, source_manifest = _fixture(tmp_path)
+    _run(raw_root, output_root, source_manifest, resume=False)
+
+    summary = validate_chip_dataset(
+        chip_root=output_root,
+        raw_root=raw_root,
+        source_manifest=source_manifest,
+        chip_size=4,
+        chip_stride=2,
+    )
+
+    assert summary["inventory"]["manifest_row_count"] == 4
+    assert summary["inventory"]["source_count"] == 1
+    assert summary["validation"]["manifest_npz_bijection"] is True
+    assert (output_root / "chip_qa_summary.json").is_file()
+    with (output_root / "chip_counts_by_source.csv").open(newline="") as file:
+        rows = list(csv.DictReader(file))
+    assert len(rows) == 1
+    assert rows[0]["chip_count"] == "4"

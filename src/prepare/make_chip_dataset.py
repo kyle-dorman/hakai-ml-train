@@ -224,15 +224,21 @@ def manifest_columns(band_remapping: tuple[int, ...]) -> list[str]:
 def iter_windows(
     width: int, height: int, chip_size: int, chip_stride: int
 ) -> list[Window]:
-    """Return full top-left-anchored windows; partial edge windows are excluded."""
+    """Return top-left windows, spanning dimensions smaller than one chip."""
     if chip_size <= 0 or chip_stride <= 0:
         raise ValueError("Chip size and stride must both be positive")
-    if width < chip_size or height < chip_size:
-        return []
+    window_width = min(width, chip_size)
+    window_height = min(height, chip_size)
+    col_offsets = (
+        [0] if width < chip_size else range(0, width - chip_size + 1, chip_stride)
+    )
+    row_offsets = (
+        [0] if height < chip_size else range(0, height - chip_size + 1, chip_stride)
+    )
     return [
-        Window(col_off, row_off, chip_size, chip_size)
-        for row_off in range(0, height - chip_size + 1, chip_stride)
-        for col_off in range(0, width - chip_size + 1, chip_stride)
+        Window(col_off, row_off, window_width, window_height)
+        for row_off in row_offsets
+        for col_off in col_offsets
     ]
 
 
@@ -357,12 +363,10 @@ def _chip_source(
                 f"{source_id} has {image_ds.count} bands, fewer than requested {num_bands}"
             )
         windows = iter_windows(image_ds.width, image_ds.height, chip_size, chip_stride)
-        if not windows:
-            raise RuntimeError(f"No full chip windows fit source {source_id}")
-
         for chip_index, window in enumerate(windows):
             row_off, col_off = int(window.row_off), int(window.col_off)
-            chip_id = f"{source_id}__r{row_off}_c{col_off}_h{chip_size}_w{chip_size}"
+            chip_width, chip_height = int(window.width), int(window.height)
+            chip_id = f"{source_id}__r{row_off}_c{col_off}_h{chip_height}_w{chip_width}"
             chip_name = f"{chip_id}.npz"
             image = image_ds.read(indexes=range(1, num_bands + 1), window=window)
             raw_label = label_ds.read(1, window=window)
@@ -391,8 +395,8 @@ def _chip_source(
                 "chip_index": chip_index,
                 "row_off": row_off,
                 "col_off": col_off,
-                "chip_width": chip_size,
-                "chip_height": chip_size,
+                "chip_width": chip_width,
+                "chip_height": chip_height,
                 "minx": minx,
                 "miny": miny,
                 "maxx": maxx,

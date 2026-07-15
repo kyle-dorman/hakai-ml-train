@@ -20,9 +20,11 @@ The temporal source-raster split is complete:
   region.
 
 The copied all-region raw merge is complete and raster-validated at
-`/Volumes/x10pro/kelpseg/merged_all_regions_v1`. The restartable chipper and
-portable chip-manifest contract are complete; Task 004 next performs the full
-canonical chip run. See `docs/todo.md` and `tasks/README.md`.
+`/Volumes/x10pro/kelpseg/merged_all_regions_v1`. The unfiltered canonical chip
+collection is complete at
+`/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1`: 6,003 chips from all
+369 source TIFFs with a portable statistics manifest. Task 005 next builds the
+manifest-driven nodata filter. See `docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 

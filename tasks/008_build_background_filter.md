@@ -29,10 +29,19 @@ training-eligible chips from per-class manifest counts.
 
 ## Background definition
 
-A chip is background-only when every positive retained class count is zero.
-Ignore pixels do not make a chip positive. An ignore-only chip is not useful
-training background and must be separately classified as `ignore_only`, not
-silently treated as ordinary background.
+Classify chips from the manifest's explicit pixel counts rather than reopening
+NPZ files or treating every non-positive value as one undifferentiated bucket:
+
+- `positive`: `class_1_pixel_count > 0`;
+- `clean_background_only`: `class_1_pixel_count == 0`,
+  `class_0_pixel_count > 0`, and `nodata_pixel_count == 0`;
+- `mixed_background_nodata`: `class_1_pixel_count == 0`,
+  `class_0_pixel_count > 0`, and `nodata_pixel_count > 0`;
+- `ignore_only`: both retained class counts are zero.
+
+Water, land, and waves are valid class-0 background under Task 004's approved
+remap. Nodata remains separately visible through `nodata_pixel_count` and the
+`-100` ignore count. Ignore pixels do not make a chip positive.
 
 ## Planned CLI
 
@@ -52,7 +61,8 @@ leave a deprecation/error path in the old entry point.
 Selection output columns:
 
 ```text
-chip_id,source_tiff_id,region_id,class_presence,selected_for_training,
+chip_id,source_tiff_id,region_id,class_0_pixel_count,class_1_pixel_count,
+ignore_pixel_count,nodata_pixel_count,class_presence,selected_for_training,
 selection_reason,policy,retain_fraction,seed
 ```
 
@@ -62,14 +72,15 @@ background. The exact grouping must be recorded in the task plan.
 
 ## User decisions required
 
-Before finalizing behavior, choose the production training policy:
+Decision (2026-07-15): use `exclude_all` for production training views. Exclude
+all `clean_background_only`, `mixed_background_nodata`, and `ignore_only`
+chips; retain positive chips that passed the universal nodata filter. Before
+materializing that selection, report chip and pixel counts for every class
+presence category globally, by region, and by source TIFF so the effect is
+auditable. Canonical, validation, and test collections remain unchanged.
 
-1. `exclude_all`: remove every background-only chip from training views; or
-2. `retain_fraction`: retain a deterministic fraction for negative examples.
-
-Recommendation: first report counts by region/source and then ask. Do not assume
-that the old destructive script's `exclude_all` behavior remains scientifically
-appropriate. Record any fraction and seed if selected.
+The implementation may retain a tested `retain_fraction` mode for future
+experiments, but it is not the selected production policy.
 
 ## Plan / spec requirement
 
@@ -92,13 +103,15 @@ uv run pytest tests/test_remove_bg_only_tiles.py
 git diff --check
 ```
 
-Run report-only selection on the real active manifest and summarize candidate
-impact by region before obtaining the user decision.
+Run report-only selection on the real active manifest and summarize the
+approved `exclude_all` policy's impact globally, by region, and by source TIFF
+before materializing any training view.
 
 ## Acceptance criteria
 
 - Canonical files and manifest are never deleted or rewritten by this selector.
-- Production background policy is user-approved and recorded.
+- The approved `exclude_all` policy is reported from explicit foreground,
+  background, ignore, and nodata counts before training-view materialization.
 - Training-selection output is deterministic and joins one-to-one to chips.
 - Validation/test materializers can bypass the selector.
 - Ignore-only behavior is explicit and tested.

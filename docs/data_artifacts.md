@@ -41,9 +41,24 @@ label class `3` means nodata wherever all eight image bands are zero or source
 label coverage is absent; later chipping/remapping converts that class to the
 training ignore index. `raster_manifest.csv`, `copy_verification.csv`,
 `label_alignment.csv`, `raster_metadata.csv`, and the raster QA artifacts own
-its provenance. Task 004 will record the canonical chip path. Task 009 will
-record the portable archive and checksum. Task 010 will record the remote
-extracted path.
+its provenance.
+
+The Task 004 unfiltered canonical chip collection is:
+
+```text
+/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1
+```
+
+It contains 6,003 NPZ chips from all 369 source TIFFs. The regular grid is
+1,024 pixels at 512-pixel stride; 52 chips use true source dimensions where an
+entire source dimension is below 1,024 pixels. Images are eight-band `uint16`;
+labels remap KATE classes with `0 1 0 -100 0`. `chip_manifest.csv` has SHA-256
+`7fd2316ae07c4c5277ff33a62ae4c1ee60ced14a528e6a153a6489a7e457d9c8`.
+`chip_counts_by_source.csv`, `chip_qa_summary.json`,
+`creation_command.txt`, and `chipping.log` own its counts, validation,
+parameters, and execution provenance. This collection is unfiltered: no
+nodata or background chips have been removed. Task 009 will record the
+portable archive and checksum. Task 010 will record the remote extracted path.
 
 ## Git policy
 
