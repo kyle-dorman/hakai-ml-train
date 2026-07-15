@@ -30,9 +30,10 @@ the next stage without inferring identity from folder order.
   assignment.
 - `src/prepare/make_chip_dataset.py`: restartable GeoTIFF-to-NPZ chip creation
   with portable source-window identity and canonical chip statistics.
-- `src/prepare/remove_tiles_with_nodata_areas.py`: current overly aggressive
-  nodata filter; Tasks 005–007 replace its policy with a manifest-driven
-  percentage threshold.
+- `src/prepare/remove_tiles_with_nodata_areas.py`: manifest-driven nodata
+  selection with a required percentage threshold, report-only dry runs, and a
+  quarantined transactional apply path that preserves filter history. Task 006
+  selects the threshold; Task 007 applies it.
 - `src/prepare/remove_bg_only_tiles.py`: current destructive filter; Task 008
   turns background removal into a training-view selection.
 - `src/data.py`: NPZ-backed Lightning data module.

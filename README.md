@@ -23,8 +23,10 @@ The copied all-region raw merge is complete and raster-validated at
 `/Volumes/x10pro/kelpseg/merged_all_regions_v1`. The unfiltered canonical chip
 collection is complete at
 `/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1`: 6,003 chips from all
-369 source TIFFs with a portable statistics manifest. Task 005 next builds the
-manifest-driven nodata filter. See `docs/todo.md` and `tasks/README.md`.
+369 source TIFFs with a portable statistics manifest. The transactional,
+manifest-driven nodata filter is complete. Task 006 next analyzes candidate
+thresholds without mutating the collection. See `docs/todo.md` and
+`tasks/README.md`.
 
 ## Documentation
 

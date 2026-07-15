@@ -14,8 +14,8 @@ No implementation task is active.
 Next task:
 
 ```text
-Task 005: Build the manifest-driven nodata filter.
-tasks/005_build_manifest_nodata_filter.md
+Task 006: Choose the universal nodata threshold.
+tasks/006_choose_nodata_threshold.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -30,6 +30,11 @@ Task 004 created the 45 GB unfiltered canonical chip collection at
 source fragments across all 12 regions. Manifest/filesystem validation, a
 74-chip stratified NPZ/raster audit, and a zero-work resume check passed.
 
+Task 005 replaced the any-nodata deletion script with a required-threshold,
+manifest-driven dry-run/apply CLI. Fixture rollback/recovery tests and real
+report-only runs at 0% and 50% passed; the canonical manifest and all 6,003
+chips remain unchanged.
+
 ## Open queue
 
 Local dataset preparation:
@@ -37,7 +42,8 @@ Local dataset preparation:
 - Tasks 001–002: complete; built and validated the all-region raw merge.
 - Task 003: complete; added the restartable manifested chipper and fixture.
 - Task 004: complete; built and validated the unfiltered canonical chips.
-- Tasks 005–007: analyze, select, and apply universal nodata filtering.
+- Task 005: complete; added the transactional manifest-driven nodata filter.
+- Tasks 006–007: analyze, select, and apply the universal threshold.
 - Task 008: build non-destructive training-only background selection.
 - Task 009: package and verify the portable dataset archive.
 

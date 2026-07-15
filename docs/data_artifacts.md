@@ -60,6 +60,13 @@ parameters, and execution provenance. This collection is unfiltered: no
 nodata or background chips have been removed. Task 009 will record the
 portable archive and checksum. Task 010 will record the remote extracted path.
 
+Nodata dry-run reports belong under an explicit analysis or `filter_reports`
+directory and never change the active collection. An applied threshold writes
+`filter_history/nodata_<threshold>/pre_filter_manifest.csv`,
+`removal_manifest.csv`, and `filter_metadata.json`; the metadata is the
+completion marker for the quarantined transaction. The active manifest is
+replaced atomically only in explicit apply mode.
+
 ## Git policy
 
 Tracked:
