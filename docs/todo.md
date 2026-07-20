@@ -2,8 +2,8 @@
 
 ## Current phase
 
-Status: the cleaned canonical chip collection is ready; training-only
-background selection is next.
+Status: the cleaned canonical chip collection and its training-only background
+selection are ready for packaging.
 
 Current active task:
 
@@ -14,8 +14,8 @@ No implementation task is active.
 Next task:
 
 ```text
-Task 008: Build non-destructive training-only background selection.
-tasks/008_build_background_filter.md
+Task 009: Package and verify the portable dataset archive.
+tasks/009_package_dataset_archive.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -46,6 +46,13 @@ now contains 4,637 chips from 367 source TIFFs across all 12 regions, with
 manifest, 1,366-row removal manifest, completion metadata, apply log, and
 global/region/source summary are preserved under `filter_history/nodata_50`.
 
+Task 008 replaced destructive background deletion with a manifest-only
+training selector. The production `exclude_all` selection joins all 4,637
+active chips one-to-one, selects 3,210 positive chips, and explicitly excludes
+1,427 non-positive chips. Its global, region, and source-TIFF audit summary and
+selection manifest are under `background_selection/exclude_all`; canonical
+chips and the active manifest are unchanged.
+
 ## Open queue
 
 Local dataset preparation:
@@ -56,7 +63,7 @@ Local dataset preparation:
 - Task 005: complete; added the transactional manifest-driven nodata filter.
 - Task 006: complete; selected the universal 50% nodata threshold.
 - Task 007: complete; applied the approved threshold transactionally.
-- Task 008: build non-destructive training-only background selection.
+- Task 008: complete; built and applied the non-destructive training selector.
 - Task 009: package and verify the portable dataset archive.
 
 Remote experiment preparation and execution:

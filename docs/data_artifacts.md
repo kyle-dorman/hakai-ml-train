@@ -62,8 +62,20 @@ Task 007 applied `max_nodata_pct = 50`, retaining 4,637 NPZ chips and
 The active collection contains 47 true-size partial chips and preserves all
 521 clean background-only chips. Active `chip_manifest.csv` has SHA-256
 `edf754888dea183f12873594b546b980f350b5b4e293ff62ca7eca64a2c39a39`.
-Task 009 will record the portable archive and checksum. Task 010 will record the
-remote extracted path.
+
+Task 008's non-destructive production selection is under
+`background_selection/exclude_all`. `training_selection.csv` joins one-to-one
+to all 4,637 active chips, retains the 3,210 positive chips for training, and
+explicitly excludes 521 clean background-only, 892 mixed background/nodata,
+and 14 ignore-only chips. `selection_summary.csv` reports all four categories
+globally, for every region, and for every source TIFF, including zero-count
+categories. Their SHA-256 hashes are
+`6a62fd9031f8d238e2a9fd9448519f765da9b958ea5022df35796de7a3da9a1b` and
+`21a3ecae1a5ec4f462b947b289dfc129f5749a0f36d1edff9740f7190a7c72d7`,
+respectively. These small artifacts belong in the portable archive; the
+selector does not change canonical NPZs or `chip_manifest.csv`. Task 009 will
+record the portable archive and checksum. Task 010 will record the remote
+extracted path.
 
 Nodata dry-run reports belong under an explicit analysis or `filter_reports`
 directory and never change the active collection. An applied threshold writes

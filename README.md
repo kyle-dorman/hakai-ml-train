@@ -25,8 +25,10 @@ at `/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1` was built with 6,003
 chips from all 369 source TIFFs, then transactionally filtered at the approved
 50% nodata threshold. Its active manifest now contains 4,637 chips from 367
 source TIFFs across all 12 regions; the unfiltered manifest and complete
-removal evidence are preserved under `filter_history/nodata_50`. Task 008 is
-next. See `docs/todo.md` and `tasks/README.md`.
+removal evidence are preserved under `filter_history/nodata_50`. The
+non-destructive training selector retains all 3,210 positive chips and marks
+1,427 non-positive chips as excluded from training only. Task 009 is next. See
+`docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 

@@ -14,6 +14,7 @@ California images/labels + BC 10-km tile images/labels
   -> overlapping NPZ chips under `all/`
   -> chip manifest with dimensions, class counts, and nodata counts
   -> universal nodata filtering
+  -> training-only background selection manifest
   -> portable canonical archive
   -> hard-linked baseline and LORO dataset views
   -> Lightning training and W&B run records
@@ -34,8 +35,10 @@ the next stage without inferring identity from folder order.
   selection with a required percentage threshold, report-only dry runs, and a
   quarantined transactional apply path that preserves filter history. Task 006
   selected the universal 50% threshold, and Task 007 applied it.
-- `src/prepare/remove_bg_only_tiles.py`: current destructive filter; Task 008
-  turns background removal into a training-view selection.
+- `src/prepare/remove_bg_only_tiles.py`: manifest-only background classifier and
+  deterministic training selector. It writes one selection row per canonical
+  chip plus global, region, and source-TIFF audit summaries; it never opens or
+  deletes NPZ files.
 - `src/data.py`: NPZ-backed Lightning data module.
 - `src/models/smp.py`: binary segmentation Lightning module.
 - `trainer.py`: Lightning CLI entry point.
@@ -70,7 +73,9 @@ Portable raster metadata owns source grid shape, CRS, affine transform, and
 bounds after raw TIFFs are left out of the remote archive.
 The chip manifest owns chip path, source TIFF, region, date, source-window
 offsets/bounds, width, height, class pixel counts, ignore count, nodata count,
-and nodata percentage. Fold manifests own experiment split and selection reason.
+and nodata percentage. The training-selection manifest owns derived class
+presence, the explicit background policy, and training eligibility. Fold
+manifests own experiment split and the reason each chip was selected.
 
 Manifest writes should be deterministic and atomic. Filtering must preserve a
 separate removal or exclusion report rather than erasing provenance.
@@ -79,7 +84,10 @@ separate removal or exclusion report rather than erasing provenance.
 
 The baseline joins chips to `planet8b_temporal_image_splits.csv` through source
 TIFF ID. LORO views use region ID. Hard links avoid duplicating canonical chip
-content.
+content. Both materializers join the Task 008 selection one-to-one by `chip_id`
+and require `selected_for_training = true` only for training rows. Baseline
+validation/test rows and LORO validation/test rows bypass that selector and
+remain representative of the canonical post-nodata collection.
 
 The canonical chip grid uses 1024-pixel windows at 512-pixel stride, anchored
 at the source raster's top-left pixel. A source dimension below 1024 pixels is
