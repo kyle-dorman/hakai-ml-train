@@ -14,7 +14,7 @@ from validate_planet8b_raw_merge import ValidationError, validate_merge
 
 
 def _write_raster(
-    path: Path, data: np.ndarray, transform=None, nodata: int | None = None
+    path: Path, data: np.ndarray, transform=None, nodata: int | None = 0
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with rasterio.open(

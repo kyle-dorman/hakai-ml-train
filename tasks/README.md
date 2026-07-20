@@ -49,7 +49,7 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [007](007_apply_nodata_filter.md) | Local | Complete | 006 | Cleaned canonical chip collection |
 | [008](008_build_background_filter.md) | Local | Complete | 004, 007 | Non-destructive training-only selector |
 | [009](009_package_dataset_archive.md) | Local | Complete | 007, 008 | Portable verified archive |
-| [009A](009a_repair_metadata_nodata_and_repackage.md) | Local | Pending | 002–009 | Metadata-aware nodata repair and v2 archive |
+| [009A](009a_repair_metadata_nodata_and_repackage.md) | Local | Complete | 002–009 | Metadata-aware nodata repair and v2 archive |
 | [010](010_transfer_and_verify_remote.md) | Remote | Pending | 009A | Verified remote dataset copy |
 | [011](011_materialize_baseline_dataset.md) | Remote | Pending | 010 | Baseline train/val/test views |
 | [012](012_materialize_loro_datasets.md) | Remote | Pending | 010 | One dataset view per held-out region |

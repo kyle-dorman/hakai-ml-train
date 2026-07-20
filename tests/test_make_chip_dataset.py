@@ -18,6 +18,7 @@ def _write_raster(
     array: np.ndarray,
     *,
     transform=None,
+    nodata=0,
 ) -> None:
     if array.ndim == 2:
         array = array[np.newaxis, ...]
@@ -33,6 +34,7 @@ def _write_raster(
         dtype=array.dtype,
         crs="EPSG:32610",
         transform=transform,
+        nodata=nodata,
     ) as dataset:
         dataset.write(array)
 

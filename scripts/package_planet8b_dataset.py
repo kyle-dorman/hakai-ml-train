@@ -93,6 +93,9 @@ class PackageResult:
     inventory_sha256: str
     npz_bytes: int
     npz_count: int
+    reused_hash_count: int
+    freshly_hashed_count: int
+    rejected_reuse_count: int
     staging_root: Path
 
 
@@ -231,8 +234,11 @@ def _class_presence(row: dict[str, str]) -> str:
 def _portable_filter_metadata(source: dict[str, Any]) -> dict[str, Any]:
     keep_keys = {
         "completed_at_utc",
+        "counts",
         "git_commit",
         "mutation_strategy",
+        "npz_membership_removal_count",
+        "npz_mutation_count",
         "nodata_definition",
         "post_manifest_sha256",
         "pre_count_by_dataset",
@@ -267,16 +273,29 @@ def _validate_source_inputs(
     raster_root: Path,
     temporal_split: Path,
 ) -> dict[str, Any]:
+    repair_root = chip_root / "repair_history/metadata_nodata_v2"
+    repaired = (repair_root / "repair_metadata.json").is_file()
     input_paths = {
         "chip_manifest": chip_root / "chip_manifest.csv",
         "training_selection": chip_root
         / "background_selection/exclude_all/training_selection.csv",
         "selection_summary": chip_root
         / "background_selection/exclude_all/selection_summary.csv",
-        "removal_manifest": chip_root / "filter_history/nodata_50/removal_manifest.csv",
-        "filter_metadata": chip_root / "filter_history/nodata_50/filter_metadata.json",
-        "post_filter_summary": chip_root
-        / "filter_history/nodata_50/post_filter_summary.csv",
+        "removal_manifest": (
+            repair_root / "combined_removal_manifest.csv"
+            if repaired
+            else chip_root / "filter_history/nodata_50/removal_manifest.csv"
+        ),
+        "filter_metadata": (
+            repair_root / "repair_metadata.json"
+            if repaired
+            else chip_root / "filter_history/nodata_50/filter_metadata.json"
+        ),
+        "post_filter_summary": (
+            repair_root / "post_filter_summary.csv"
+            if repaired
+            else chip_root / "filter_history/nodata_50/post_filter_summary.csv"
+        ),
         "task004_chip_qa": chip_root / "chip_qa_summary.json",
         "raster_manifest": raster_root / "raster_manifest.csv",
         "raster_metadata": raster_root / "raster_metadata.csv",
@@ -403,12 +422,17 @@ def _validate_source_inputs(
 
     with input_paths["filter_metadata"].open() as file:
         filter_metadata = json.load(file)
+    retained_count = filter_metadata.get("retained_count")
+    if retained_count is None:
+        retained_count = filter_metadata.get("counts", {}).get("final_active_count")
     if (
         filter_metadata.get("status") != "complete"
         or str(filter_metadata.get("threshold_pct")) != "50"
-        or int(filter_metadata.get("retained_count", -1)) != len(chips)
+        or int(retained_count if retained_count is not None else -1) != len(chips)
     ):
-        raise RuntimeError("Task 007 completion metadata does not match active chips")
+        raise RuntimeError(
+            "Nodata-filter completion metadata does not match active chips"
+        )
 
     with input_paths["task004_chip_qa"].open() as file:
         task004_chip_qa = json.load(file)
@@ -436,6 +460,17 @@ def _validate_source_inputs(
         "by_region": dict(sorted(by_region.items())),
         "source_count": len(source_ids),
         "partial_count": partial_count,
+        "repaired": repaired,
+        "repair_root": repair_root,
+        "rewritten_chip_paths": (
+            {
+                f"chips/{row['chip_path']}"
+                for row in _read_csv(repair_root / "rewritten_npz_inventory.csv")[1]
+                if row["retained_after_filter"].lower() == "true"
+            }
+            if repaired
+            else set()
+        ),
     }
 
 
@@ -467,9 +502,42 @@ def _validate_staged_paths(staging_root: Path) -> None:
             raise RuntimeError(f"Absolute path in portable runtime file: {path}")
 
 
-def _write_inventory(staging_root: Path) -> tuple[int, str]:
+def _load_prior_inventory(
+    archive: Path, checksum_file: Path
+) -> tuple[dict[str, dict[str, str]], dict[str, str]]:
+    expected = _expected_checksum(checksum_file, archive)
+    actual = sha256_file(archive)
+    if actual != expected:
+        raise RuntimeError("Prior archive does not match its checksum sidecar")
+    with zipfile.ZipFile(archive) as source:
+        candidates = [
+            name
+            for name in source.namelist()
+            if name.endswith("/metadata/archive_inventory.csv")
+        ]
+        if len(candidates) != 1:
+            raise RuntimeError("Prior archive must contain one inventory")
+        content = source.read(candidates[0])
+    reader = csv.DictReader(content.decode().splitlines())
+    rows = list(reader)
+    by_path = _unique_by(rows, "relative_path", label="prior archive inventory")
+    return by_path, {
+        "trusted_prior_archive_sha256": actual,
+        "trusted_prior_inventory_sha256": hashlib.sha256(content).hexdigest(),
+    }
+
+
+def _write_inventory(
+    staging_root: Path,
+    *,
+    prior_inventory: dict[str, dict[str, str]] | None = None,
+    force_fresh_paths: set[str] | None = None,
+) -> tuple[int, str, int, int, int]:
     inventory = staging_root / INVENTORY_PATH
     rows: list[dict[str, Any]] = []
+    reused = 0
+    freshly_hashed = 0
+    rejected = 0
     for index, path in enumerate(sorted(staging_root.rglob("*"))):
         if not path.is_file() or path == inventory:
             continue
@@ -480,12 +548,31 @@ def _write_inventory(staging_root: Path) -> tuple[int, str]:
             kind = "manifest"
         else:
             kind = "metadata"
+        prior = None if prior_inventory is None else prior_inventory.get(relative)
+        can_reuse = (
+            kind == "chip"
+            and prior is not None
+            and prior.get("kind") == "chip"
+            and int(prior["byte_size"]) == path.stat().st_size
+            and relative not in (force_fresh_paths or set())
+        )
+        if can_reuse:
+            digest = prior["sha256"]
+            hash_source = "prior_inventory_reuse"
+            reused += 1
+        else:
+            digest = sha256_file(path)
+            hash_source = "fresh_sha256"
+            freshly_hashed += 1
+            if kind == "chip" and prior_inventory is not None:
+                rejected += 1
         rows.append(
             {
                 "relative_path": relative,
                 "byte_size": path.stat().st_size,
-                "sha256": sha256_file(path),
+                "sha256": digest,
                 "kind": kind,
+                "hash_source": hash_source,
             }
         )
         if index and index % 500 == 0:
@@ -493,9 +580,9 @@ def _write_inventory(staging_root: Path) -> tuple[int, str]:
     _write_csv(
         inventory,
         rows,
-        ["relative_path", "byte_size", "sha256", "kind"],
+        ["relative_path", "byte_size", "sha256", "kind", "hash_source"],
     )
-    return len(rows), sha256_file(inventory)
+    return len(rows), sha256_file(inventory), reused, freshly_hashed, rejected
 
 
 def _write_archive(staging_root: Path, archive: Path) -> None:
@@ -530,6 +617,8 @@ def package_dataset_archive(
     producer_git_commit: str,
     producer_worktree_dirty: bool = False,
     staging_root: Path | None = None,
+    prior_archive: Path | None = None,
+    prior_checksum_file: Path | None = None,
 ) -> PackageResult:
     """Validate canonical inputs, stage them portably, and create one ZIP."""
     chip_root = chip_root.resolve()
@@ -550,6 +639,15 @@ def package_dataset_archive(
         raise RuntimeError("Staging dataset root name must match the archive stem")
     if staging_root.exists():
         raise RuntimeError(f"Refusing to overwrite staging root: {staging_root}")
+    if (prior_archive is None) != (prior_checksum_file is None):
+        raise RuntimeError("Prior archive and checksum must be supplied together")
+    prior_inventory = None
+    prior_trust: dict[str, str] = {}
+    if prior_archive is not None and prior_checksum_file is not None:
+        print("Validating trusted prior archive and inventory", flush=True)
+        prior_inventory, prior_trust = _load_prior_inventory(
+            prior_archive.resolve(), prior_checksum_file.resolve()
+        )
 
     print("Validating canonical inputs", flush=True)
     validated = _validate_source_inputs(
@@ -645,6 +743,18 @@ def package_dataset_archive(
         validated["input_paths"]["selection_summary"],
         staging_root / "manifests/background_selection_summary.csv",
     )
+    if validated["repaired"]:
+        for source_name, destination in (
+            ("repaired_rows.csv", "manifests/nodata_repaired_rows.csv"),
+            ("added_removals.csv", "manifests/nodata_added_removals.csv"),
+            ("source_nodata_inventory.csv", "manifests/source_nodata_inventory.csv"),
+            ("affected_source_audit.csv", "manifests/affected_source_nodata_audit.csv"),
+            ("active_chip_qa_summary.json", "metadata/active_chip_qa_summary.json"),
+        ):
+            _copy_regular(
+                validated["repair_root"] / source_name,
+                staging_root / destination,
+            )
 
     selected_count = sum(
         row["selected_for_training"].lower() == "true"
@@ -728,6 +838,13 @@ def package_dataset_archive(
             "metadata_source_tiff_count": len(validated["metadata"]),
             "raw_tiffs_included": False,
         },
+        "hash_reuse": {
+            **prior_trust,
+            "criteria": (
+                "reuse only chip SHA-256 when relative path and byte size match "
+                "the trusted prior inventory; all non-chip files are freshly hashed"
+            ),
+        },
     }
     _write_json(staging_root / "metadata/dataset_parameters.json", dataset_parameters)
     readme = f"""# {archive.stem}
@@ -750,9 +867,55 @@ CSV is optional historical context and is never a runtime dependency.
 """
     _write_text(staging_root / "metadata/README.md", readme)
 
-    print("Hashing every staged member for the portable inventory", flush=True)
+    current_files = [
+        path
+        for path in staging_root.rglob("*")
+        if path.is_file() and path != staging_root / INVENTORY_PATH
+    ]
+    reusable_count = 0
+    if prior_inventory is not None:
+        for path in current_files:
+            relative = path.relative_to(staging_root).as_posix()
+            prior = prior_inventory.get(relative)
+            if (
+                relative.startswith("chips/all/")
+                and prior is not None
+                and prior.get("kind") == "chip"
+                and int(prior["byte_size"]) == path.stat().st_size
+                and relative not in validated["rewritten_chip_paths"]
+            ):
+                reusable_count += 1
+    chip_count = len(validated["chips"])
+    hash_reuse_provenance = {
+        **prior_trust,
+        "criteria": (
+            "reuse only chip SHA-256 when relative path and byte size match the "
+            "trusted prior inventory and the chip is absent from the repair's "
+            "rewritten NPZ inventory"
+        ),
+        "reused_hash_count": reusable_count,
+        "rejected_reuse_count": chip_count - reusable_count,
+        "freshly_hashed_count": len(current_files) + 1 - reusable_count,
+        "prior_inventory_supplied": prior_inventory is not None,
+    }
+    _write_json(
+        staging_root / "metadata/hash_reuse_provenance.json",
+        hash_reuse_provenance,
+    )
+
+    print("Building portable inventory with auditable chip-hash reuse", flush=True)
     _validate_staged_paths(staging_root)
-    inventory_count, inventory_sha256 = _write_inventory(staging_root)
+    (
+        inventory_count,
+        inventory_sha256,
+        reused_hash_count,
+        freshly_hashed_count,
+        rejected_reuse_count,
+    ) = _write_inventory(
+        staging_root,
+        prior_inventory=prior_inventory,
+        force_fresh_paths=validated["rewritten_chip_paths"],
+    )
     _validate_staged_paths(staging_root)
 
     print("Writing ZIP64 archive", flush=True)
@@ -771,6 +934,9 @@ CSV is optional historical context and is never a runtime dependency.
         inventory_sha256=inventory_sha256,
         npz_bytes=validated["npz_bytes"],
         npz_count=len(validated["chips"]),
+        reused_hash_count=reused_hash_count,
+        freshly_hashed_count=freshly_hashed_count,
+        rejected_reuse_count=rejected_reuse_count,
         staging_root=staging_root,
     )
 
@@ -843,7 +1009,10 @@ def _validate_npz_sample(
             raise RuntimeError(f"NPZ class-1 mismatch: {path}")
         if int(np.count_nonzero(label == -100)) != int(row["ignore_pixel_count"]):
             raise RuntimeError(f"NPZ ignore mismatch: {path}")
-        nodata = int(np.count_nonzero(np.all(image == 0, axis=-1)))
+        nodata_value = np.asarray(
+            row.get("source_nodata_value", "0"), dtype=image.dtype
+        ).item()
+        nodata = int(np.count_nonzero(np.all(image == nodata_value, axis=-1)))
         if nodata != int(row["nodata_pixel_count"]):
             raise RuntimeError(f"NPZ nodata mismatch: {path}")
     return sample_size
@@ -872,15 +1041,31 @@ def _validate_extracted_dataset(
         missing = sorted(set(inventory_by_path) - extracted_files)[:3]
         extra = sorted(extracted_files - set(inventory_by_path))[:3]
         raise RuntimeError(f"Inventory mismatch; missing={missing}, extra={extra}")
+    reused_inventory_rows: list[dict[str, str]] = []
     for index, (relative, row) in enumerate(sorted(inventory_by_path.items()), start=1):
         path = dataset_root / Path(*PurePosixPath(relative).parts)
         if path.stat().st_size != int(row["byte_size"]):
             raise RuntimeError(f"Inventory byte-size mismatch: {relative}")
-        if sha256_file(path) != row["sha256"]:
+        reused = row.get("hash_source") == "prior_inventory_reuse"
+        if reused:
+            if row.get("kind") != "chip":
+                raise RuntimeError(f"Only chip hashes may be reused: {relative}")
+            reused_inventory_rows.append(row)
+        elif sha256_file(path) != row["sha256"]:
             raise RuntimeError(f"Inventory SHA-256 mismatch: {relative}")
         if index % 500 == 0:
             print(
                 f"Verified {index:,}/{len(inventory):,} inventory members", flush=True
+            )
+    hash_sample = random.Random(9).sample(
+        reused_inventory_rows,
+        min(sample_count, len(reused_inventory_rows)),
+    )
+    for row in hash_sample:
+        path = dataset_root / Path(*PurePosixPath(row["relative_path"]).parts)
+        if sha256_file(path) != row["sha256"]:
+            raise RuntimeError(
+                f"Sampled reused NPZ SHA-256 mismatch: {row['relative_path']}"
             )
 
     chip_manifest = dataset_root / "manifests/chip_manifest.csv"
@@ -1053,6 +1238,8 @@ def _parser() -> argparse.ArgumentParser:
     package.add_argument("--producer-git-commit", required=True)
     package.add_argument("--producer-worktree-dirty", action="store_true")
     package.add_argument("--staging-root", type=Path)
+    package.add_argument("--prior-archive", type=Path)
+    package.add_argument("--prior-checksum-file", type=Path)
 
     verify = subparsers.add_parser("verify", help="Verify and extract the ZIP")
     verify.add_argument("--archive", type=Path, required=True)
@@ -1078,6 +1265,8 @@ def main(argv: list[str] | None = None) -> int:
                 producer_git_commit=args.producer_git_commit,
                 producer_worktree_dirty=args.producer_worktree_dirty,
                 staging_root=args.staging_root,
+                prior_archive=args.prior_archive,
+                prior_checksum_file=args.prior_checksum_file,
             )
         else:
             result = verify_dataset_archive(

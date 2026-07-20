@@ -23,18 +23,17 @@ The copied all-region raw merge is complete and raster-validated at
 `/Volumes/x10pro/kelpseg/merged_all_regions_v1`. The canonical chip collection
 at `/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1` was built with 6,003
 chips from all 369 source TIFFs, then transactionally filtered at the approved
-50% nodata threshold. Its active manifest now contains 4,637 chips from 367
+50% source-aware nodata threshold. Its repaired active manifest contains 4,602 chips from 367
 source TIFFs across all 12 regions; the unfiltered manifest and complete
-removal evidence are preserved under `filter_history/nodata_50`. The
+removal evidence are preserved under `filter_history/nodata_50` and
+`repair_history/metadata_nodata_v2`. The
 non-destructive training selector retains all 3,210 positive chips and marks
-1,427 non-positive chips as excluded from training only. The v1 portable
-canonical archive is complete and clean-extraction verified at
-`/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip`.
-A later audit found five California TIFFs whose declared `65535` nodata value
-was missed by zero-only chip statistics. Task 009A will repair affected
-manifests and downstream selections without a full re-chip, then build a v2
-archive. Task 010 will transfer only that repaired archive. See `docs/todo.md`
-and `tasks/README.md`.
+1,392 non-positive chips as excluded from training only. Task 009A repaired the
+one affected California and all 30 BC derived labels, re-chipped only those 31
+source fragments, and clean-extraction verified the v2 portable archive at
+`/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip`.
+Task 010 will transfer only v2; v1 remains historical evidence. See
+`docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 
@@ -65,11 +64,10 @@ uv run ruff check .
 
 For a disposable remote GPU instance, `scripts/bootstrap_skypilot.sh` installs
 the locked environment, verifies CUDA, establishes the expected data-root
-compatibility path, and handles W&B login. Dataset archive details will be
-connected to the remote compatibility path in Task 010. Task 009A will replace
-the current transfer candidate with a repaired v2 ZIP and adjacent
-`.zip.sha256` sidecar under `/Volumes/x10pro/kelpseg/archives`; do not transfer
-the v1 ZIP or use the old tar archive as the new experiment contract.
+compatibility path, and handles W&B login. Task 010 will connect the verified
+v2 ZIP and adjacent `.zip.sha256` sidecar under
+`/Volumes/x10pro/kelpseg/archives` to the selected remote data root; do not
+transfer the v1 ZIP or use the old tar archive as the new experiment contract.
 
 ## Active workflow
 

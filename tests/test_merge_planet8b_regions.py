@@ -227,6 +227,7 @@ def test_derived_label_aligns_and_assigns_kate_nodata(tmp_path: Path) -> None:
         dtype="uint16",
         crs="EPSG:32610",
         transform=from_origin(0, 4, 1, 1),
+        nodata=0,
     ) as dataset:
         dataset.write(image)
     with rasterio.open(
@@ -264,3 +265,22 @@ def test_derived_label_aligns_and_assigns_kate_nodata(tmp_path: Path) -> None:
     assert alignment.outside_source_label_pixels == 12
     assert alignment.assigned_nodata_pixels == 13
     assert alignment.outside_source_label_not_nodata_pixels == 0
+
+    bc_output = tmp_path / "output" / "bc_label.tif"
+    bc_alignment = derive_aligned_label(
+        image_path,
+        label_path,
+        bc_output,
+        "bc_fixture",
+        assign_outside_nodata=False,
+    )
+    with rasterio.open(bc_output) as output:
+        bc_result = output.read(1)
+    assert bc_result.tolist() == [
+        [0, 0, 0, 0],
+        [0, 3, 1, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 0],
+    ]
+    assert bc_alignment.assigned_nodata_pixels == 1
+    assert bc_alignment.outside_source_label_not_nodata_pixels == 12

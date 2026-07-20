@@ -9,7 +9,7 @@ prediction, or metric aggregation.
 ```text
 California images/labels + BC 10-km tile images/labels
   -> independent image copies + exact-grid derived labels
-  -> KATE class 3 for image nodata or missing label coverage
+  -> source-aware image nodata and KATE class 3 repair
   -> raster manifest
   -> overlapping NPZ chips under `all/`
   -> chip manifest with dimensions, class counts, and nodata counts
@@ -30,7 +30,11 @@ the next stage without inferring identity from folder order.
 - `scripts/create_temporal_baseline_split.py`: deterministic baseline raster
   assignment.
 - `src/prepare/make_chip_dataset.py`: restartable GeoTIFF-to-NPZ chip creation
-  with portable source-window identity and canonical chip statistics.
+  with portable source-window identity, effective source nodata metadata, and
+  canonical chip statistics.
+- `scripts/repair_planet8b_nodata_metadata.py`: report-only and transactional
+  scoped repair for derived labels, source fragments, corrected statistics,
+  dependent membership, and audit evidence.
 - `src/prepare/remove_tiles_with_nodata_areas.py`: manifest-driven nodata
   selection with a required percentage threshold, report-only dry runs, and a
   quarantined transactional apply path that preserves filter history. Task 006
@@ -71,7 +75,8 @@ alignment provenance owns source/output grids and class-3 assignment counts;
 copy provenance owns source/output image checksums and inode independence.
 Portable raster metadata owns source grid shape, CRS, affine transform, and
 bounds after raw TIFFs are left out of the remote archive.
-The chip manifest owns chip path, source TIFF, region, date, source-window
+The chip manifest owns chip path, source TIFF, effective source nodata value,
+region, date, source-window
 offsets/bounds, width, height, class pixel counts, ignore count, nodata count,
 and nodata percentage. The training-selection manifest owns derived class
 presence, the explicit background policy, and training eligibility. Fold

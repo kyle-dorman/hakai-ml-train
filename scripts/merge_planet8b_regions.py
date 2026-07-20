@@ -17,11 +17,16 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Iterable
 
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import numpy as np
 import rasterio
 from planet8b_metadata import parse_bc_stem, parse_ca_stem
 from rasterio.enums import Resampling
 from rasterio.vrt import WarpedVRT
+
+from src.prepare.nodata import declared_nodata_values, nodata_mask
 
 TIFF_SUFFIXES = {".tif", ".tiff"}
 MANIFEST_FIELDS = [
@@ -411,7 +416,12 @@ def _source_label_values(label: rasterio.io.DatasetReader) -> list[int | float]:
 
 
 def derive_aligned_label(
-    source_image: Path, source_label: Path, destination: Path, source_tiff_id: str
+    source_image: Path,
+    source_label: Path,
+    destination: Path,
+    source_tiff_id: str,
+    *,
+    assign_outside_nodata: bool = True,
 ) -> AlignmentRow:
     """Write a uint8 KATE label on the image grid with class 3 as nodata."""
     with rasterio.open(source_image) as image, rasterio.open(source_label) as label:
@@ -425,6 +435,9 @@ def derive_aligned_label(
             )
         if image.crs is None or label.crs is None:
             raise RuntimeError(f"{source_tiff_id}: image and label must have a CRS")
+        image_nodata_values = declared_nodata_values(
+            image, retained_bands=8, missing_value=0
+        )
         source_values = _source_label_values(label)
         unsupported = sorted(set(source_values) - {0, 1, 2, 3, 4})
         if unsupported:
@@ -481,9 +494,15 @@ def derive_aligned_label(
                 image_block = image.read(window=window)
                 label_block = aligned.read(1, window=window).astype(np.uint8)
                 coverage = aligned.read(alpha_band, window=window) > 0
-                image_nodata = np.all(image_block == 0, axis=0)
+                image_nodata = nodata_mask(
+                    image_block, image_nodata_values, band_axis=0
+                )
                 outside = ~coverage
-                assigned = image_nodata | outside
+                if not assign_outside_nodata:
+                    label_block[outside] = 0
+                assigned = (
+                    image_nodata | outside if assign_outside_nodata else image_nodata
+                )
                 label_block[assigned] = 3
                 output.write(label_block, 1, window=window)
 
@@ -499,7 +518,7 @@ def derive_aligned_label(
                 )
                 output_values.update(int(value) for value in np.unique(label_block))
 
-        if totals["outside_source_label_not_nodata_pixels"]:
+        if assign_outside_nodata and totals["outside_source_label_not_nodata_pixels"]:
             raise RuntimeError(
                 f"{source_tiff_id}: pixels outside label coverage were not set to 3"
             )
@@ -590,6 +609,7 @@ def materialize(
                             Path(row.source_label),
                             staged_label,
                             row.source_tiff_id,
+                            assign_outside_nodata=row.dataset != "bc",
                         )
                     )
                 else:

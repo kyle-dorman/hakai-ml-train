@@ -12,8 +12,13 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
 
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import numpy as np
 import rasterio
+
+from src.prepare.nodata import declared_nodata_values, nodata_mask, nodata_value_text
 
 QA_FIELDS = [
     "source_tiff_id",
@@ -53,6 +58,7 @@ METADATA_FIELDS = [
     "height",
     "band_count",
     "image_dtype",
+    "source_nodata_value",
     "label_dtype",
     "crs",
     "transform_a",
@@ -258,8 +264,14 @@ def validate_pair(row: dict[str, str]) -> tuple[dict[str, Any], dict[str, Any] |
                 for _, window in image_ds.block_windows(1):
                     image_block = image_ds.read(window=window)
                     label_block = label_ds.read(1, window=window)
+                    source_nodata = declared_nodata_values(
+                        image_ds, retained_bands=8, missing_value=0
+                    )
                     image_nodata_not_3 += int(
-                        (np.all(image_block == 0, axis=0) & (label_block != 3)).sum()
+                        (
+                            nodata_mask(image_block, source_nodata, band_axis=0)
+                            & (label_block != 3)
+                        ).sum()
                     )
             if label_dtype != "uint8":
                 issues.append(f"label dtype is {label_dtype}, expected uint8")
@@ -307,6 +319,9 @@ def validate_pair(row: dict[str, str]) -> tuple[dict[str, Any], dict[str, Any] |
                 "height": image_ds.height,
                 "band_count": image_ds.count,
                 "image_dtype": image_dtype,
+                "source_nodata_value": nodata_value_text(
+                    declared_nodata_values(image_ds, retained_bands=8, missing_value=0)
+                ),
                 "label_dtype": label_dtype,
                 "crs": str(image_ds.crs or ""),
                 "transform_a": transform.a,
@@ -375,6 +390,7 @@ def _validate_provenance(
     root: Path, manifest: list[dict[str, str]]
 ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     expected_ids = {row["source_tiff_id"] for row in manifest}
+    manifest_by_id = {row["source_tiff_id"]: row for row in manifest}
     alignment = _read_csv(root / "label_alignment.csv")
     copies = _read_csv(root / "copy_verification.csv")
     alignment_ids = {row["source_tiff_id"] for row in alignment}
@@ -390,7 +406,16 @@ def _validate_provenance(
             raise ValidationError(
                 f"Invalid label-alignment policy for {row['source_tiff_id']}"
             )
-        if int(row["outside_source_label_not_nodata_pixels"]) != 0:
+        outside_not_nodata = int(row["outside_source_label_not_nodata_pixels"])
+        if manifest_by_id[row["source_tiff_id"]]["dataset"] == "bc":
+            expected = int(row["outside_source_label_pixels"]) - int(
+                row["image_nodata_and_outside_label_pixels"]
+            )
+            if outside_not_nodata != expected:
+                raise ValidationError(
+                    f"BC outside-coverage provenance mismatch for {row['source_tiff_id']}"
+                )
+        elif outside_not_nodata != 0:
             raise ValidationError(
                 f"Missing-coverage pixels were not nodata for {row['source_tiff_id']}"
             )

@@ -4,13 +4,19 @@ from __future__ import annotations
 
 import argparse
 import csv
+import sys
 from collections import Counter
 from pathlib import Path, PurePosixPath
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colors
+
+from src.prepare.nodata import nodata_mask
 
 matplotlib.use("Agg", force=True)
 
@@ -248,7 +254,8 @@ def render_contact_sheet(
         with np.load(chip_path) as data:
             image = data["image"]
             label = data["label"]
-        nodata = np.all(image == 0, axis=-1)
+        source_nodata = np.asarray(row["source_nodata_value"], dtype=image.dtype).item()
+        nodata = nodata_mask(image, [source_nodata] * image.shape[-1], band_axis=-1)
         stored_nodata_count = int(row["nodata_pixel_count"])
         if int(nodata.sum()) != stored_nodata_count:
             raise RuntimeError(f"NPZ nodata mismatch for {row['chip_id']}")
@@ -281,7 +288,7 @@ def render_contact_sheet(
         (
             "RGB-like bands 6/4/2",
             "Label: gray bg, green kelp, pink ignore",
-            "All-8-band-zero mask: red nodata",
+            "All-8-band source-declared nodata mask: red nodata",
         ),
         strict=True,
     ):

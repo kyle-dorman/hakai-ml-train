@@ -36,10 +36,12 @@ The Task 002 canonical raw merge is:
 /Volumes/x10pro/kelpseg/merged_all_regions_v1
 ```
 
-It contains independent image copies and exact-image-grid derived labels. Raw
-label class `3` means nodata wherever all eight image bands are zero or source
-label coverage is absent; later chipping/remapping converts that class to the
-training ignore index. `raster_manifest.csv`, `copy_verification.csv`,
+It contains independent image copies and exact-image-grid derived labels. After
+Task 009A, raw label class `3` follows source-aware image nodata for all repaired
+sources: the California repair preserves four accepted edge-only class-3 false
+positives, while all 30 BC labels are rebuilt from raw `{0,1}` labels and use
+class `3` exactly at image nodata. Later chipping/remapping converts class `3`
+to the training ignore index. `raster_manifest.csv`, `copy_verification.csv`,
 `label_alignment.csv`, `raster_metadata.csv`, and the raster QA artifacts own
 its provenance.
 
@@ -63,15 +65,25 @@ The active collection contains 47 true-size partial chips and preserves all
 521 clean background-only chips. Active `chip_manifest.csv` has SHA-256
 `edf754888dea183f12873594b546b980f350b5b4e293ff62ca7eca64a2c39a39`.
 
-Task 008's non-destructive production selection is under
+Task 009A superseded that active membership after source-aware repair. The
+current collection contains 4,602 NPZ chips and 44,854,174,488 compressed bytes
+from 367 source TIFFs across all 12 regions, including 47 true-size partial
+chips. The corrected 6,003-row inventory has 1,401 total removals: the original
+1,366 plus 35 metadata-nodata additions. Active `chip_manifest.csv` has SHA-256
+`b8b14d8db7910fe7de69803a669ce8922b07fa401a0d99999019f5cc1f12886f`.
+Repair plans, pre-repair snapshots, label audits, row-level statistic changes,
+the 724-row rewritten-NPZ inventory, combined removals, summaries, and
+completion metadata are under `repair_history/metadata_nodata_v2`.
+
+The refreshed Task 008 non-destructive production selection is under
 `background_selection/exclude_all`. `training_selection.csv` joins one-to-one
-to all 4,637 active chips, retains the 3,210 positive chips for training, and
-explicitly excludes 521 clean background-only, 892 mixed background/nodata,
-and 14 ignore-only chips. `selection_summary.csv` reports all four categories
+to all 4,602 active chips, retains the 3,210 positive chips for training, and
+explicitly excludes 440 clean background-only and 952 mixed
+background/nodata chips. `selection_summary.csv` reports all four categories
 globally, for every region, and for every source TIFF, including zero-count
 categories. Their SHA-256 hashes are
-`6a62fd9031f8d238e2a9fd9448519f765da9b958ea5022df35796de7a3da9a1b` and
-`21a3ecae1a5ec4f462b947b289dfc129f5749a0f36d1edff9740f7190a7c72d7`,
+`200db4b41f84cacd00296b86f5cc50174368f568fa8540eb1c704567484b38fa` and
+`2531b1494f21cfcc54a6339a5517190bcf20a224f9dc64e3d72512e89f9fb0ce`,
 respectively. These small artifacts belong in the portable archive; the
 selector does not change canonical NPZs or `chip_manifest.csv`.
 
@@ -95,10 +107,26 @@ absolute path dependency; original raster paths are isolated in the optional
 full inventory verification, manifest joins, and sampled NPZ validation under
 the former all-band-zero nodata definition. A later audit found five California
 TIFFs that declare `65535` as nodata, so this v1 archive is preserved as
-historical evidence but must not be transferred. Task 009A owns the
-metadata-aware manifest repair, dependent selection refresh, prior-inventory
-chip-hash reuse, and replacement v2 archive. Task 010 will record the remote
-extracted path for v2.
+historical evidence but must not be transferred.
+
+Task 009A's transfer candidate is:
+
+```text
+/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip
+```
+
+It is a 44,859,496,084-byte ZIP64 archive with SHA-256
+`1244ecfe2cc4cee624bb5661087f0126ea239367bda60efd823b4fcb9b7399db`.
+The archive contains one versioned dataset root and 4,624 files: 4,602 NPZs,
+13 manifests, eight metadata/provenance files, and the inventory itself. The
+4,623-row inventory has SHA-256
+`9e1e393229ba4bf22ab5b30bdf6756f3c9a4737c27ff67bb3d9e125e5830c408`.
+It reuses 4,120 unchanged NPZ hashes from the checksum-verified v1 inventory
+and freshly hashes all 482 retained rewritten NPZs plus 21 changed
+manifest/metadata members. A clean extraction passed archive checksum, ZIP
+integrity, path/size joins, all fresh hashes, a 74-chip reused-hash sample, and
+portable NPZ/manifest validation. Task 010 will record the remote extracted
+path for v2.
 
 Nodata dry-run reports belong under an explicit analysis or `filter_reports`
 directory and never change the active collection. An applied threshold writes
@@ -110,8 +138,9 @@ atomically only in explicit apply mode.
 
 Task 006's versioned decision evidence is under
 `/Volumes/x10pro/kelpseg/nodata_threshold_analysis_v1`. The user-approved
-universal policy is `max_nodata_pct = 50`: keep chips at or below 50% all-eight-
-band-zero pixels and remove chips above 50%. Task 007 applied that exact policy:
+universal policy is `max_nodata_pct = 50`: keep chips at or below 50% source-
+aware image nodata and remove chips above 50%. Task 007 originally applied the
+zero-only implementation of that policy:
 4,637 of 6,003 chips are active and 1,366 were removed, representing
 3,245,804,422 compressed bytes. No region was eliminated. Source TIFFs
 `006_20210805_184050_240c` and

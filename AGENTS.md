@@ -29,21 +29,18 @@ compaction or in a new window, reread this file, `docs/index.md`,
 
 ## Current Status
 
-Tasks 000–009 established the 369-TIFF temporal baseline assignment, validated
+Tasks 000–009A established the 369-TIFF temporal baseline assignment, validated
 copied raw merge, restartable manifested chipper, canonical chip collection at
 `/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1`, and the transactional
-manifest-driven nodata filter, then selected and applied the universal 50%
-nodata threshold. The active collection contains 4,637 chips from 367 source
-TIFFs across all 12 regions. Its training-selection manifest retains all 3,210
-positive chips and explicitly excludes 1,427 non-positive chips without
-changing the canonical collection. Task 009 packaged and clean-extraction
-verified the 44,917,177,439-byte v1 portable ZIP at
-`/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip`.
-A later audit found that five California TIFFs declare `65535` as nodata while
-the current chip statistics count only all-band-zero pixels. The next task is
-Task 009A, which repairs affected manifests and selections without a full
-re-chip and produces a v2 archive. Task 010 transfers only that repaired
-archive.
+manifest-driven 50% nodata policy. Task 009A repaired source-aware nodata
+metadata, one California and all 30 BC derived labels, and only those 31 source
+fragments. The active collection contains 4,602 chips from 367 source TIFFs
+across all 12 regions. Its training-selection manifest retains all 3,210
+positive chips and explicitly excludes 1,392 non-positive chips without
+changing canonical membership. The clean-extraction-verified transfer artifact
+is the 44,859,496,084-byte v2 ZIP at
+`/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip`.
+Task 010 transfers only that repaired archive; v1 remains historical evidence.
 The complete ordered queue is in `docs/todo.md`; detailed contracts are in
 `tasks/`.
 

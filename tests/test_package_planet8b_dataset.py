@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from package_planet8b_dataset import (
+    _write_inventory,
     package_dataset_archive,
     sha256_file,
     verify_dataset_archive,
@@ -364,7 +365,7 @@ def test_fixture_archive_is_portable_and_clean_extraction_verifies(
     assert verified.npz_count == verified.sampled_npz_count == 2
     assert verified.source_count == 2
     assert verified.npz_bytes == packaged.npz_bytes
-    assert packaged.inventory_count == 17
+    assert packaged.inventory_count == 18
     root = verified.dataset_root
     fields, rows = _read_csv(root / "manifests/chip_manifest.csv")
     assert "chip_path" in fields
@@ -458,3 +459,69 @@ def test_packager_refuses_symlinked_chip_and_existing_output(tmp_path: Path) -> 
             dataset_version="fixture_v1",
             producer_git_commit="a" * 40,
         )
+
+
+def test_v2_packaging_reuses_prior_chip_hashes_and_hashes_metadata_freshly(
+    tmp_path: Path,
+) -> None:
+    chip_root, raster_root, split_path = _fixture(tmp_path)
+    v1 = package_dataset_archive(
+        chip_root=chip_root,
+        raster_root=raster_root,
+        temporal_split=split_path,
+        archive=tmp_path / "archives/planet8b_fixture_v1.zip",
+        dataset_version="fixture_v1",
+        producer_git_commit="a" * 40,
+    )
+    v2 = package_dataset_archive(
+        chip_root=chip_root,
+        raster_root=raster_root,
+        temporal_split=split_path,
+        archive=tmp_path / "archives/planet8b_fixture_v2.zip",
+        dataset_version="fixture_v2",
+        producer_git_commit="b" * 40,
+        prior_archive=v1.archive,
+        prior_checksum_file=v1.checksum_file,
+    )
+    assert v2.reused_hash_count == 2
+    assert v2.rejected_reuse_count == 0
+    assert v2.freshly_hashed_count > 2
+    with zipfile.ZipFile(v2.archive) as archive_file:
+        inventory_name = next(
+            name
+            for name in archive_file.namelist()
+            if name.endswith("metadata/archive_inventory.csv")
+        )
+        rows = list(
+            csv.DictReader(archive_file.read(inventory_name).decode().splitlines())
+        )
+    chip_rows = [row for row in rows if row["kind"] == "chip"]
+    metadata_rows = [row for row in rows if row["kind"] == "metadata"]
+    assert {row["hash_source"] for row in chip_rows} == {"prior_inventory_reuse"}
+    assert {row["hash_source"] for row in metadata_rows} == {"fresh_sha256"}
+
+
+def test_inventory_forces_rewritten_same_size_chip_to_be_hashed_freshly(
+    tmp_path: Path,
+) -> None:
+    staging = tmp_path / "dataset"
+    chip = staging / "chips/all/example.npz"
+    chip.parent.mkdir(parents=True)
+    chip.write_bytes(b"new!")
+    prior = {
+        "chips/all/example.npz": {
+            "relative_path": "chips/all/example.npz",
+            "byte_size": "4",
+            "sha256": hashlib.sha256(b"old!").hexdigest(),
+            "kind": "chip",
+        }
+    }
+    _, _, reused, fresh, rejected = _write_inventory(
+        staging,
+        prior_inventory=prior,
+        force_fresh_paths={"chips/all/example.npz"},
+    )
+    assert (reused, fresh, rejected) == (0, 1, 1)
+    rows = list(csv.DictReader((staging / "metadata/archive_inventory.csv").open()))
+    assert rows[0]["hash_source"] == "fresh_sha256"
+    assert rows[0]["sha256"] == hashlib.sha256(b"new!").hexdigest()

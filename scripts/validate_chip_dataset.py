@@ -5,13 +5,19 @@ import csv
 import hashlib
 import json
 import os
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import numpy as np
 import rasterio
 from rasterio.windows import Window
+
+from src.prepare.nodata import declared_nodata_values, nodata_mask
 
 IGNORE_INDEX = -100
 NODATA_BIN_EDGES = (0, 1, 5, 10, 20, 30, 40, 50, 75, 100)
@@ -154,12 +160,16 @@ def _validate_sample(
             raise RuntimeError(f"Sample class-1 mismatch: {chip_path}")
         if np.count_nonzero(label == IGNORE_INDEX) != int(row["ignore_pixel_count"]):
             raise RuntimeError(f"Sample ignore mismatch: {chip_path}")
-        nodata = int(np.count_nonzero(np.all(image == 0, axis=-1)))
-        if nodata != int(row["nodata_pixel_count"]):
-            raise RuntimeError(f"Sample nodata mismatch: {chip_path}")
-
         source_id = row["source_tiff_id"]
         with rasterio.open(raw_root / "all" / "images" / f"{source_id}.tif") as source:
+            source_nodata = declared_nodata_values(
+                source, retained_bands=8, missing_value=0
+            )
+            nodata = int(
+                np.count_nonzero(nodata_mask(image, source_nodata, band_axis=-1))
+            )
+            if nodata != int(row["nodata_pixel_count"]):
+                raise RuntimeError(f"Sample nodata mismatch: {chip_path}")
             if source.width != int(row["source_width"]) or source.height != int(
                 row["source_height"]
             ):
@@ -288,9 +298,15 @@ def validate_chip_dataset(
         ):
             pixel_totals[key] += int(row[key])
 
-    if set(rows_by_source) != set(source_by_id):
-        missing = sorted(set(source_by_id) - set(rows_by_source))
-        raise RuntimeError(f"Sources without chips: {missing}")
+    unknown_sources = sorted(set(rows_by_source) - set(source_by_id))
+    if unknown_sources:
+        raise RuntimeError(f"Chips reference unknown sources: {unknown_sources}")
+    sources_without_active_chips = sorted(set(source_by_id) - set(rows_by_source))
+    filtered_collection = (
+        chip_root / "filter_history/nodata_50/filter_metadata.json"
+    ).is_file()
+    if sources_without_active_chips and not filtered_collection:
+        raise RuntimeError(f"Sources without chips: {sources_without_active_chips}")
     filesystem_paths = {
         path.relative_to(chip_root).as_posix()
         for path in (chip_root / "all").glob("*.npz")
@@ -383,7 +399,10 @@ def validate_chip_dataset(
             "label_dtype": "int64",
             "remap": [0, 1, 0, -100, 0],
             "ignore_index": IGNORE_INDEX,
-            "nodata_definition": "all eight retained image bands equal zero",
+            "nodata_definition": (
+                "all eight retained image bands equal their source TIFF's effective "
+                "nodata value, including explicit zero for wholly missing metadata"
+            ),
         },
         "inventory": {
             "manifest_row_count": len(rows),
@@ -401,7 +420,9 @@ def validate_chip_dataset(
         "by_region": _group_summary(rows, "region_id"),
         "by_year": _group_summary(rows_with_year, "year"),
         "validation": {
-            "all_sources_have_chips": True,
+            "all_active_sources_have_chips": True,
+            "sources_without_active_chips": sources_without_active_chips,
+            "filtered_collection_allows_removed_sources": filtered_collection,
             "manifest_npz_bijection": True,
             "source_manifest_join": True,
             "manifest_counts_reconcile": True,

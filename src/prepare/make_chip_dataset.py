@@ -26,6 +26,8 @@ from torchgeo.datasets.utils import stack_samples
 from torchgeo.samplers import GridGeoSampler
 from tqdm.auto import tqdm
 
+from src.prepare.nodata import declared_nodata_values, nodata_mask, nodata_value_text
+
 IGNORE_INDEX = -100
 BASE_MANIFEST_COLUMNS = [
     "chip_id",
@@ -38,6 +40,7 @@ BASE_MANIFEST_COLUMNS = [
     "source_width",
     "source_height",
     "source_crs",
+    "source_nodata_value",
     "chip_index",
     "row_off",
     "col_off",
@@ -267,7 +270,16 @@ def _validate_npz(path: Path, row: dict[str, Any]) -> None:
             raise RuntimeError(f"Stored class counts do not match fragment for {path}")
     if np.count_nonzero(label == IGNORE_INDEX) != int(row["ignore_pixel_count"]):
         raise RuntimeError(f"Stored ignore count does not match fragment for {path}")
-    nodata_count = int(np.count_nonzero(np.all(image == 0, axis=-1)))
+    nodata_count = int(
+        np.count_nonzero(
+            nodata_mask(
+                image,
+                [np.asarray(row["source_nodata_value"], dtype=image.dtype).item()]
+                * image.shape[-1],
+                band_axis=-1,
+            )
+        )
+    )
     if nodata_count != int(row["nodata_pixel_count"]):
         raise RuntimeError(f"Stored nodata count does not match fragment for {path}")
     expected_pct = 100.0 * nodata_count / total
@@ -362,6 +374,9 @@ def _chip_source(
             raise RuntimeError(
                 f"{source_id} has {image_ds.count} bands, fewer than requested {num_bands}"
             )
+        source_nodata = declared_nodata_values(
+            image_ds, retained_bands=num_bands, missing_value=0
+        )
         windows = iter_windows(image_ds.width, image_ds.height, chip_size, chip_stride)
         for chip_index, window in enumerate(windows):
             row_off, col_off = int(window.row_off), int(window.col_off)
@@ -373,7 +388,7 @@ def _chip_source(
             _validate_image_range(image, dtype)
             image = image.astype(dtype)
             label = remap_label_array(raw_label, band_remapping)
-            nodata = np.all(image == 0, axis=0)
+            nodata = nodata_mask(image, source_nodata, band_axis=0)
             np.savez_compressed(
                 staging_dir / chip_name,
                 image=np.moveaxis(image, 0, -1),
@@ -392,6 +407,7 @@ def _chip_source(
                 "source_width": image_ds.width,
                 "source_height": image_ds.height,
                 "source_crs": image_ds.crs.to_string() if image_ds.crs else "",
+                "source_nodata_value": nodata_value_text(source_nodata),
                 "chip_index": chip_index,
                 "row_off": row_off,
                 "col_off": col_off,
