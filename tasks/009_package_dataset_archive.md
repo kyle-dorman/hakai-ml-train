@@ -231,19 +231,10 @@ Changed repository files are `scripts/package_planet8b_dataset.py`,
 artifact, routing, and task documentation. There are no unresolved Task 009
 issues.
 
-Task 010 can use this transfer template after the user supplies the SSH alias
-and remote staging directory:
-
-```bash
-scp \
-  /Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip \
-  /Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip.sha256 \
-  <ssh-alias>:<remote-staging-directory>/
-ssh <ssh-alias> \
-  'cd <remote-staging-directory> && sha256sum -c planet8b_all_regions_1024_512_v1.zip.sha256'
-```
-
-The exact next action is to open Task 010, obtain the remote SSH alias/user,
-staging path, extracted root, compatibility path, and repo branch/commit, then
-transfer and independently verify this ZIP without re-chipping or changing the
-local canonical collection. Stop before Task 011.
+Post-completion audit note (2026-07-20): five California TIFFs declare `65535`
+as nodata, but this archive's chip statistics and filtering provenance use the
+former all-band-zero definition. Preserve this v1 archive and its outcome as
+historical evidence, but do not transfer it. The exact next action is Task 009A,
+which repairs existing manifests and dependent selections without a full
+re-chip, reuses trusted v1 individual-chip hashes where safe, and produces a v2
+archive. Task 010 must transfer only the repaired v2 archive.

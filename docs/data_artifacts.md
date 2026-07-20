@@ -75,7 +75,7 @@ categories. Their SHA-256 hashes are
 respectively. These small artifacts belong in the portable archive; the
 selector does not change canonical NPZs or `chip_manifest.csv`.
 
-Task 009's portable canonical archive is:
+Task 009's v1 portable canonical archive is:
 
 ```text
 /Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip
@@ -92,8 +92,13 @@ for all 4,652 other payload files, including every NPZ, and has SHA-256
 Runtime manifests resolve from the extracted dataset root and contain no local
 absolute path dependency; original raster paths are isolated in the optional
 `metadata/local_raster_path_provenance.csv`. A clean local extraction passed
-full inventory verification, manifest joins, and sampled NPZ validation.
-Task 010 will record the remote extracted path.
+full inventory verification, manifest joins, and sampled NPZ validation under
+the former all-band-zero nodata definition. A later audit found five California
+TIFFs that declare `65535` as nodata, so this v1 archive is preserved as
+historical evidence but must not be transferred. Task 009A owns the
+metadata-aware manifest repair, dependent selection refresh, prior-inventory
+chip-hash reuse, and replacement v2 archive. Task 010 will record the remote
+extracted path for v2.
 
 Nodata dry-run reports belong under an explicit analysis or `filter_reports`
 directory and never change the active collection. An applied threshold writes

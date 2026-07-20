@@ -37,9 +37,13 @@ nodata threshold. The active collection contains 4,637 chips from 367 source
 TIFFs across all 12 regions. Its training-selection manifest retains all 3,210
 positive chips and explicitly excludes 1,427 non-positive chips without
 changing the canonical collection. Task 009 packaged and clean-extraction
-verified the 44,917,177,439-byte portable ZIP at
+verified the 44,917,177,439-byte v1 portable ZIP at
 `/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip`.
-The next task is Task 010, which transfers and verifies that archive remotely.
+A later audit found that five California TIFFs declare `65535` as nodata while
+the current chip statistics count only all-band-zero pixels. The next task is
+Task 009A, which repairs affected manifests and selections without a full
+re-chip and produces a v2 archive. Task 010 transfers only that repaired
+archive.
 The complete ordered queue is in `docs/todo.md`; detailed contracts are in
 `tasks/`.
 

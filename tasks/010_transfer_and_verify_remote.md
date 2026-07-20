@@ -2,7 +2,7 @@
 
 Status: Pending
 
-Depends on: Task 009
+Depends on: Task 009A
 
 Execution: Local-to-remote transfer plus remote verification.
 
@@ -15,12 +15,12 @@ root. It does not materialize experimental folds or launch training.
 
 ## Goal
 
-Create a byte-verified remote copy of the Task 009 dataset that Tasks 011–019
+Create a byte-verified remote copy of the Task 009A v2 dataset that Tasks 011–019
 can use without accessing the local external drive.
 
 ## Inputs
 
-- Task 009 archive, `.sha256`, inventory, archive version, and verification
+- Task 009A v2 archive, `.sha256`, inventory, archive version, and verification
   command
 - `scripts/bootstrap_skypilot.sh`
 - `docs/data_artifacts.md`
@@ -72,7 +72,7 @@ exact command.
 
 ## Remote verification
 
-- Extracted file count and total uncompressed bytes match Task 009 inventory.
+- Extracted file count and total uncompressed bytes match Task 009A inventory.
 - Canonical chip count matches the active chip manifest.
 - Every relative `chip_path` resolves from the documented dataset root.
 - Raster, raster-metadata, and temporal manifests exist and join all chip source
@@ -80,7 +80,7 @@ exact command.
 - Open at least five stratified NPZs: CA old region, CA newly included region,
   BC, high-nodata retained chip, and positive-class chip.
 - Verify image/label shapes, dtypes, and manifest counts for those samples.
-- Run the archive verification helper from Task 009 if one exists.
+- Run the archive verification helper updated by Task 009A.
 - Confirm free disk space after extraction.
 
 ## Bootstrap boundary
@@ -106,7 +106,7 @@ Any bootstrap code change runs focused shell/static checks and
 
 ## Acceptance criteria
 
-- Remote checksum equals Task 009 checksum.
+- Remote checksum equals the Task 009A v2 checksum.
 - Extracted inventory and manifests validate without local absolute paths.
 - The canonical remote dataset root is recorded in this task,
   `docs/data_artifacts.md`, and `docs/todo.md`.

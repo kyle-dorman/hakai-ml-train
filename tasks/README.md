@@ -49,7 +49,8 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [007](007_apply_nodata_filter.md) | Local | Complete | 006 | Cleaned canonical chip collection |
 | [008](008_build_background_filter.md) | Local | Complete | 004, 007 | Non-destructive training-only selector |
 | [009](009_package_dataset_archive.md) | Local | Complete | 007, 008 | Portable verified archive |
-| [010](010_transfer_and_verify_remote.md) | Remote | Pending | 009 | Verified remote dataset copy |
+| [009A](009a_repair_metadata_nodata_and_repackage.md) | Local | Pending | 002–009 | Metadata-aware nodata repair and v2 archive |
+| [010](010_transfer_and_verify_remote.md) | Remote | Pending | 009A | Verified remote dataset copy |
 | [011](011_materialize_baseline_dataset.md) | Remote | Pending | 010 | Baseline train/val/test views |
 | [012](012_materialize_loro_datasets.md) | Remote | Pending | 010 | One dataset view per held-out region |
 | [013](013_add_wandb_run_context.md) | Remote/code | Pending | 011, 012 | Consistent W&B context and artifacts |
@@ -78,6 +79,7 @@ task contract.
 | 007 | None if Task 006 records an approved numeric threshold. |
 | 008 | Exclude all background-only training chips or retain a deterministic fraction. |
 | 009 | Archive directory/name and whether compact QA evidence is included. |
+| 009A | None; metadata-aware counting, in-place manifest repair, and prior chip-hash reuse are approved. |
 | 010 | Remote SSH alias/user, staging path, extracted root, compatibility path, and repo branch/commit. |
 | 011 | Baseline view root; split policy is already fixed by Task 000. |
 | 012 | Non-held-out LORO train/validation policy, separate `ca_005`/`ca_006` folds, and view root. |

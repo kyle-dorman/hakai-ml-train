@@ -27,11 +27,14 @@ chips from all 369 source TIFFs, then transactionally filtered at the approved
 source TIFFs across all 12 regions; the unfiltered manifest and complete
 removal evidence are preserved under `filter_history/nodata_50`. The
 non-destructive training selector retains all 3,210 positive chips and marks
-1,427 non-positive chips as excluded from training only. The portable canonical
-archive is complete and clean-extraction verified at
+1,427 non-positive chips as excluded from training only. The v1 portable
+canonical archive is complete and clean-extraction verified at
 `/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip`.
-Task 010 will transfer and verify it remotely. See `docs/todo.md` and
-`tasks/README.md`.
+A later audit found five California TIFFs whose declared `65535` nodata value
+was missed by zero-only chip statistics. Task 009A will repair affected
+manifests and downstream selections without a full re-chip, then build a v2
+archive. Task 010 will transfer only that repaired archive. See `docs/todo.md`
+and `tasks/README.md`.
 
 ## Documentation
 
@@ -63,10 +66,10 @@ uv run ruff check .
 For a disposable remote GPU instance, `scripts/bootstrap_skypilot.sh` installs
 the locked environment, verifies CUDA, establishes the expected data-root
 compatibility path, and handles W&B login. Dataset archive details will be
-connected to the remote compatibility path in Task 010. The current local
-transfer source is the Task 009 ZIP and adjacent `.zip.sha256` sidecar under
-`/Volumes/x10pro/kelpseg/archives`; do not use the old tar archive as the new
-experiment contract.
+connected to the remote compatibility path in Task 010. Task 009A will replace
+the current transfer candidate with a repaired v2 ZIP and adjacent
+`.zip.sha256` sidecar under `/Volumes/x10pro/kelpseg/archives`; do not transfer
+the v1 ZIP or use the old tar archive as the new experiment contract.
 
 ## Active workflow
 

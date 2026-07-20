@@ -2,8 +2,10 @@
 
 ## Current phase
 
-Status: the portable canonical archive is packaged and verified locally. It is
-ready for remote transfer and verification.
+Status: Task 009's v1 archive is packaged and verified, but a subsequent audit
+found that five California TIFFs declare `65535` as nodata while the current
+chip statistics count only all-band-zero pixels. Repair and repackage locally
+before any remote transfer.
 
 Current active task:
 
@@ -14,8 +16,8 @@ No implementation task is active.
 Next task:
 
 ```text
-Task 010: Transfer and verify the archive remotely.
-tasks/010_transfer_and_verify_remote.md
+Task 009A: Repair metadata-aware nodata statistics and repackage.
+tasks/009a_repair_metadata_nodata_and_repackage.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -59,6 +61,8 @@ Task 009 created and clean-extraction verified
 `6640757c19d803a000834b34abdb20c71a5359e215e8edf08b4958123c4ab098`
 and contains all 4,637 canonical NPZs plus the portable manifests and compact
 provenance needed by Tasks 010–012. Its internal inventory hashes every NPZ.
+This v1 archive is preserved as historical evidence but is superseded as a
+transfer candidate pending Task 009A's metadata-aware repair and v2 archive.
 
 ## Open queue
 
@@ -72,10 +76,12 @@ Local dataset preparation:
 - Task 007: complete; applied the approved threshold transactionally.
 - Task 008: complete; built and applied the non-destructive training selector.
 - Task 009: complete; packaged and verified the portable dataset archive.
+- Task 009A: pending; repair metadata-aware nodata counts, dependent selections,
+  and the portable archive without a full re-chip.
 
 Remote experiment preparation and execution:
 
-- Task 010: transfer and verify the archive.
+- Task 010: transfer and verify the repaired v2 archive.
 - Tasks 011–012: materialize baseline and LORO dataset views.
 - Tasks 013–014: establish W&B/run registry and training orchestration.
 - Tasks 015–016: run the baseline and LORO training suite.

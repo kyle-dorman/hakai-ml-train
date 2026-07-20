@@ -16,7 +16,10 @@ Tasks 000–009 completed the temporal raster split, canonical raw merge,
 manifested chipper, full unfiltered chip collection, manifest-driven nodata
 filter, transactional application of the selected universal 50% threshold, and
 the non-destructive training-only background selector, then packaged and
-clean-extraction verified the portable canonical archive. Task 010 is next.
+clean-extraction verified the portable canonical archive. A later audit found
+five California TIFFs whose declared `65535` nodata value was missed by the
+zero-only chip statistics. Task 009A is next to repair dependent artifacts and
+produce a v2 archive before Task 010 transfers anything.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles
