@@ -32,8 +32,9 @@ non-destructive training selector retains all 3,210 positive chips and marks
 one affected California and all 30 BC derived labels, re-chipped only those 31
 source fragments, and clean-extraction verified the v2 portable archive at
 `/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip`.
-Task 010 will transfer only v2; v1 remains historical evidence. See
-`docs/todo.md` and `tasks/README.md`.
+Task 010 downloaded and fully verified only v2 at the remote canonical root
+`/home/sky/data/planet8b_all_regions_1024_512_v2`; v1 remains historical
+evidence. Task 011 is next. See `docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 
@@ -63,14 +64,23 @@ uv run ruff check .
 ```
 
 For a disposable remote GPU instance, `scripts/bootstrap_skypilot.sh` installs
-the Codex CLI and locked environment, verifies CUDA, establishes the expected
-data-root compatibility path, and handles W&B login. Codex device
-authentication remains interactive; after bootstrap, run
+the Codex CLI and locked environment, verifies CUDA, and handles W&B login. It
+does not download or extract datasets. Codex device authentication remains
+interactive; after bootstrap, run
 `codex login --device-auth` when `codex login status` reports that the host is
-not authenticated. Task 010 will connect the verified v2 ZIP and adjacent
-`.zip.sha256` sidecar under
-`/Volumes/x10pro/kelpseg/archives` to the selected remote data root; do not
-transfer the v1 ZIP or use the old tar archive as the new experiment contract.
+not authenticated.
+
+Task 010 prepares the verified v2 dataset separately. On the selected remote
+host, download missing Drive artifacts, verify the approved archive checksum,
+and extract into the canonical remote root with:
+
+```bash
+scripts/prepare_remote_planet8b_dataset.sh --download-missing
+```
+
+The corresponding local source artifacts are the v2 ZIP and adjacent
+`.zip.sha256` sidecar under `/Volumes/x10pro/kelpseg/archives`. Do not transfer
+the v1 ZIP or use the old tar archive as the new experiment contract.
 
 ## Active workflow
 

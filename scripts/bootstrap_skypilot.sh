@@ -5,16 +5,9 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 PYTHON_VERSION="${HAKAI_PYTHON_VERSION:-3.12}"
 UV_SYNC_ARGS="${HAKAI_UV_SYNC_ARGS:---frozen}"
-DATA_ROOT="${HAKAI_DATA_ROOT:-$HOME/data}"
-COMPAT_DATA_ROOT="${HAKAI_COMPAT_DATA_ROOT:-/home/taylor/data}"
-EXTRACT_DIR="${HAKAI_EXTRACT_DIR:-$DATA_ROOT/PlanetScope/pre-chipped-8b}"
-DATASET_NAME="${HAKAI_DATASET_NAME:-1024_512_20250814_cali_bc}"
-ARCHIVE="${HAKAI_DATA_ARCHIVE:-}"
 
-FORCE_EXTRACT=0
 SKIP_SYSTEM_UPGRADE="${HAKAI_SKIP_SYSTEM_UPGRADE:-0}"
 SKIP_NVIDIA_CHECK="${HAKAI_SKIP_NVIDIA_CHECK:-0}"
-SKIP_DATA=0
 SKIP_UV_SYNC=0
 SKIP_WANDB=0
 SKIP_CODEX="${HAKAI_SKIP_CODEX:-0}"
@@ -41,13 +34,8 @@ usage() {
 Usage: scripts/bootstrap_skypilot.sh [options]
 
 Options:
-  --archive PATH      Tarball copied to the instance. Default: ~/${DATASET_NAME}.tar.gz
-  --data-root PATH    Data root. Default: \$HOME/data
-  --extract-dir PATH  Extraction parent. Default: \$HAKAI_DATA_ROOT/PlanetScope/pre-chipped-8b
-  --force-extract     Re-extract even if the dataset directory already exists.
   --skip-upgrade      Do not run apt-get update/upgrade.
   --skip-nvidia-check Do not check nvidia-smi or PyTorch CUDA.
-  --skip-data         Do not extract the dataset archive.
   --skip-uv-sync      Do not run uv sync.
   --skip-wandb        Do not run wandb login.
   --skip-codex        Do not install or check the Codex CLI.
@@ -64,33 +52,11 @@ EOF
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --archive)
-      [[ $# -ge 2 ]] || die "--archive requires a path"
-      ARCHIVE="$2"
-      shift
-      ;;
-    --data-root)
-      [[ $# -ge 2 ]] || die "--data-root requires a path"
-      DATA_ROOT="$2"
-      EXTRACT_DIR="$DATA_ROOT/PlanetScope/pre-chipped-8b"
-      shift
-      ;;
-    --extract-dir)
-      [[ $# -ge 2 ]] || die "--extract-dir requires a path"
-      EXTRACT_DIR="$2"
-      shift
-      ;;
-    --force-extract)
-      FORCE_EXTRACT=1
-      ;;
     --skip-upgrade)
       SKIP_SYSTEM_UPGRADE=1
       ;;
     --skip-nvidia-check)
       SKIP_NVIDIA_CHECK=1
-      ;;
-    --skip-data)
-      SKIP_DATA=1
       ;;
     --skip-uv-sync)
       SKIP_UV_SYNC=1
@@ -214,69 +180,6 @@ print("cuda allocation test:", float(x.mean()))
 PY
 }
 
-default_archive_path() {
-  local home_archive="$HOME/${DATASET_NAME}.tar.gz"
-  local repo_archive="$REPO_ROOT/${DATASET_NAME}.tar.gz"
-
-  if [[ -n "$ARCHIVE" ]]; then
-    printf '%s\n' "$ARCHIVE"
-  elif [[ -f "$home_archive" ]]; then
-    printf '%s\n' "$home_archive"
-  elif [[ -f "$repo_archive" ]]; then
-    printf '%s\n' "$repo_archive"
-  else
-    printf '%s\n' "$home_archive"
-  fi
-}
-
-extract_dataset() {
-  [[ "$SKIP_DATA" == "1" ]] && return
-
-  local archive_path
-  archive_path="$(default_archive_path)"
-  archive_path="${archive_path/#\~/$HOME}"
-
-  local dataset_dir="$EXTRACT_DIR/$DATASET_NAME"
-  if [[ -d "$dataset_dir/train" && -d "$dataset_dir/val" && -d "$dataset_dir/test" && "$FORCE_EXTRACT" != "1" ]]; then
-    log "Dataset already extracted: $dataset_dir"
-    return
-  fi
-
-  [[ -f "$archive_path" ]] || die "Archive not found: $archive_path"
-
-  log "Extracting dataset"
-  mkdir -p "$EXTRACT_DIR"
-  tar -xzf "$archive_path" -C "$EXTRACT_DIR"
-
-  [[ -d "$dataset_dir/train" && -d "$dataset_dir/val" && -d "$dataset_dir/test" ]] || \
-    die "Expected train/val/test under $dataset_dir after extraction"
-}
-
-create_compat_symlink() {
-  [[ -n "$COMPAT_DATA_ROOT" ]] || return 0
-  [[ "$COMPAT_DATA_ROOT" != "$DATA_ROOT" ]] || return 0
-
-  if [[ -L "$COMPAT_DATA_ROOT" && "$(readlink "$COMPAT_DATA_ROOT")" == "$DATA_ROOT" ]]; then
-    return
-  fi
-  if [[ -e "$COMPAT_DATA_ROOT" ]]; then
-    warn "$COMPAT_DATA_ROOT already exists; leaving it unchanged."
-    return
-  fi
-
-  local parent
-  parent="$(dirname "$COMPAT_DATA_ROOT")"
-  if [[ -w "$parent" ]]; then
-    mkdir -p "$parent"
-    ln -s "$DATA_ROOT" "$COMPAT_DATA_ROOT"
-  elif have_cmd sudo && sudo -n true >/dev/null 2>&1; then
-    sudo mkdir -p "$parent"
-    sudo ln -s "$DATA_ROOT" "$COMPAT_DATA_ROOT"
-  else
-    warn "Could not create compatibility symlink: $COMPAT_DATA_ROOT -> $DATA_ROOT"
-  fi
-}
-
 wandb_login() {
   [[ "$SKIP_WANDB" == "1" ]] && return
 
@@ -305,19 +208,11 @@ main() {
   ensure_uv
   sync_python_environment
   check_nvidia_setup
-  extract_dataset
-  create_compat_symlink
   wandb_login
 
   cat <<EOF
 
 Done.
-
-Dataset:
-  $EXTRACT_DIR/$DATASET_NAME
-
-Compatibility data root:
-  $COMPAT_DATA_ROOT
 EOF
 }
 

@@ -17,8 +17,9 @@ manifested chipper, full unfiltered chip collection, manifest-driven nodata
 filter, transactional application of the selected universal 50% threshold, and
 the non-destructive training-only background selector, then packaged and
 clean-extraction verified the source-aware v2 portable canonical archive after
-repairing one California and all 30 BC label/source fragments. Task 010 is next
-to transfer and verify only that v2 archive remotely.
+repairing one California and all 30 BC label/source fragments. Task 010 then
+downloaded, checksum-verified, and fully validated that archive remotely. Task
+011 is next to materialize the temporal baseline dataset view.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles

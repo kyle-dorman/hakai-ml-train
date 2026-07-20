@@ -40,9 +40,11 @@ positive chips and explicitly excludes 1,392 non-positive chips without
 changing canonical membership. The clean-extraction-verified transfer artifact
 is the 44,859,496,084-byte v2 ZIP at
 `/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip`.
-Task 010 transfers only that repaired archive; v1 remains historical evidence.
-The complete ordered queue is in `docs/todo.md`; detailed contracts are in
-`tasks/`.
+Task 010 downloaded and fully verified only that repaired archive at the remote
+canonical root `/home/sky/data/planet8b_all_regions_1024_512_v2`; v1 remains
+historical evidence. Task 011 is next to materialize the temporal baseline
+view. The complete ordered queue is in `docs/todo.md`; detailed contracts are
+in `tasks/`.
 
 Do not start multiple numbered tasks in one window. Close the selected task,
 update its outcome and `docs/todo.md`, and stop.

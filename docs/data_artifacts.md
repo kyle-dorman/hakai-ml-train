@@ -125,8 +125,20 @@ It reuses 4,120 unchanged NPZ hashes from the checksum-verified v1 inventory
 and freshly hashes all 482 retained rewritten NPZs plus 21 changed
 manifest/metadata members. A clean extraction passed archive checksum, ZIP
 integrity, path/size joins, all fresh hashes, a 74-chip reused-hash sample, and
-portable NPZ/manifest validation. Task 010 will record the remote extracted
-path for v2.
+portable NPZ/manifest validation.
+
+Task 010 downloaded, checksum-verified, fully inventory-validated, and cleanly
+extracted that v2 archive on the selected SkyPilot host. The canonical remote
+dataset root for Tasks 011–019 is:
+
+```text
+/home/sky/data/planet8b_all_regions_1024_512_v2
+```
+
+The remote staging ZIP and checksum sidecar remain under
+`/home/sky/dataset-staging`. The durable verification receipt is
+`metadata/remote_archive_verification.log` inside the extracted dataset root.
+No `/home/taylor/data` compatibility symlink was created.
 
 Nodata dry-run reports belong under an explicit analysis or `filter_reports`
 directory and never change the active collection. An applied threshold writes

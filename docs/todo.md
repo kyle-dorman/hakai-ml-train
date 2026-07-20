@@ -2,23 +2,22 @@
 
 ## Current phase
 
-Status: Task 009A repaired the source-aware nodata defect, regenerated the
-selected one California plus all 30 BC label/source fragments, reapplied the
-approved 50% policy, and clean-extraction verified the v2 archive. Remote
-transfer has not started.
+Status: Task 010 downloaded the repaired v2 archive directly from Google Drive
+to `sky-dad6-kyledorman`, matched its approved checksum, cleanly extracted and
+fully verified it, and recorded the canonical remote dataset root.
 
-Current active task (in progress):
+Current active task:
 
 ```text
-Task 010: Transfer and verify the repaired v2 archive.
-tasks/010_transfer_and_verify_remote.md
+Task 011: Materialize the temporal baseline dataset view.
+tasks/011_materialize_baseline_dataset.md
 ```
 
 Next task:
 
 ```text
-Task 011: Materialize the temporal baseline dataset view.
-tasks/011_materialize_baseline_dataset.md
+Task 012: Materialize the LORO dataset views.
+tasks/012_materialize_loro_datasets.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -103,9 +102,9 @@ Local dataset preparation:
 
 Remote experiment preparation and execution:
 
-- Task 010: in progress; `sky-dad6-kyledorman` (`sky`) is selected and its
-  disposable-host bootstrap is being established before transfer and
-  verification of the repaired v2 archive.
+- Task 010: complete; the dedicated remote preparation script downloaded,
+  checksum-verified, cleanly extracted, and fully validated the repaired v2
+  archive at `/home/sky/data/planet8b_all_regions_1024_512_v2`.
 - Tasks 011–012: materialize baseline and LORO dataset views.
 - Tasks 013–014: establish W&B/run registry and training orchestration.
 - Tasks 015–016: run the baseline and LORO training suite.
