@@ -73,9 +73,27 @@ categories. Their SHA-256 hashes are
 `6a62fd9031f8d238e2a9fd9448519f765da9b958ea5022df35796de7a3da9a1b` and
 `21a3ecae1a5ec4f462b947b289dfc129f5749a0f36d1edff9740f7190a7c72d7`,
 respectively. These small artifacts belong in the portable archive; the
-selector does not change canonical NPZs or `chip_manifest.csv`. Task 009 will
-record the portable archive and checksum. Task 010 will record the remote
-extracted path.
+selector does not change canonical NPZs or `chip_manifest.csv`.
+
+Task 009's portable canonical archive is:
+
+```text
+/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip
+```
+
+It is a 44,917,177,439-byte ZIP64 archive with SHA-256
+`6640757c19d803a000834b34abdb20c71a5359e215e8edf08b4958123c4ab098`;
+the adjacent `.zip.sha256` sidecar owns that transfer checksum. The archive has
+one versioned dataset root and 4,653 files: 4,637 canonical NPZs, nine portable
+manifests, six compact metadata/provenance files, and
+`metadata/archive_inventory.csv`. The inventory records byte size and SHA-256
+for all 4,652 other payload files, including every NPZ, and has SHA-256
+`a07d8326a8b3946907aeb04c0fac042e714a7c226b96c24d6f93302c33f01fbc`.
+Runtime manifests resolve from the extracted dataset root and contain no local
+absolute path dependency; original raster paths are isolated in the optional
+`metadata/local_raster_path_provenance.csv`. A clean local extraction passed
+full inventory verification, manifest joins, and sampled NPZ validation.
+Task 010 will record the remote extracted path.
 
 Nodata dry-run reports belong under an explicit analysis or `filter_reports`
 directory and never change the active collection. An applied threshold writes

@@ -1,6 +1,6 @@
 # Task 009: Package the portable canonical dataset archive
 
-Status: Pending
+Status: Complete
 
 Depends on: Tasks 007 and 008
 
@@ -43,6 +43,12 @@ Confirm:
    needed remotely.
 
 ZIP format is already fixed by the user.
+
+Decision (2026-07-20): use the recommended archive directory and versioned
+name, `/Volumes/x10pro/kelpseg/archives` and
+`planet8b_all_regions_1024_512_v1.zip`. Include compact CSV/JSON/Markdown QA
+and provenance evidence, exclude large QA/contact-sheet images, and keep the
+ZIP format fixed by the user.
 
 ## Archive layout
 
@@ -125,3 +131,119 @@ failure on a deliberately changed member/checksum.
 Record approved name/path, staging layout, archive size/checksum, inventory and
 extraction validation, excluded artifacts, scripts changed, and Task 010
 transfer command template.
+
+## Outcome
+
+Task 009 created the approved versioned portable archive and adjacent checksum
+sidecar:
+
+```text
+/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip
+/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip.sha256
+```
+
+The ZIP is 44,917,177,439 bytes (41.832381 GiB) and has SHA-256
+`6640757c19d803a000834b34abdb20c71a5359e215e8edf08b4958123c4ab098`.
+It contains one root named `planet8b_all_regions_1024_512_v1` and 4,653 file
+members. The payload is 4,637 canonical NPZ chips totaling 44,912,049,410
+bytes, nine portable manifests totaling 3,011,141 bytes, six compact metadata
+files totaling 134,905 bytes, and the 669,229-byte inventory itself.
+
+`metadata/archive_inventory.csv` has 4,652 rows and SHA-256
+`a07d8326a8b3946907aeb04c0fac042e714a7c226b96c24d6f93302c33f01fbc`.
+It records the relative path, byte size, file kind, and SHA-256 for every other
+archive member, including every NPZ. The inventory excludes only itself to
+avoid a recursive self-hash; the archive sidecar protects the ZIP and the
+inventory file together.
+
+The portable layout includes the active chip, raster, raster-metadata,
+temporal-split, nodata-removal, training-selection, and compact audit
+manifests. It also includes dataset parameters, current chip and raster QA
+summaries, portable nodata-filter metadata, a dataset README, and an optional
+local raster-path provenance CSV. Active `chip_path` values were rewritten
+from `all/*.npz` to `chips/all/*.npz`. Runtime raster metadata and manifests do
+not require any absolute path; the original local raster paths are isolated in
+the explicitly optional provenance CSV.
+
+The exact production packaging command was:
+
+```bash
+caffeinate -i uv run python scripts/package_planet8b_dataset.py package \
+  --chip-root /Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1 \
+  --raster-root /Volumes/x10pro/kelpseg/merged_all_regions_v1 \
+  --temporal-split planet8b_temporal_image_splits.csv \
+  --archive /Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip \
+  --dataset-version 1024_512_v1 \
+  --producer-git-commit 5d22dc38330d0bebf5848ec7080b95f4169348a1 \
+  --producer-worktree-dirty
+```
+
+The packager first built
+`/Volumes/x10pro/kelpseg/archives/staging/planet8b_all_regions_1024_512_v1`
+with same-volume hard links for the immutable NPZ payload, portable rewritten
+manifests, and generated compact metadata. It refused symlinks, undeclared
+file types, raw TIFFs, checkpoints, W&B paths, traversal paths, missing joins,
+partial selections, and output overwrites. It used `ZIP_STORED` because the
+NPZ payloads are already compressed and enabled ZIP64 for the total size.
+
+The exact independent clean-extraction verification command was:
+
+```bash
+caffeinate -i uv run python scripts/package_planet8b_dataset.py verify \
+  --archive /Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip \
+  --checksum-file /Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip.sha256 \
+  --extraction-parent /Volumes/x10pro/kelpseg/archives/.verify_planet8b_all_regions_1024_512_v1 \
+  --sample-count 12 \
+  --staging-root /Volumes/x10pro/kelpseg/archives/staging/planet8b_all_regions_1024_512_v1 \
+  --cleanup-extraction \
+  --cleanup-staging
+```
+
+Verification passed the outer checksum and safe-member checks, extracted all
+members to a new root, and re-hashed all 4,652 inventoried payloads. The active
+manifest resolved exactly 4,637 extracted NPZs and joined one-to-one to the
+training selector. All 367 active source TIFF IDs joined through the 369-row
+raster manifest, raster metadata, and temporal split; every source had shape,
+CRS, affine transform, and bounds. Twelve deterministic NPZ samples matched
+their manifest keys, shapes, dtypes, class counts, ignore counts, and nodata
+counts. The staging and verification roots were deliberately removed only
+after all checks passed. The source active manifest remained unchanged at
+SHA-256 `edf754888dea183f12873594b546b980f350b5b4e293ff62ca7eca64a2c39a39`.
+
+Fixture tests also proved clean portability, full verification failure for a
+wrong sidecar checksum, internal-inventory failure for a deliberately changed
+member even after recomputing the outer checksum, symlink refusal, and output
+overwrite refusal. Large removal-analysis images, contact sheets, raw TIFFs,
+historical chip collections, checkpoints, W&B directories, and materialized
+baseline/LORO views were excluded.
+
+Final repository validation passed with three focused packaging tests, all 45
+repository tests, Ruff format and lint over `scripts`, `src`, and `tests`,
+pre-commit over every Task 009 file, `git diff --check`, and relative Markdown
+link validation over all changed docs. The broader repository-wide Ruff format
+and lint commands remain red only on pre-existing legacy notebook formatting
+and two unused `i` variables in
+`notebooks/create_skema_aux_files.ipynb`; Task 009 did not modify or expand
+those legacy surfaces.
+
+Changed repository files are `scripts/package_planet8b_dataset.py`,
+`tests/test_package_planet8b_dataset.py`, and the synchronized status,
+artifact, routing, and task documentation. There are no unresolved Task 009
+issues.
+
+Task 010 can use this transfer template after the user supplies the SSH alias
+and remote staging directory:
+
+```bash
+scp \
+  /Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip \
+  /Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v1.zip.sha256 \
+  <ssh-alias>:<remote-staging-directory>/
+ssh <ssh-alias> \
+  'cd <remote-staging-directory> && sha256sum -c planet8b_all_regions_1024_512_v1.zip.sha256'
+```
+
+The exact next action is to open Task 010, obtain the remote SSH alias/user,
+staging path, extracted root, compatibility path, and repo branch/commit, then
+transfer and independently verify this ZIP without re-chipping or changing the
+local canonical collection. Stop before Task 011.

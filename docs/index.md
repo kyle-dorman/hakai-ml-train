@@ -12,10 +12,11 @@ The active project is expanded-region PlanetScope 8-band binary kelp
 segmentation. It will compare a temporally separated standard baseline with
 leave-one-region-out models and evaluate them on matching source TIFFs.
 
-Tasks 000–008 completed the temporal raster split, canonical raw merge,
+Tasks 000–009 completed the temporal raster split, canonical raw merge,
 manifested chipper, full unfiltered chip collection, manifest-driven nodata
 filter, transactional application of the selected universal 50% threshold, and
-the non-destructive training-only background selector. Task 009 is next.
+the non-destructive training-only background selector, then packaged and
+clean-extraction verified the portable canonical archive. Task 010 is next.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles

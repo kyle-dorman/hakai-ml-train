@@ -2,8 +2,8 @@
 
 ## Current phase
 
-Status: the cleaned canonical chip collection and its training-only background
-selection are ready for packaging.
+Status: the portable canonical archive is packaged and verified locally. It is
+ready for remote transfer and verification.
 
 Current active task:
 
@@ -14,8 +14,8 @@ No implementation task is active.
 Next task:
 
 ```text
-Task 009: Package and verify the portable dataset archive.
-tasks/009_package_dataset_archive.md
+Task 010: Transfer and verify the archive remotely.
+tasks/010_transfer_and_verify_remote.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -53,6 +53,13 @@ active chips one-to-one, selects 3,210 positive chips, and explicitly excludes
 selection manifest are under `background_selection/exclude_all`; canonical
 chips and the active manifest are unchanged.
 
+Task 009 created and clean-extraction verified
+`planet8b_all_regions_1024_512_v1.zip` under
+`/Volumes/x10pro/kelpseg/archives`. The 44,917,177,439-byte ZIP has SHA-256
+`6640757c19d803a000834b34abdb20c71a5359e215e8edf08b4958123c4ab098`
+and contains all 4,637 canonical NPZs plus the portable manifests and compact
+provenance needed by Tasks 010–012. Its internal inventory hashes every NPZ.
+
 ## Open queue
 
 Local dataset preparation:
@@ -64,7 +71,7 @@ Local dataset preparation:
 - Task 006: complete; selected the universal 50% nodata threshold.
 - Task 007: complete; applied the approved threshold transactionally.
 - Task 008: complete; built and applied the non-destructive training selector.
-- Task 009: package and verify the portable dataset archive.
+- Task 009: complete; packaged and verified the portable dataset archive.
 
 Remote experiment preparation and execution:
 
