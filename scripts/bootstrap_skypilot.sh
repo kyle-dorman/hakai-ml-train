@@ -17,6 +17,7 @@ SKIP_NVIDIA_CHECK="${HAKAI_SKIP_NVIDIA_CHECK:-0}"
 SKIP_DATA=0
 SKIP_UV_SYNC=0
 SKIP_WANDB=0
+SKIP_CODEX="${HAKAI_SKIP_CODEX:-0}"
 
 log() {
   printf '\n==> %s\n' "$*"
@@ -49,6 +50,7 @@ Options:
   --skip-data         Do not extract the dataset archive.
   --skip-uv-sync      Do not run uv sync.
   --skip-wandb        Do not run wandb login.
+  --skip-codex        Do not install or check the Codex CLI.
   --help              Show this help.
 
 Useful environment variables:
@@ -56,6 +58,7 @@ Useful environment variables:
   HAKAI_UV_SYNC_ARGS  Extra uv sync flags. Default: --frozen
   HAKAI_SKIP_SYSTEM_UPGRADE=1
   HAKAI_SKIP_NVIDIA_CHECK=1
+  HAKAI_SKIP_CODEX=1
 EOF
 }
 
@@ -94,6 +97,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-wandb)
       SKIP_WANDB=1
+      ;;
+    --skip-codex)
+      SKIP_CODEX=1
       ;;
     --help|-h)
       usage
@@ -144,6 +150,26 @@ ensure_uv() {
   curl -LsSf https://astral.sh/uv/install.sh | sh
   export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
   have_cmd uv || die "uv is not on PATH after install"
+}
+
+ensure_codex() {
+  [[ "$SKIP_CODEX" == "1" ]] && return
+
+  export PATH="$HOME/.local/bin:$PATH"
+  if ! have_cmd codex; then
+    have_cmd curl || die "curl is required to install the Codex CLI"
+    log "Installing Codex CLI"
+    curl -fsSL https://chatgpt.com/codex/install.sh | \
+      CODEX_NON_INTERACTIVE=1 sh
+    export PATH="$HOME/.local/bin:$PATH"
+    have_cmd codex || die "codex is not on PATH after install"
+  fi
+
+  log "Checking Codex CLI"
+  codex --version
+  if ! codex login status >/dev/null 2>&1; then
+    warn "Codex is not authenticated. Run: codex login --device-auth"
+  fi
 }
 
 sync_python_environment() {
@@ -227,8 +253,8 @@ extract_dataset() {
 }
 
 create_compat_symlink() {
-  [[ -n "$COMPAT_DATA_ROOT" ]] || return
-  [[ "$COMPAT_DATA_ROOT" != "$DATA_ROOT" ]] || return
+  [[ -n "$COMPAT_DATA_ROOT" ]] || return 0
+  [[ "$COMPAT_DATA_ROOT" != "$DATA_ROOT" ]] || return 0
 
   if [[ -L "$COMPAT_DATA_ROOT" && "$(readlink "$COMPAT_DATA_ROOT")" == "$DATA_ROOT" ]]; then
     return
@@ -275,6 +301,7 @@ main() {
   printf 'Repo: %s\n' "$REPO_ROOT"
 
   upgrade_system_packages
+  ensure_codex
   ensure_uv
   sync_python_environment
   check_nvidia_setup

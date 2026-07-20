@@ -7,7 +7,7 @@ selected one California plus all 30 BC label/source fragments, reapplied the
 approved 50% policy, and clean-extraction verified the v2 archive. Remote
 transfer has not started.
 
-Current active task:
+Current active task (in progress):
 
 ```text
 Task 010: Transfer and verify the repaired v2 archive.
@@ -103,7 +103,9 @@ Local dataset preparation:
 
 Remote experiment preparation and execution:
 
-- Task 010: pending; transfer and verify the repaired v2 archive.
+- Task 010: in progress; `sky-dad6-kyledorman` (`sky`) is selected and its
+  disposable-host bootstrap is being established before transfer and
+  verification of the repaired v2 archive.
 - Tasks 011–012: materialize baseline and LORO dataset views.
 - Tasks 013–014: establish W&B/run registry and training orchestration.
 - Tasks 015–016: run the baseline and LORO training suite.

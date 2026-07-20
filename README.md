@@ -63,9 +63,12 @@ uv run ruff check .
 ```
 
 For a disposable remote GPU instance, `scripts/bootstrap_skypilot.sh` installs
-the locked environment, verifies CUDA, establishes the expected data-root
-compatibility path, and handles W&B login. Task 010 will connect the verified
-v2 ZIP and adjacent `.zip.sha256` sidecar under
+the Codex CLI and locked environment, verifies CUDA, establishes the expected
+data-root compatibility path, and handles W&B login. Codex device
+authentication remains interactive; after bootstrap, run
+`codex login --device-auth` when `codex login status` reports that the host is
+not authenticated. Task 010 will connect the verified v2 ZIP and adjacent
+`.zip.sha256` sidecar under
 `/Volumes/x10pro/kelpseg/archives` to the selected remote data root; do not
 transfer the v1 ZIP or use the old tar archive as the new experiment contract.
 

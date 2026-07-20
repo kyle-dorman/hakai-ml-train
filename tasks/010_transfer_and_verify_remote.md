@@ -1,6 +1,6 @@
 # Task 010: Transfer and verify the canonical archive remotely
 
-Status: Pending
+Status: In progress
 
 Depends on: Task 009A
 
@@ -44,6 +44,16 @@ only if configs still require it.
 
 Record exact values here before transfer. Do not put credentials or W&B keys in
 the task file.
+
+Confirmed values:
+
+- Remote SSH alias: `sky-dad6-kyledorman`
+- Remote SSH user: `sky`
+- Instance lifecycle: disposable SkyPilot host
+- Remote repo: `/home/sky/hakai-ml-train`, clean `main` at `598490b`
+
+The staging path, extracted data root, `/home/taylor/data` compatibility need,
+remain to be confirmed before transfer.
 
 ## Transfer contract
 
