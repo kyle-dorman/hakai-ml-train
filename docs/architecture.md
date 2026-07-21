@@ -100,16 +100,16 @@ represented by one true-size window spanning that dimension; canonical NPZs
 are not padded, and their manifest width, height, and bounds describe only real
 source pixels. Dimensions at least 1024 pixels retain full windows only, so
 trailing edge strips outside the regular grid remain uncovered. Training views
-retain all eligible overlapping chips. Validation views select the
+retain all eligible overlapping chips. Validation and test views select the
 non-overlapping subset where both pixel offsets are multiples of 1024;
-validation coverage must be reported. This is a manifest selection from one
+evaluation coverage must be reported. This is a manifest selection from one
 canonical chip family, not a second evaluation artifact. Any later transform
 that pads a small canonical chip must fill its mask with the `-100` ignore
 index, not class-0 background.
 
 The current planned LORO policy is:
 
-- test: all retained chips from the held-out region;
+- test: the retained non-overlapping-grid chips from the held-out region;
 - train: baseline-TRAIN chips from other regions, with the selected
   background-only training policy;
 - validation: baseline-VAL chips from other regions;
@@ -129,9 +129,9 @@ overlapping chips, reconstruct one probability per covered source pixel before
 thresholding and calculating TIFF confusion counts. Region and test-set metrics
 then sum the non-overlapping TIFF confusion counts. Do not sum overlapping chip
 confusion counts into TIFF metrics. Ignore-index and uncovered pixels do not
-contribute, and coverage must be reported. Final test evaluation uses every
-retained overlapping chip; the non-overlapping subset policy applies only to
-validation used for model selection.
+contribute, and coverage must be reported. Validation and final test evaluation
+use the non-overlapping materialized subset; overlap reconstruction remains
+required for any evaluation artifact that includes overlapping chips.
 
 ## Compatibility boundary
 

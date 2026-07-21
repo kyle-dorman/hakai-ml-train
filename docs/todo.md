@@ -2,22 +2,26 @@
 
 ## Current phase
 
-Status: Task 010 downloaded the repaired v2 archive directly from Google Drive
-to `sky-dad6-kyledorman`, matched its approved checksum, cleanly extracted and
-fully verified it, and recorded the canonical remote dataset root.
+Status: Task 011 implemented the shared fold materializer and atomically
+published the validated temporal baseline view at
+`/home/sky/data/planet8b_all_regions_1024_512_v2/views/baseline_temporal_v1`.
+The view records all 4,602 canonical chips and hard-links 2,103 train, 277
+validation, and 185 test chips. Training retains eligible overlaps and applies
+the approved background exclusion; validation and test retain their complete
+non-overlapping grids without background exclusion.
 
 Current active task:
 
 ```text
-Task 011: Materialize the temporal baseline dataset view.
-tasks/011_materialize_baseline_dataset.md
+Task 012: Materialize the LORO dataset views.
+tasks/012_materialize_loro_datasets.md
 ```
 
 Next task:
 
 ```text
-Task 012: Materialize the LORO dataset views.
-tasks/012_materialize_loro_datasets.md
+Task 013: Add W&B run context and establish the run registry.
+tasks/013_add_wandb_run_context.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -105,7 +109,9 @@ Remote experiment preparation and execution:
 - Task 010: complete; the dedicated remote preparation script downloaded,
   checksum-verified, cleanly extracted, and fully validated the repaired v2
   archive at `/home/sky/data/planet8b_all_regions_1024_512_v2`.
-- Tasks 011–012: materialize baseline and LORO dataset views.
+- Task 011: complete; implemented the reusable materializer and published the
+  validated temporal baseline view.
+- Task 012: materialize the LORO dataset views.
 - Tasks 013–014: establish W&B/run registry and training orchestration.
 - Tasks 015–016: run the baseline and LORO training suite.
 - Tasks 017–018: build and run chip/TIFF prediction evaluation.
