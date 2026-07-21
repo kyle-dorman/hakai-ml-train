@@ -62,8 +62,10 @@ Attach or log references to:
 Large canonical chips do not need to be uploaded to W&B merely to make the run
 reproducible; their archive checksum and manifest identity are the contract.
 
-Training runs keep exactly one checkpoint (`save_top_k=1`, `save_last=false`)
-and explicitly log that best checkpoint as the model artifact at fit end.
+Training runs keep one validation-selected best checkpoint (`save_top_k=1`) and
+a local `last.ckpt` for exact interruption recovery. Only the best checkpoint is
+logged as the W&B model artifact at fit end; `last.ckpt` remains a local recovery
+artifact.
 Metadata and best-checkpoint artifacts use the same path in online and offline
 mode; offline run directories remain syncable later. The metadata artifact
 contains the generated context, resolved Lightning config, fold manifest and

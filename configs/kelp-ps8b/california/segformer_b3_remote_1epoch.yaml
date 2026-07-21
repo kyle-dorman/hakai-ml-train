@@ -51,7 +51,7 @@ data:
           - __class_fullname__: RandomCrop
             border_mode: 0
             fill: 0.0
-            fill_mask: 0.0
+            fill_mask: *ignore_index
             height: 1024
             p: 1.0
             pad_if_needed: true
@@ -124,13 +124,12 @@ data:
           - __class_fullname__: PadIfNeeded
             border_mode: 0
             fill: 0.0
-            fill_mask: 0.0
+            fill_mask: *ignore_index
             min_height: 1024
             min_width: 1024
             p: 1.0
             pad_height_divisor: null
             pad_width_divisor: null
-            padding: 0
             position: center
           - __class_fullname__: Normalize
             max_pixel_value: 4000.0
@@ -189,7 +188,7 @@ trainer:
         filename: remote_1epoch_kelp_ps8b_segformer_b3_epoch-{epoch:02d}_val-iou-{val/iou_epoch:.4f}
         monitor: val/iou_epoch
         mode: max
-        save_last: False
+        save_last: True
         save_top_k: 1
         save_weights_only: False
         verbose: True

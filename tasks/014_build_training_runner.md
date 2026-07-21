@@ -1,8 +1,8 @@
 # Task 014: Build the experiment registry and training runner
 
-Status: Pending
+Status: Paused; resume after Task 014A
 
-Depends on: Task 013
+Depends on: Task 013; remaining smoke execution requires Task 014A
 
 Execution: Remote-aware code task; smoke runs only.
 
@@ -25,8 +25,8 @@ matrix and restartable execution surface.
 - Task 011 baseline view/manifest
 - Task 012 LORO views/manifests
 - Reference config: `configs/kelp-ps8b/california/segformer_b3.yaml`
-- Smoke config:
-  `configs/kelp-ps8b/california/segformer_b3_remote_1epoch.yaml`
+- Smoke profile: the selected production config with only `max_epochs=1`, so
+  batch size, precision, workers, accumulation, and transforms match production
 - `trainer.py`
 - `docs/experiments.md`
 
@@ -38,13 +38,18 @@ Confirm the comparison policy before generating the matrix:
    user explicitly selects another already-working PS8B config.
 2. Seed policy. Recommendation: one fixed seed (`42`) for the first complete
    baseline/LORO suite; multiple seeds are backlog follow-up.
-3. Full training budget: maximum epochs, early-stopping policy if any, and
-   checkpoint monitor. Recommendation: preserve the selected base config unless
-   the baseline smoke reveals a concrete problem.
+3. Full training budget: **approved at 100 epochs**, with no early stopping and
+   `val/iou_epoch` as the best-checkpoint monitor. The complete matrix first runs
+   as an isolated one-epoch smoke suite.
 4. Execution mode: sequential runs (recommended for one GPU) versus an external
    scheduler.
-5. Failure policy: continue to next run after recording failure (recommended)
-   or stop suite.
+5. Failure policy: **approved to continue to the next sequential run after
+   recording a failure**.
+
+The approved base model is the California PS8B SegFormer B3, with fixed seed
+`42` and sequential single-GPU execution. The user will launch the production
+runs in Tasks 015 and 016; those tasks are post-run verification/check-in
+boundaries, not agent-owned launch steps.
 
 Record exact choices in this task and the checked-in experiment matrix.
 
@@ -67,6 +72,10 @@ resolved_configs/<run_key>.yaml
 logs/<run_key>.log
 ```
 
+Generated run artifacts are namespaced by `experiment_version`; smoke and
+production attempts never share resolved configs, checkpoints, logs, or latest
+registry state.
+
 CLI:
 
 ```bash
@@ -82,7 +91,8 @@ Support:
 - `--run <run_key>` repeatable;
 - `--pending` for all non-completed matrix entries;
 - `--dry-run`;
-- `--smoke` with bounded trainer overrides;
+- `--smoke` selecting a separate one-epoch experiment identity, registry state,
+  output root, and W&B smoke identity;
 - explicit `--resume-checkpoint` for a failed/interrupted entry where valid;
 - no implicit rerun of completed entries without a deliberate override.
 
@@ -111,8 +121,9 @@ JSONL is the append-only event source; CSV is a regenerated latest-state view.
 - Record `running` before subprocess launch and final status after exit.
 - Capture stdout/stderr to per-run log while preserving live console output.
 - A W&B run ID and checkpoint can never be silently reassigned to another fold.
-- Resume uses compatible `last.ckpt`; completed runs remain immutable unless the
-  user explicitly creates a new version/attempt.
+- Resume uses compatible local `last.ckpt`; only the best checkpoint is uploaded
+  to W&B. Completed runs remain immutable unless the user explicitly creates a
+  new version/attempt.
 
 ## Plan / spec requirement
 
@@ -123,11 +134,13 @@ handling, and duplicate-run prevention.
 ## Smoke test
 
 1. Dry-run the complete 13-run matrix and inspect commands/configs.
-2. Run one bounded baseline smoke.
-3. Run one bounded `ca_001` LORO smoke.
+2. Run the baseline plus all 12 LORO folds for one complete epoch each.
+3. For every smoke, run validation and test from the selected best checkpoint.
 4. Simulate one failed command and one interrupted entry.
-5. Re-run `--pending` and verify completed smokes are skipped and failed work is
-   represented honestly.
+5. Re-run smoke `--pending` and verify completed smokes are skipped and failed
+   work is represented honestly.
+6. Verify production `--pending` still selects all 13 entries because smoke and
+   production state are isolated.
 
 ## Validation
 
@@ -145,7 +158,7 @@ Validate resolved data paths and W&B metadata for all 13 dry-run entries.
 - User-approved matrix/config/seed/budget are checked in.
 - Dry-run shows one baseline plus 12 LORO runs with correct fold paths.
 - Registry survives success, failure, interruption, and resume tests.
-- Two smoke runs use correct W&B context and dataset views.
+- All 13 smoke runs use correct W&B context and dataset views.
 - No full training run has started.
 
 ## Non-goals
@@ -165,3 +178,31 @@ Validate resolved data paths and W&B metadata for all 13 dry-run entries.
 
 Record user-approved matrix policy, files/CLI, registry schema, dry-run matrix,
 smoke run results, failure/resume evidence, validation, and Task 015 command.
+
+## Progress
+
+Approved policy is recorded in the checked-in matrix: SegFormer B3, seed `42`,
+100 production epochs, no early stopping, best `val/iou_epoch` checkpoint plus
+local `last.ckpt`, sequential execution, and continue-after-failure. The user
+will execute Tasks 015–016; those tasks will verify and record the resulting
+runs after the fact.
+
+The runner, registry tests, and all 13 real-fold smoke/production dry-runs are
+implemented and passing. A historical batch-size-1 baseline smoke completed fit,
+validation, checkpoint upload, and test under W&B run `8f4268b3`; it measured
+`val/iou_epoch = 0.14294` and `test/iou = 0.28319`. That profile took 43:47 for
+fit and was superseded because it did not match production runtime settings.
+
+The production-like `planet8b-loro-v1-smoke-1epoch-v2` suite then reached batch
+281/701 of the baseline before the A40 disappeared from the driver with
+`cudaErrorUnknown`. PyTorch now reports zero CUDA devices and `nvidia-smi`
+cannot obtain the device handle. The attempt and interruption remain in
+`/home/sky/experiments/planet8b-loro-v1/experiment_registry.jsonl`; no v2 run is
+marked complete.
+
+The original host is no longer available. Task 014 is paused at this boundary
+while Task 014A recreates and validates the environment, canonical dataset, and
+hard-linked views on a replacement GPU machine. After Task 014A, restart all 13
+production-like smokes under a fresh registry/output namespace and new smoke
+experiment identity (recommended `v3`); do not import the failed host's v2
+registry as current state. The exact next action is Task 014A.

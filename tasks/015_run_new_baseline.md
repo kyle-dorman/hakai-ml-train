@@ -4,7 +4,7 @@ Status: Pending
 
 Depends on: Task 014
 
-Execution: Remote full training task.
+Execution: User-executed remote training; agent verification/check-in afterward.
 
 ## Abstract
 
@@ -13,6 +13,11 @@ experiment matrix. This establishes temporally separated in-domain performance
 on the expanded 12-region dataset and produces the first checkpoint required by
 prediction-evaluator development. This task executes the recorded policy; it
 does not tune the model based on test results.
+
+The user launches and monitors this production run. On follow-up, the agent
+inspects the existing registry, logs, W&B run, checkpoints, and metrics, records
+the outcome, and advances the queue; it does not relaunch training unless the
+user explicitly asks.
 
 ## Goal
 

@@ -128,8 +128,8 @@ integrity, path/size joins, all fresh hashes, a 74-chip reused-hash sample, and
 portable NPZ/manifest validation.
 
 Task 010 downloaded, checksum-verified, fully inventory-validated, and cleanly
-extracted that v2 archive on the selected SkyPilot host. The canonical remote
-dataset root for Tasks 011–019 is:
+extracted that v2 archive on the original SkyPilot host. Its canonical root
+was:
 
 ```text
 /home/sky/data/planet8b_all_regions_1024_512_v2
@@ -138,7 +138,10 @@ dataset root for Tasks 011–019 is:
 The remote staging ZIP and checksum sidecar remain under
 `/home/sky/dataset-staging`. The durable verification receipt is
 `metadata/remote_archive_verification.log` inside the extracted dataset root.
-No `/home/taylor/data` compatibility symlink was created.
+No `/home/taylor/data` compatibility symlink was created. That GPU host is no
+longer available. Task 014A must establish and record a newly verified remote
+canonical root before Task 014 resumes; the same path is recommended when the
+replacement user is also `sky`, but the old host's existence is not assumed.
 
 Nodata dry-run reports belong under an explicit analysis or `filter_reports`
 directory and never change the active collection. An applied threshold writes

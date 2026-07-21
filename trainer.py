@@ -56,7 +56,7 @@ def apply_run_context_to_config(config, context: dict) -> None:
         )
     checkpoint_args = checkpoint_callbacks[0].init_args
     checkpoint_args.save_top_k = 1
-    checkpoint_args.save_last = False
+    checkpoint_args.save_last = True
 
 
 class KelpLightningCLI(LightningCLI):

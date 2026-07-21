@@ -4,7 +4,7 @@ Status: Pending
 
 Depends on: Tasks 015 and 014
 
-Execution: Remote multi-run training task.
+Execution: User-executed remote training; agent verification/check-in afterward.
 
 ## Abstract
 
@@ -12,6 +12,11 @@ Run one model for each approved held-out region using the exact training policy
 established for the baseline. Begin with one representative fold, verify the
 complete training/checkpoint/W&B path, and then execute the remaining pending
 matrix entries through the resumable runner. Fold-specific tuning is prohibited.
+
+The user launches and monitors the production suite. On follow-up, the agent
+audits the existing registry, logs, W&B runs, and checkpoints, records the
+outcome, and advances the queue; it does not relaunch folds unless the user
+explicitly asks.
 
 ## Goal
 
@@ -30,13 +35,11 @@ W&B context, checkpoints, and registry state.
 
 Before launching the suite, confirm:
 
-1. First full LORO fold. Recommendation: a moderate-size California fold rather
-   than BC; use matrix counts to choose one that exercises the normal path
-   without being the longest run.
-2. Whether to run all remaining folds sequentially after that fold passes
-   validation, or pause after the first for user review. Recommendation: pause
-   after the first completed fold and show its W&B/checkpoint/test preflight;
-   then obtain approval for the remaining compute.
+1. First full LORO fold: **`ca_006`**, selected as a moderate-size California
+   fold (1,898 train, 261 validation, and 110 test chips).
+2. Continue through all remaining folds sequentially after `ca_006`; do not
+   pause for another approval unless a failure or operational correction needs
+   user input.
 3. Run order if compute scheduling matters. Default: deterministic region-ID
    order after the first fold.
 

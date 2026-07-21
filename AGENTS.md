@@ -44,7 +44,10 @@ Task 010 downloaded and fully verified only that repaired archive at the remote
 canonical root `/home/sky/data/planet8b_all_regions_1024_512_v2`; v1 remains
 historical evidence. Tasks 011–012 materialized the temporal baseline and all
 12 LORO views beneath that canonical root. Task 013 added validated W&B run
-context and artifact logging; Task 014 is next. The complete
+context and artifact logging. Task 014's runner is implemented, but its A40
+host failed during the final smoke; Task 014A now owns replacement-host setup,
+the verified v2 re-download, and hard-link rematerialization before Task 014
+restarts. The complete
 ordered queue is in `docs/todo.md`; detailed contracts are in `tasks/`.
 
 Do not start multiple numbered tasks in one window. Close the selected task,
@@ -109,9 +112,10 @@ entity: kdorman90-ucla
 project: kelpseg
 ```
 
-The experiment group for the new baseline/LORO suite has not been selected yet.
-Do not copy W&B identity or grouping from legacy configs into new work. Read
-`docs/experiments.md` before changing W&B configuration or run metadata.
+The comparison-suite group is `planet8b-loro-v1`; smoke runs use the separate
+`smoke` group. Do not copy W&B identity or grouping from legacy configs into
+new work. Read `docs/experiments.md` before changing W&B configuration or run
+metadata.
 
 ## Setup And Validation
 

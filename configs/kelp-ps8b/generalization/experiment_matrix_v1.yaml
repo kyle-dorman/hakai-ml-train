@@ -1,0 +1,78 @@
+schema_version: 1
+experiment_version: planet8b-loro-v1
+smoke_experiment_version: planet8b-loro-v1-smoke-1epoch-v2
+dataset_root: /home/sky/data/planet8b_all_regions_1024_512_v2
+experiment_root: /home/sky/experiments/planet8b-loro-v1
+model_config: configs/kelp-ps8b/california/segformer_b3.yaml
+smoke_model_config: configs/kelp-ps8b/california/segformer_b3.yaml
+seed: 42
+max_epochs: 100
+smoke_max_epochs: 1
+execution_mode: sequential
+failure_policy: continue
+runs:
+  - run_key: baseline-temporal-v1
+    run_type: baseline_training
+    fold_id: baseline_temporal_v1
+    fold_root: views/baseline_temporal_v1
+    held_out_region: null
+  - run_key: loro-ca_006-v1
+    run_type: loro_training
+    fold_id: loro_ca_006
+    fold_root: views/loro_v1/ca_006
+    held_out_region: ca_006
+  - run_key: loro-bc-v1
+    run_type: loro_training
+    fold_id: loro_bc
+    fold_root: views/loro_v1/bc
+    held_out_region: bc
+  - run_key: loro-ca_001-v1
+    run_type: loro_training
+    fold_id: loro_ca_001
+    fold_root: views/loro_v1/ca_001
+    held_out_region: ca_001
+  - run_key: loro-ca_002-v1
+    run_type: loro_training
+    fold_id: loro_ca_002
+    fold_root: views/loro_v1/ca_002
+    held_out_region: ca_002
+  - run_key: loro-ca_003-v1
+    run_type: loro_training
+    fold_id: loro_ca_003
+    fold_root: views/loro_v1/ca_003
+    held_out_region: ca_003
+  - run_key: loro-ca_004-v1
+    run_type: loro_training
+    fold_id: loro_ca_004
+    fold_root: views/loro_v1/ca_004
+    held_out_region: ca_004
+  - run_key: loro-ca_005-v1
+    run_type: loro_training
+    fold_id: loro_ca_005
+    fold_root: views/loro_v1/ca_005
+    held_out_region: ca_005
+  - run_key: loro-ca_007-v1
+    run_type: loro_training
+    fold_id: loro_ca_007
+    fold_root: views/loro_v1/ca_007
+    held_out_region: ca_007
+  - run_key: loro-ca_008-v1
+    run_type: loro_training
+    fold_id: loro_ca_008
+    fold_root: views/loro_v1/ca_008
+    held_out_region: ca_008
+  - run_key: loro-ca_009-v1
+    run_type: loro_training
+    fold_id: loro_ca_009
+    fold_root: views/loro_v1/ca_009
+    held_out_region: ca_009
+  - run_key: loro-ca_010-v1
+    run_type: loro_training
+    fold_id: loro_ca_010
+    fold_root: views/loro_v1/ca_010
+    held_out_region: ca_010
+  - run_key: loro-ca_011-v1
+    run_type: loro_training
+    fold_id: loro_ca_011
+    fold_root: views/loro_v1/ca_011
+    held_out_region: ca_011

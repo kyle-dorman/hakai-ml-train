@@ -19,15 +19,19 @@ folds.
 Current active task:
 
 ```text
-Task 014: Build the training runner.
-tasks/014_build_training_runner.md
+Task 014A: Pending. Move to a replacement GPU machine, download and fully
+verify the canonical v2 archive again, rematerialize and inode-check the
+baseline plus all 12 LORO hard-link views, and pass environment/GPU/W&B/runner
+preflight without launching training.
+tasks/014a_move_to_new_machine.md
 ```
 
 Next task:
 
 ```text
-Task 015: Run the expanded-data temporal baseline.
-tasks/015_run_new_baseline.md
+Task 014: Resume on the replacement host with a fresh 13-entry one-epoch smoke
+suite and registry namespace.
+tasks/014_build_training_runner.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -119,7 +123,10 @@ Remote experiment preparation and execution:
   validated temporal baseline view.
 - Task 012: complete; materialized and validated all 12 LORO dataset views.
 - Task 013: complete; added validated W&B context and artifact logging.
-- Task 014: build the resumable registry and training runner.
+- Task 014: paused; the runner and matrix are implemented, but its clean
+  13-entry one-epoch smoke restart awaits the replacement-host gate.
+- Task 014A: pending; rebuild and verify the environment, canonical dataset,
+  and baseline/LORO hard-link views on a replacement GPU host.
 - Tasks 015–016: run the baseline and LORO training suite.
 - Tasks 017–018: build and run chip/TIFF prediction evaluation.
 - Task 019: compare accuracy on matching source TIFFs.

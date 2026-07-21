@@ -161,7 +161,7 @@ def test_build_and_revalidate_baseline_context(tmp_path: Path) -> None:
     assert loaded["held_out_region"] is None
     assert loaded["train_chip_count"] == 1
     assert loaded["train_date_range"] == {"min": "2020-01-01", "max": "2020-01-01"}
-    assert loaded["checkpoint_policy"] == "best_only"
+    assert loaded["checkpoint_policy"] == "best_plus_local_last"
     assert loaded["git_dirty"] is False
 
 
@@ -217,7 +217,7 @@ def test_loro_requires_and_validates_held_out_region(tmp_path: Path) -> None:
         )
 
 
-def test_config_injection_enforces_best_only_offline_policy(tmp_path: Path) -> None:
+def test_config_injection_keeps_best_and_local_last_offline(tmp_path: Path) -> None:
     paths = _fixture(tmp_path)
     context = _build(paths)
     config = Namespace(
@@ -248,5 +248,5 @@ def test_config_injection_enforces_best_only_offline_policy(tmp_path: Path) -> N
     assert logger.log_model is False
     assert logger.group == "smoke"
     assert checkpoint.save_top_k == 1
-    assert checkpoint.save_last is False
+    assert checkpoint.save_last is True
     assert config.data.init_args.test_chip_dir == context["data_paths"]["test"]

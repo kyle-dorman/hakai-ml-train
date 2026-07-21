@@ -348,7 +348,7 @@ def build_run_context(
         "wandb_tags": [EXPERIMENT_VERSION, run_type, fold_id]
         + (["smoke"] if smoke else []),
         "wandb_offline": offline,
-        "checkpoint_policy": "best_only",
+        "checkpoint_policy": "best_plus_local_last",
         "source_artifacts": {
             "dataset_metadata": str(dataset_metadata_path),
             "archive_receipt": str(archive_receipt_path),

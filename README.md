@@ -33,8 +33,11 @@ one affected California and all 30 BC derived labels, re-chipped only those 31
 source fragments, and clean-extraction verified the v2 portable archive at
 `/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip`.
 Task 010 downloaded and fully verified only v2 at the remote canonical root
-`/home/sky/data/planet8b_all_regions_1024_512_v2`; v1 remains historical
-evidence. Task 011 is next. See `docs/todo.md` and `tasks/README.md`.
+`/home/sky/data/planet8b_all_regions_1024_512_v2`; Tasks 011–012 materialized
+the baseline and all 12 LORO views there. That GPU host has since failed during
+Task 014's final smoke. Task 014A now recreates the verified dataset and views
+on a replacement host before Task 014 restarts. See `docs/todo.md` and
+`tasks/README.md`.
 
 ## Documentation
 
@@ -135,5 +138,6 @@ entity: kdorman90-ucla
 project: kelpseg
 ```
 
-The new experiment group and run-name convention will be selected in Task 013.
-W&B values in legacy configs are not the active tracking contract.
+The comparison-suite group is `planet8b-loro-v1`; smoke runs use the separate
+`smoke` group. W&B values in legacy configs are not the active tracking
+contract.
