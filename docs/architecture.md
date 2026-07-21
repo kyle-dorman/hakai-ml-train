@@ -107,13 +107,18 @@ canonical chip family, not a second evaluation artifact. Any later transform
 that pads a small canonical chip must fill its mask with the `-100` ignore
 index, not class-0 background.
 
-The current planned LORO policy is:
+The approved and materialized LORO policy is:
 
 - test: the retained non-overlapping-grid chips from the held-out region;
 - train: baseline-TRAIN chips from other regions, with the selected
   background-only training policy;
 - validation: baseline-VAL chips from other regions;
 - non-held-out baseline-TEST chips: unused in that LORO fold.
+
+The 12 hard-linked folds are rooted at
+`/home/sky/data/planet8b_all_regions_1024_512_v2/views/loro_v1`. `ca_005` and
+`ca_006` remain separate folds keyed by canonical region ID despite sharing a
+descriptive name.
 
 Any change to that policy must be recorded in the relevant task before runs are
 launched.

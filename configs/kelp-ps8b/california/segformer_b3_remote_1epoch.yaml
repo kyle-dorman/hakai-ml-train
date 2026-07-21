@@ -174,12 +174,14 @@ trainer:
       init_args:
         entity: kdorman90-ucla
         project: kelpseg
-        name: segformer_b3_remote_1epoch
-        group: remote_smoke_test
+        name: smoke-baseline-temporal-v1
+        group: smoke
+        job_type: smoke
         log_model: false
         tags:
-          - remote_1epoch
-          - 1024_512_20250814_cali_bc
+          - planet8b-loro-v1
+          - baseline_training
+          - smoke
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
@@ -187,7 +189,7 @@ trainer:
         filename: remote_1epoch_kelp_ps8b_segformer_b3_epoch-{epoch:02d}_val-iou-{val/iou_epoch:.4f}
         monitor: val/iou_epoch
         mode: max
-        save_last: True
+        save_last: False
         save_top_k: 1
         save_weights_only: False
         verbose: True

@@ -174,11 +174,13 @@ trainer:
       init_args:
         entity: kdorman90-ucla
         project: kelpseg
-        name: segformer_b3
-        group: Mar2026
-        log_model: true
+        name: baseline-temporal-v1
+        group: planet8b-loro-v1
+        job_type: train
+        log_model: false
         tags:
-          - 1024_512_20250814_cali_bc
+          - planet8b-loro-v1
+          - baseline_training
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
@@ -186,8 +188,8 @@ trainer:
         filename: kelp_ps8b_segformer_b3_epoch-{epoch:02d}_val-iou-{val/iou_epoch:.4f}
         monitor: val/iou_epoch
         mode: max
-        save_last: True
-        save_top_k: 2
+        save_last: False
+        save_top_k: 1
         save_weights_only: False
         verbose: True
     - class_path: lightning.pytorch.callbacks.LearningRateMonitor

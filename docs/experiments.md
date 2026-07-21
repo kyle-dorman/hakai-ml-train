@@ -17,8 +17,10 @@ This is the destination used by the current California SegFormer config and its
 remote smoke config. Other PS8B configs contain historical values; do not treat
 them as the new suite's tracking contract.
 
-The new group name is intentionally undecided. Task 013 must select it with the
-user and then update this file, the active config/runner, and the task outcome.
+The comparison-suite group is `planet8b-loro-v1`. Baseline and LORO training
+runs use `baseline-temporal-v1` and `loro-<region_id>-v1`; the region ID is the
+canonical fold key. Smoke runs use the separate `smoke` group, a `smoke` job
+type/tag, and the corresponding `smoke-` name prefix.
 
 ## Run organization
 
@@ -39,6 +41,13 @@ registry:
 Names must be predictable and unique. Use region IDs, not potentially duplicated
 region names, in LORO run names.
 
+`src/run_context.py` owns the required JSON-compatible context. Generate it
+from the dataset and fold files with `scripts/build_planet8b_run_context.py`,
+then pass it to `trainer.py fit --run_context <path>`. The trainer rehashes all
+identity-bearing inputs and injects data paths and W&B fields before Lightning
+instantiates any training objects. Do not derive fold identity from the run
+name or maintain one YAML copy per fold.
+
 ## W&B artifacts
 
 Attach or log references to:
@@ -52,6 +61,14 @@ Attach or log references to:
 
 Large canonical chips do not need to be uploaded to W&B merely to make the run
 reproducible; their archive checksum and manifest identity are the contract.
+
+Training runs keep exactly one checkpoint (`save_top_k=1`, `save_last=false`)
+and explicitly log that best checkpoint as the model artifact at fit end.
+Metadata and best-checkpoint artifacts use the same path in online and offline
+mode; offline run directories remain syncable later. The metadata artifact
+contains the generated context, resolved Lightning config, fold manifest and
+summary, canonical dataset metadata, archive verification receipt, chip
+manifest, and model config. Canonical NPZs are not uploaded.
 
 ## Local experiment registry
 

@@ -19,8 +19,9 @@ the non-destructive training-only background selector, then packaged and
 clean-extraction verified the source-aware v2 portable canonical archive after
 repairing one California and all 30 BC label/source fragments. Task 010 then
 downloaded, checksum-verified, and fully validated that archive remotely. Task
-011 materialized the temporal baseline view; Task 012 is next to materialize
-the LORO views.
+011 materialized the temporal baseline view, Task 012 materialized all 12 LORO
+views, and Task 013 added validated W&B run context and artifacts. Task 014 is
+next to build the resumable training runner and local registry.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles

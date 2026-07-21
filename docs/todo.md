@@ -2,26 +2,32 @@
 
 ## Current phase
 
-Status: Task 011 implemented the shared fold materializer and atomically
-published the validated temporal baseline view at
-`/home/sky/data/planet8b_all_regions_1024_512_v2/views/baseline_temporal_v1`.
-The view records all 4,602 canonical chips and hard-links 2,103 train, 277
-validation, and 185 test chips. Training retains eligible overlaps and applies
-the approved background exclusion; validation and test retain their complete
-non-overlapping grids without background exclusion.
+Status: Tasks 011–012 implemented the shared fold materializer and atomically
+published the validated temporal baseline plus all 12 LORO views beneath
+`/home/sky/data/planet8b_all_regions_1024_512_v2/views`. Every fold manifest
+records all 4,602 canonical chips. The LORO parent contains 27,508 verified hard
+links; training uses eligible overlapping non-held-out temporal-TRAIN chips,
+validation uses non-held-out temporal-VAL chips on the non-overlapping grid,
+and test uses the complete retained non-overlapping grid from one held-out
+region.
+
+Task 013 added validated, hash-backed W&B run context, resolved-config and
+source-metadata artifacts, and explicit best-only checkpoint logging. Final
+offline one-batch baseline and `ca_001` LORO smokes passed against the real
+folds.
 
 Current active task:
 
 ```text
-Task 012: Materialize the LORO dataset views.
-tasks/012_materialize_loro_datasets.md
+Task 014: Build the training runner.
+tasks/014_build_training_runner.md
 ```
 
 Next task:
 
 ```text
-Task 013: Add W&B run context and establish the run registry.
-tasks/013_add_wandb_run_context.md
+Task 015: Run the expanded-data temporal baseline.
+tasks/015_run_new_baseline.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -111,8 +117,9 @@ Remote experiment preparation and execution:
   archive at `/home/sky/data/planet8b_all_regions_1024_512_v2`.
 - Task 011: complete; implemented the reusable materializer and published the
   validated temporal baseline view.
-- Task 012: materialize the LORO dataset views.
-- Tasks 013–014: establish W&B/run registry and training orchestration.
+- Task 012: complete; materialized and validated all 12 LORO dataset views.
+- Task 013: complete; added validated W&B context and artifact logging.
+- Task 014: build the resumable registry and training runner.
 - Tasks 015–016: run the baseline and LORO training suite.
 - Tasks 017–018: build and run chip/TIFF prediction evaluation.
 - Task 019: compare accuracy on matching source TIFFs.

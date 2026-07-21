@@ -51,9 +51,9 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [009](009_package_dataset_archive.md) | Local | Complete | 007, 008 | Portable verified archive |
 | [009A](009a_repair_metadata_nodata_and_repackage.md) | Local | Complete | 002–009 | Metadata-aware nodata repair and v2 archive |
 | [010](010_transfer_and_verify_remote.md) | Remote | Complete | 009A | Verified remote dataset copy |
-| [011](011_materialize_baseline_dataset.md) | Remote | Pending | 010 | Baseline train/val/test views |
-| [012](012_materialize_loro_datasets.md) | Remote | Pending | 010 | One dataset view per held-out region |
-| [013](013_add_wandb_run_context.md) | Remote/code | Pending | 011, 012 | Consistent W&B context and artifacts |
+| [011](011_materialize_baseline_dataset.md) | Remote | Complete | 010 | Baseline train/val/test views |
+| [012](012_materialize_loro_datasets.md) | Remote | Complete | 010, 011 | One dataset view per held-out region |
+| [013](013_add_wandb_run_context.md) | Remote/code | Complete | 011, 012 | Consistent W&B context and artifacts |
 | [014](014_build_training_runner.md) | Remote/code | Pending | 013 | Resumable registry and training runner |
 | [015](015_run_new_baseline.md) | Remote | Pending | 014 | Expanded-data baseline checkpoint |
 | [016](016_run_loro_training.md) | Remote | Pending | 015 | Complete LORO checkpoint suite |
