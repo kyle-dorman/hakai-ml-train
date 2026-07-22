@@ -26,7 +26,8 @@ Task 014A verified a replacement A40 host, redownloaded and fully validated the
 canonical archive, rematerialized every hard-link view, and passed all service,
 GPU, DataModule, and runner preflight gates. Task 014B is next to create and
 validate a dedicated suite config from the intended later root PS8B baseline
-recipe before Task 014 restarts its 13-entry one-epoch smoke suite.
+recipe, benchmark the constant-effective-batch runtime pair, and implement the
+approved tiered EMA-aware smoke profile before Task 014 restarts.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles

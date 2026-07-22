@@ -27,17 +27,20 @@ dry-runs passed without launching training. The fresh smoke identity is
 Current active task:
 
 ```text
-Task 014B: Pending. Create and validate a dedicated generalization config from
-the intended root PS8B SegFormer B3 recipe, with current ignore-index, budget,
-checkpoint, W&B, and runner contracts. Do not launch training.
+Task 014B: Pending and approved for implementation. Create and validate a
+dedicated generalization config from the intended root PS8B SegFormer B3
+recipe, preserve its established SMP eight-band ImageNet adaptation, benchmark
+constant-effective-batch runtime pairs, and add a two-tier EMA-aware smoke plan
+alongside the current ignore-index, budget, checkpoint, W&B, and runner
+contracts. Do not launch experiment training.
 tasks/014b_correct_generalization_model_config.md
 ```
 
 Next task:
 
 ```text
-Task 014: Resume the fresh 13-entry one-epoch smoke suite only after Task 014B
-closes the corrected model-config gate.
+Task 014: Resume the 13-entry tiered EMA smoke suite only after Task 014B closes
+the corrected model-config, batch benchmark, runner, and smoke-identity gate.
 tasks/014_build_training_runner.md
 ```
 
@@ -134,8 +137,10 @@ Remote experiment preparation and execution:
   matrix still names the superseded California-specific model config.
 - Task 014A: complete; rebuilt and verified the environment, canonical dataset,
   and all baseline/LORO hard-link views on the replacement A40 host.
-- Task 014B: pending; create the dedicated suite config from the intended later
-  root PS8B recipe and repeat the no-training config/runner validation gate.
+- Task 014B: pending and approved for implementation; create the dedicated
+  suite config from the intended later root PS8B recipe with its established
+  initialization, benchmark the fixed-effective-batch runtime pair, and add the
+  tiered EMA-aware smoke gate.
 - Tasks 015–016: run the baseline and LORO training suite.
 - Tasks 017–018: build and run chip/TIFF prediction evaluation.
 - Task 019: compare accuracy on matching source TIFFs.

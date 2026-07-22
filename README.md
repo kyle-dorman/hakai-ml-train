@@ -39,7 +39,8 @@ Task 014's final smoke. Task 014A recreated and fully verified the dataset,
 views, environment, W&B access, and A40 health on a replacement host. Task 014
 is paused while Task 014B replaces the superseded California-specific model
 config with a dedicated suite config based on the intended later root PS8B
-recipe. See `docs/todo.md` and `tasks/README.md`.
+recipe, benchmarks the constant-effective-batch runtime pair, and prepares the
+tiered EMA-aware smoke profile. See `docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 

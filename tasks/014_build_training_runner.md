@@ -24,30 +24,36 @@ matrix and restartable execution surface.
 - Task 013 run-context helper and W&B decisions
 - Task 011 baseline view/manifest
 - Task 012 LORO views/manifests
-- Reference config: `configs/kelp-ps8b/california/segformer_b3.yaml`
-- Smoke profile: the selected production config with only `max_epochs=1`, so
-  batch size, precision, workers, accumulation, and transforms match production
+- Dedicated config produced by Task 014B:
+  `configs/kelp-ps8b/generalization/segformer_b3_v1.yaml`
+- Smoke profile: the selected production config with runner-owned tiered budget
+  and batch-limit overrides; model recipe, selected batch/accumulation pair,
+  precision, workers, and transforms otherwise match production
 - `trainer.py`
 - `docs/experiments.md`
 
 ## User decisions required
 
-Confirm the comparison policy before generating the matrix:
+The comparison and smoke policies are approved:
 
-1. Base model config. Recommendation: California PS8B SegFormer B3 unless the
-   user explicitly selects another already-working PS8B config.
+1. Base model config: **approved as the dedicated Task 014B config derived from
+   the later root PS8B SegFormer B3 recipe**, including its existing SMP
+   eight-band ImageNet adaptation.
 2. Seed policy. Recommendation: one fixed seed (`42`) for the first complete
    baseline/LORO suite; multiple seeds are backlog follow-up.
 3. Full training budget: **approved at 100 epochs**, with no early stopping and
-   `val/iou_epoch` as the best-checkpoint monitor. The complete matrix first runs
-   as an isolated one-epoch smoke suite.
+   `val/iou_epoch` as the best-checkpoint monitor. Smoke uses two full epochs
+   for the temporal baseline and `loro-bc-v1`; the other 11 LORO entries use one
+   bounded epoch with two optimizer updates' worth of training micro-batches,
+   two validation batches, and two test batches.
 4. Execution mode: sequential runs (recommended for one GPU) versus an external
    scheduler.
 5. Failure policy: **approved to continue to the next sequential run after
    recording a failure**.
 
-The approved base model is the California PS8B SegFormer B3, with fixed seed
-`42` and sequential single-GPU execution. The user will launch the production
+The approved base model is the dedicated Task 014B SegFormer B3, with fixed
+seed `42`, a benchmark-selected micro-batch/accumulation pair whose product is
+24, and sequential single-GPU execution. The user will launch the production
 runs in Tasks 015 and 016; those tasks are post-run verification/check-in
 boundaries, not agent-owned launch steps.
 
@@ -91,8 +97,8 @@ Support:
 - `--run <run_key>` repeatable;
 - `--pending` for all non-completed matrix entries;
 - `--dry-run`;
-- `--smoke` selecting a separate one-epoch experiment identity, registry state,
-  output root, and W&B smoke identity;
+- `--smoke` selecting the separate tiered-EMA experiment identity, per-run
+  budget/batch limits, registry state, output root, and W&B smoke identity;
 - explicit `--resume-checkpoint` for a failed/interrupted entry where valid;
 - no implicit rerun of completed entries without a deliberate override.
 
@@ -134,12 +140,18 @@ handling, and duplicate-run prevention.
 ## Smoke test
 
 1. Dry-run the complete 13-run matrix and inspect commands/configs.
-2. Run the baseline plus all 12 LORO folds for one complete epoch each.
-3. For every smoke, run validation and test from the selected best checkpoint.
-4. Simulate one failed command and one interrupted entry.
-5. Re-run smoke `--pending` and verify completed smokes are skipped and failed
+2. Run the temporal baseline and `loro-bc-v1` for two full epochs each; verify
+   both cross optimizer step 100, update EMA, validate with EMA weights, and
+   produce a usable best checkpoint plus local `last.ckpt`.
+3. Run the other 11 LORO folds for one bounded epoch each, with exactly two
+   optimizer updates' worth of training micro-batches followed by two
+   validation batches and two test batches.
+4. For every smoke, load the selected best checkpoint for the configured test
+   scope. Treat all smoke metrics as integration evidence only.
+5. Simulate one failed command and one interrupted entry.
+6. Re-run smoke `--pending` and verify completed smokes are skipped and failed
    work is represented honestly.
-6. Verify production `--pending` still selects all 13 entries because smoke and
+7. Verify production `--pending` still selects all 13 entries because smoke and
    production state are isolated.
 
 ## Validation
@@ -181,11 +193,13 @@ smoke run results, failure/resume evidence, validation, and Task 015 command.
 
 ## Progress
 
-Approved policy is recorded in the checked-in matrix: SegFormer B3, seed `42`,
-100 production epochs, no early stopping, best `val/iou_epoch` checkpoint plus
-local `last.ckpt`, sequential execution, and continue-after-failure. The user
-will execute Tasks 015–016; those tasks will verify and record the resulting
-runs after the fact.
+The final approved policy is owned by Task 014B and will be recorded in the
+updated matrix: dedicated later-root SegFormer B3 recipe, retained SMP
+eight-band ImageNet adaptation, benchmark-selected effective batch size 24,
+seed `42`, 100 production epochs, no early stopping, best `val/iou_epoch`
+checkpoint plus local `last.ckpt`, sequential execution, and
+continue-after-failure. The user will execute Tasks 015–016; those tasks will
+verify and record the resulting runs after the fact.
 
 The runner, registry tests, and all 13 real-fold smoke/production dry-runs are
 implemented and passing. A historical batch-size-1 baseline smoke completed fit,
@@ -203,9 +217,11 @@ marked complete.
 The original host is no longer available. Task 014A completed the replacement
 A40 host gate at commit `5461cfeb45aab216d43cd8d80451d8a420ae00f0`, including
 the canonical dataset, all hard-linked views, W&B/CUDA/GPU preflight, and all
-13 runner dry-runs. The matrix now uses fresh smoke identity
-`planet8b-loro-v1-smoke-1epoch-v3`; no failed-host v2 registry was imported.
-Resume Task 014 with:
+13 runner dry-runs. The checked-in matrix still names the unused pre-014B smoke
+identity `planet8b-loro-v1-smoke-1epoch-v3`; no failed-host v2 registry was
+imported. Task 014B must replace that misleading identity with
+`planet8b-loro-v1-smoke-tiered-ema-v1` after verifying that no real v3 event
+exists. After Task 014B closes, resume Task 014 with:
 
 ```bash
 uv run python scripts/run_planet8b_experiments.py \
@@ -214,8 +230,7 @@ uv run python scripts/run_planet8b_experiments.py \
   --pending --smoke
 ```
 
-Do not run this command yet. The user subsequently clarified that the intended
-baseline is the later recipe in `configs/kelp-ps8b/segformer_b3.yaml`, not the
-California-specific config currently named by the matrix. Task 014B owns the
-dedicated generalization config, compatibility adjustments, matrix update, and
-renewed dry-run gate before this task resumes.
+Do not run this command until Task 014B closes. Task 014B owns the dedicated
+generalization config, batch benchmark, tiered-smoke runner/matrix adjustments,
+compatibility validation, identity update, and renewed dry-run gate before this
+task resumes.

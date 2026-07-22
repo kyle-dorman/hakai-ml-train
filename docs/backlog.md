@@ -16,3 +16,12 @@ current work.
   separate geographic folds after the first results are available.
 - Test region-aware or domain-adaptation methods only after the plain LORO
   baseline is complete.
+- Compare the baseline's generic SMP eight-band ImageNet adaptation with a
+  PS8B-aware input projection after the primary suite is complete. The current
+  behavior repeats RGB first-layer filters cyclically across the eight channels
+  and scales them by `3/8`, while retaining deeper ImageNet weights. A future
+  controlled variant could preserve the deeper encoder, map the known
+  PlanetScope red/green/blue bands explicitly to their corresponding pretrained
+  filters, and initialize Coastal Blue, Green I, Yellow, Red Edge, and NIR
+  input weights independently. Treat this as a separately versioned model
+  experiment, not a correction to the current baseline.

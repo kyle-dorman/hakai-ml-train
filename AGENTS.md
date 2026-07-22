@@ -48,9 +48,11 @@ context and artifact logging. Task 014's runner is implemented, but its A40
 host failed during the final smoke. Task 014A completed replacement-host setup,
 the verified v2 re-download, hard-link rematerialization, and all preflight
 gates. Before Task 014 restarts its complete 13-entry smoke suite, the user
-clarified that the intended baseline is the later root PS8B recipe,
-not the California-specific config currently in the matrix. Task 014B is next
-to correct and validate the dedicated suite config before Task 014 restarts.
+clarified that the intended baseline is the later root PS8B recipe, not the
+California-specific config currently in the matrix. Task 014B is approved to
+create and validate the dedicated suite config, benchmark a constant-effective-
+batch runtime pair, and add the tiered EMA-aware smoke profile before Task 014
+restarts.
 The complete ordered queue is in `docs/todo.md`; detailed contracts are in
 `tasks/`.
 
