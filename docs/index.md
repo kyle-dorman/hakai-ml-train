@@ -20,15 +20,16 @@ clean-extraction verified the source-aware v2 portable canonical archive after
 repairing one California and all 30 BC label/source fragments. Task 010 then
 downloaded, checksum-verified, and fully validated that archive remotely. Task
 011 materialized the temporal baseline view, Task 012 materialized all 12 LORO
-views, and Task 013 added validated W&B run context and artifacts. Task 014's
-runner is implemented, but its original GPU host failed during the final smoke.
-Task 014A verified a replacement A40 host, redownloaded and fully validated the
-canonical archive, rematerialized every hard-link view, and passed all service,
-GPU, DataModule, and runner preflight gates. Task 014B created and validated a
-dedicated suite config from the intended later root PS8B baseline recipe,
-selected the constant-effective-batch runtime pair, and implemented the
-approved tiered EMA-aware smoke profile. Task 014 is ready to resume.
-`docs/todo.md` owns the current queue and status.
+views, and Task 013 added validated W&B run context and artifacts. Task 014A
+verified a replacement A40 host, redownloaded and fully validated the canonical
+archive, rematerialized every hard-link view, and passed all service, GPU,
+DataModule, and runner preflight gates. Task 014B created and validated a
+dedicated suite config from the intended later root PS8B baseline recipe and
+implemented the approved tiered EMA-aware smoke profile. Task 014 then
+completed all 13 smoke entries with verified best/last checkpoints, deep EMA
+gates, bounded shallow folds, and isolated registry state. Task 015 is ready
+for the user to launch the production temporal baseline. `docs/todo.md` owns
+the current queue and status.
 
 ## Document roles
 

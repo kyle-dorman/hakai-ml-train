@@ -29,21 +29,29 @@ accumulation 8 at effective batch 24, and implemented the tiered EMA smoke
 profile. All config checks and 26 real-fold dry-runs passed. The fresh smoke
 identity is `planet8b-loro-v1-smoke-tiered-ema-v1`.
 
+Task 014 completed that fresh 13-entry smoke suite on the replacement A40. All
+13 latest registry states are completed with matching best-checkpoint hashes
+and local `last.ckpt` files. The baseline and BC deep gates reached optimizer
+steps 176 and 172; every shallow fold reached exactly two optimizer updates and
+tested exactly two batches from its selected best checkpoint. Failure,
+interruption, pending-state, and production-isolation checks passed. No
+production training has started.
+
 Current active task:
 
 ```text
-Task 014: Resume and verify the 13-entry tiered EMA smoke suite with the
-dedicated config and fresh smoke identity. No production training belongs in
-this task.
-tasks/014_build_training_runner.md
+Task 015: The user launches the approved 100-epoch expanded-data temporal
+baseline; the agent verifies the resulting registry, logs, W&B run, and
+checkpoints on follow-up.
+tasks/015_run_new_baseline.md
 ```
 
 Next task:
 
 ```text
-Task 015: Run and verify the expanded-data temporal baseline after Task 014's
-smoke suite closes.
-tasks/015_run_new_baseline.md
+Task 016: Run and verify the 12 LORO production models after the baseline
+closes.
+tasks/016_run_loro_training.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -135,12 +143,14 @@ Remote experiment preparation and execution:
   validated temporal baseline view.
 - Task 012: complete; materialized and validated all 12 LORO dataset views.
 - Task 013: complete; added validated W&B context and artifact logging.
-- Task 014: ready to resume the validated 13-entry tiered EMA smoke suite.
+- Task 014: complete; all 13 tiered EMA smoke entries and state simulations
+  passed.
 - Task 014A: complete; rebuilt and verified the environment, canonical dataset,
   and all baseline/LORO hard-link views on the replacement A40 host.
 - Task 014B: complete; created the dedicated later-root suite config, selected
   the fixed-effective-batch runtime pair, and added the tiered EMA smoke gate.
-- Tasks 015–016: run the baseline and LORO training suite.
+- Task 015: ready for the user to launch the approved production baseline.
+- Task 016: pending; run the LORO production suite after Task 015.
 - Tasks 017–018: build and run chip/TIFF prediction evaluation.
 - Task 019: compare accuracy on matching source TIFFs.
 

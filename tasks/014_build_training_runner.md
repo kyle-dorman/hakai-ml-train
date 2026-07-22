@@ -1,6 +1,6 @@
 # Task 014: Build the experiment registry and training runner
 
-Status: Ready to resume; Task 014B gate complete
+Status: Complete
 
 Depends on: Tasks 013, 014A, and 014B
 
@@ -220,7 +220,8 @@ the canonical dataset, all hard-linked views, W&B/CUDA/GPU preflight, and all
 13 runner dry-runs. Task 014B created and validated the dedicated config,
 selected micro-batch 3 with accumulation 8, replaced the unused pre-014B smoke
 identity after confirming no real v3 registry event exists, and passed all 13
-smoke plus all 13 production dry-runs. Resume Task 014 with:
+smoke plus all 13 production dry-runs. The completed fresh suite was launched
+with:
 
 ```bash
 uv run python scripts/run_planet8b_experiments.py \
@@ -229,5 +230,88 @@ uv run python scripts/run_planet8b_experiments.py \
   --pending --smoke
 ```
 
-This is now the exact clean restart command for the validated
-`planet8b-loro-v1-smoke-tiered-ema-v1` suite.
+That command produced the completed
+`planet8b-loro-v1-smoke-tiered-ema-v1` evidence recorded below.
+
+## Outcome
+
+Task 014 completed the runner implementation and the fresh 13-entry
+`planet8b-loro-v1-smoke-tiered-ema-v1` integration suite on the replacement
+NVIDIA A40. The suite ran from `2026-07-22T20:02:41Z` through
+`2026-07-22T21:56:00Z`. The append-only registry contains exactly 13
+`planned`, 13 `running`, and 13 `completed` events for this version; every
+latest state has exit code 0, a W&B run ID, a validation-selected best
+checkpoint with a matching recorded SHA-256, and a separate local
+`last.ckpt`.
+
+The two deep gates both crossed EMA step 100 and validated afterward:
+
+| Run | W&B ID | Final optimizer step | Best `val/iou_epoch` | Test batches | Test IoU |
+|---|---|---:|---:|---:|---:|
+| `baseline-temporal-v1` | `87bcc703` | 176 | 0.4005 | 62 | 0.374109 |
+| `loro-bc-v1` | `fd4195b0` | 172 | 0.4998 | 51 | 0.155444 |
+
+All 11 California LORO smokes ran exactly 16 training micro-batches with
+accumulation 8, reached optimizer step 2, validated on two batches, loaded the
+selected best checkpoint, and tested on two batches. Their W&B IDs are:
+
+| Run | W&B ID | Best `val/iou_epoch` | Test IoU |
+|---|---|---:|---:|
+| `loro-ca_001-v1` | `dd56111f` | 0.0455 | 0.014247 |
+| `loro-ca_002-v1` | `51a9dfb0` | 0.0257 | 0.033441 |
+| `loro-ca_003-v1` | `2a66ac87` | 0.0257 | 0.001215 |
+| `loro-ca_004-v1` | `0b5250a7` | 0.0257 | 0.036984 |
+| `loro-ca_005-v1` | `3659bf4a` | 0.0257 | 0.009279 |
+| `loro-ca_006-v1` | `69875b28` | 0.0257 | 0.015178 |
+| `loro-ca_007-v1` | `65e34864` | 0.0257 | 0.006964 |
+| `loro-ca_008-v1` | `72084f55` | 0.0257 | 0.069283 |
+| `loro-ca_009-v1` | `1800275a` | 0.0257 | 0.007480 |
+| `loro-ca_010-v1` | `64764561` | 0.0257 | 0.001180 |
+| `loro-ca_011-v1` | `5c000519` | 0.0257 | 0.010572 |
+
+These metrics are integration evidence only and were not used for tuning.
+W&B produced transient GraphQL timeout/HTTP 500 retries late in the suite, but
+each affected upload/resume/close recovered without intervention and every
+local run finished consistently. A post-suite W&B API audit found all 13 run
+IDs in state `finished`, group `smoke`, with the expected name and `smoke` job
+type. The A40 remained visible throughout; its thermal-slowdown flags stayed
+inactive.
+
+Changed repository files across Task 014 are the experiment matrix, runner,
+focused runner tests, and task/queue documentation. This closing pass added
+direct failed-command and keyboard-interruption execution tests. Durable
+external artifacts are under
+`/home/sky/experiments/planet8b-loro-v1/planet8b-loro-v1-smoke-tiered-ema-v1`
+(18 GB, 26 checkpoints), with the append-only JSONL registry and regenerated
+CSV at `/home/sky/experiments/planet8b-loro-v1`. The final JSONL SHA-256 is
+`a5202da828650be3489fa9dc5ba3fd061a3e6e6a70ebbb6bf5fd4d2f24f99ffd`.
+
+Validation passed:
+
+```text
+uv run ruff format --check scripts tests
+uv run ruff check scripts tests
+uv run pytest tests/test_run_planet8b_experiments.py  # 10 passed
+```
+
+The behavioral tests record `planned -> running -> failed` for a simulated
+exit code 17 and `planned -> running -> interrupted` for a simulated keyboard
+interrupt. Real smoke `--pending --dry-run` selected zero entries without
+changing the registry hash, while production `--pending --dry-run` selected
+all 13 entries. No production training started. There are no blocking
+unresolved issues.
+
+Repository-wide Ruff format/check remains blocked by two unchanged legacy
+notebooks: `notebooks/create_skema_aux_files.ipynb` would be reformatted and
+also contains two pre-existing B007 unused-loop-variable findings, while
+`notebooks/export_skema_models_onnx.ipynb` would be reformatted. These files are
+outside the active PS8B task scope; task-scoped checks are clean.
+
+The exact next action is the user-executed Task 015 baseline launch:
+
+```bash
+uv run python scripts/run_planet8b_experiments.py \
+  --matrix configs/kelp-ps8b/generalization/experiment_matrix_v1.yaml \
+  --registry /home/sky/experiments/planet8b-loro-v1/experiment_registry.jsonl \
+  --run baseline-temporal-v1
+```

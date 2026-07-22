@@ -44,14 +44,14 @@ Task 010 downloaded and fully verified only that repaired archive at the remote
 canonical root `/home/sky/data/planet8b_all_regions_1024_512_v2`; v1 remains
 historical evidence. Tasks 011–012 materialized the temporal baseline and all
 12 LORO views beneath that canonical root. Task 013 added validated W&B run
-context and artifact logging. Task 014's runner is implemented, but its first
-A40 host failed during the final smoke. Task 014A completed replacement-host
-setup, the verified v2 re-download, hard-link rematerialization, and all
-preflight gates. Task 014B then created the dedicated later-root SegFormer B3
-suite config, selected micro-batch 3 with accumulation 8 at effective batch 24,
-and validated the tiered EMA-aware smoke profile. Task 014 is ready to resume
-the 13-entry smoke suite under
-`planet8b-loro-v1-smoke-tiered-ema-v1`.
+context and artifact logging. Task 014A completed replacement-host setup, the
+verified v2 re-download, hard-link rematerialization, and all preflight gates.
+Task 014B then created the dedicated later-root SegFormer B3 suite config,
+selected micro-batch 3 with accumulation 8 at effective batch 24, and validated
+the tiered EMA-aware smoke profile. Task 014 completed all 13 entries under
+`planet8b-loro-v1-smoke-tiered-ema-v1`, including both deep EMA gates, every
+bounded fold test, and failure/interruption/pending-state checks. Task 015 is
+ready for the user to launch the production temporal baseline.
 The complete ordered queue is in `docs/todo.md`; detailed contracts are in
 `tasks/`.
 

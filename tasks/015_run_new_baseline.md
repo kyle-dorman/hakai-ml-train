@@ -1,6 +1,6 @@
 # Task 015: Run the expanded-data temporal baseline
 
-Status: Pending
+Status: Ready for user launch
 
 Depends on: Task 014
 

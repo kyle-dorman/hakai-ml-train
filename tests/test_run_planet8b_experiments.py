@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+import run_planet8b_experiments as runner
 import yaml
 from run_planet8b_experiments import (
     REGIONS,
@@ -319,3 +320,124 @@ def test_resume_checkpoint_must_belong_to_interrupted_attempt(tmp_path: Path) ->
     foreign.write_bytes(b"checkpoint")
     with pytest.raises(RunnerError, match="not owned"):
         validate_resume_checkpoint(foreign, state=state, run_key="baseline-temporal-v1")
+
+
+def test_execute_run_records_failed_command_and_keyboard_interrupt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    model_config = tmp_path / "model.yaml"
+    model_config.write_text(
+        """
+data:
+  init_args:
+    batch_size: 3
+trainer:
+  accumulate_grad_batches: 8
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        save_top_k: 1
+        save_last: true
+  logger:
+    - init_args: {}
+""".lstrip()
+    )
+    matrix = {
+        "experiment_version": "production",
+        "smoke_experiment_version": "smoke",
+        "dataset_root": str(tmp_path / "dataset"),
+        "experiment_root": str(tmp_path / "experiments"),
+        "model_config": str(model_config),
+        "smoke_model_config": str(model_config),
+        "seed": 42,
+        "max_epochs": 100,
+        "smoke_deep_run_keys": ["baseline-temporal-v1", "loro-bc-v1"],
+        "smoke_deep_max_epochs": 2,
+        "smoke_shallow_max_epochs": 1,
+        "smoke_shallow_optimizer_updates": 2,
+        "smoke_shallow_limit_val_batches": 2,
+        "smoke_shallow_limit_test_batches": 2,
+    }
+    run = {
+        "run_key": "loro-ca_001-v1",
+        "run_type": "loro_training",
+        "fold_id": "loro_ca_001",
+        "fold_root": "views/loro/ca_001",
+        "held_out_region": "ca_001",
+    }
+    context = {
+        "data_paths": {
+            "train": "/fold/train",
+            "val": "/fold/val",
+            "test": "/fold/test",
+        },
+        "source_artifacts": {"fold_manifest": "/fold/fold_manifest.csv"},
+        "fold_manifest_sha256": "fold-sha256",
+        "model_config_sha256": "model-sha256",
+        "git_commit": "commit",
+        "git_dirty": False,
+        "hostname": "host",
+        "wandb_entity": "kdorman90-ucla",
+        "wandb_project": "kelpseg",
+        "wandb_group": "smoke",
+        "wandb_name": "smoke-loro-ca_001-v1",
+        "wandb_job_type": "smoke",
+        "wandb_tags": ["smoke"],
+        "wandb_offline": True,
+    }
+    monkeypatch.setattr(runner, "build_run_context", lambda **_: dict(context))
+    monkeypatch.setattr(
+        runner,
+        "write_run_context",
+        lambda value, path: path.write_text(json.dumps(value)),
+    )
+
+    failed_registry = tmp_path / "failed.jsonl"
+    monkeypatch.setattr(runner, "_run_logged", lambda *_: 17)
+    assert not runner.execute_run(
+        matrix,
+        run,
+        failed_registry,
+        tmp_path,
+        smoke=True,
+        offline=True,
+        dry_run=False,
+        resume_checkpoint=None,
+    )
+    failed_events = read_events(failed_registry)
+    assert [event["status"] for event in failed_events] == [
+        "planned",
+        "running",
+        "failed",
+    ]
+    assert failed_events[-1]["exit_code"] == 17
+    assert failed_events[-1]["error_summary"] == "fit command failed"
+
+    interrupted_registry = tmp_path / "interrupted.jsonl"
+    interrupted_matrix = {
+        **matrix,
+        "experiment_root": str(tmp_path / "interrupted-experiments"),
+    }
+
+    def interrupt(*_: object) -> int:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(runner, "_run_logged", interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        runner.execute_run(
+            interrupted_matrix,
+            run,
+            interrupted_registry,
+            tmp_path,
+            smoke=True,
+            offline=True,
+            dry_run=False,
+            resume_checkpoint=None,
+        )
+    interrupted_events = read_events(interrupted_registry)
+    assert [event["status"] for event in interrupted_events] == [
+        "planned",
+        "running",
+        "interrupted",
+    ]
+    assert interrupted_events[-1]["error_summary"] == "received keyboard interrupt"
