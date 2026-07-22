@@ -1,8 +1,8 @@
 # Task 014: Build the experiment registry and training runner
 
-Status: Paused; resume after Task 014A
+Status: Paused; model-config correction requires Task 014B
 
-Depends on: Task 013; remaining smoke execution requires Task 014A
+Depends on: Tasks 013, 014A, and 014B
 
 Execution: Remote-aware code task; smoke runs only.
 
@@ -200,9 +200,22 @@ cannot obtain the device handle. The attempt and interruption remain in
 `/home/sky/experiments/planet8b-loro-v1/experiment_registry.jsonl`; no v2 run is
 marked complete.
 
-The original host is no longer available. Task 014 is paused at this boundary
-while Task 014A recreates and validates the environment, canonical dataset, and
-hard-linked views on a replacement GPU machine. After Task 014A, restart all 13
-production-like smokes under a fresh registry/output namespace and new smoke
-experiment identity (recommended `v3`); do not import the failed host's v2
-registry as current state. The exact next action is Task 014A.
+The original host is no longer available. Task 014A completed the replacement
+A40 host gate at commit `5461cfeb45aab216d43cd8d80451d8a420ae00f0`, including
+the canonical dataset, all hard-linked views, W&B/CUDA/GPU preflight, and all
+13 runner dry-runs. The matrix now uses fresh smoke identity
+`planet8b-loro-v1-smoke-1epoch-v3`; no failed-host v2 registry was imported.
+Resume Task 014 with:
+
+```bash
+uv run python scripts/run_planet8b_experiments.py \
+  --matrix configs/kelp-ps8b/generalization/experiment_matrix_v1.yaml \
+  --registry /home/sky/experiments/planet8b-loro-v1/experiment_registry.jsonl \
+  --pending --smoke
+```
+
+Do not run this command yet. The user subsequently clarified that the intended
+baseline is the later recipe in `configs/kelp-ps8b/segformer_b3.yaml`, not the
+California-specific config currently named by the matrix. Task 014B owns the
+dedicated generalization config, compatibility adjustments, matrix update, and
+renewed dry-run gate before this task resumes.

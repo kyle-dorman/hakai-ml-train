@@ -16,21 +16,28 @@ source-metadata artifacts, and explicit best-only checkpoint logging. Final
 offline one-batch baseline and `ca_001` LORO smokes passed against the real
 folds.
 
+Task 014A rebuilt the replacement A40 host boundary at commit
+`5461cfeb45aab216d43cd8d80451d8a420ae00f0`: the approved v2 archive was
+reassembled from checksum-verified Drive parts, fully verified and extracted,
+and all 30,073 baseline/LORO links passed independent inode and batch audits.
+Python/CUDA, W&B, sustained GPU health, and all smoke/production runner
+dry-runs passed without launching training. The fresh smoke identity is
+`planet8b-loro-v1-smoke-1epoch-v3`.
+
 Current active task:
 
 ```text
-Task 014A: Pending. Move to a replacement GPU machine, download and fully
-verify the canonical v2 archive again, rematerialize and inode-check the
-baseline plus all 12 LORO hard-link views, and pass environment/GPU/W&B/runner
-preflight without launching training.
-tasks/014a_move_to_new_machine.md
+Task 014B: Pending. Create and validate a dedicated generalization config from
+the intended root PS8B SegFormer B3 recipe, with current ignore-index, budget,
+checkpoint, W&B, and runner contracts. Do not launch training.
+tasks/014b_correct_generalization_model_config.md
 ```
 
 Next task:
 
 ```text
-Task 014: Resume on the replacement host with a fresh 13-entry one-epoch smoke
-suite and registry namespace.
+Task 014: Resume the fresh 13-entry one-epoch smoke suite only after Task 014B
+closes the corrected model-config gate.
 tasks/014_build_training_runner.md
 ```
 
@@ -123,10 +130,12 @@ Remote experiment preparation and execution:
   validated temporal baseline view.
 - Task 012: complete; materialized and validated all 12 LORO dataset views.
 - Task 013: complete; added validated W&B context and artifact logging.
-- Task 014: paused; the runner and matrix are implemented, but its clean
-  13-entry one-epoch smoke restart awaits the replacement-host gate.
-- Task 014A: pending; rebuild and verify the environment, canonical dataset,
-  and baseline/LORO hard-link views on a replacement GPU host.
+- Task 014: paused; the runner and replacement-host gate are complete, but its
+  matrix still names the superseded California-specific model config.
+- Task 014A: complete; rebuilt and verified the environment, canonical dataset,
+  and all baseline/LORO hard-link views on the replacement A40 host.
+- Task 014B: pending; create the dedicated suite config from the intended later
+  root PS8B recipe and repeat the no-training config/runner validation gate.
 - Tasks 015–016: run the baseline and LORO training suite.
 - Tasks 017–018: build and run chip/TIFF prediction evaluation.
 - Task 019: compare accuracy on matching source TIFFs.

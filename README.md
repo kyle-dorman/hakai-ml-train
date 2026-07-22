@@ -35,9 +35,11 @@ source fragments, and clean-extraction verified the v2 portable archive at
 Task 010 downloaded and fully verified only v2 at the remote canonical root
 `/home/sky/data/planet8b_all_regions_1024_512_v2`; Tasks 011–012 materialized
 the baseline and all 12 LORO views there. That GPU host has since failed during
-Task 014's final smoke. Task 014A now recreates the verified dataset and views
-on a replacement host before Task 014 restarts. See `docs/todo.md` and
-`tasks/README.md`.
+Task 014's final smoke. Task 014A recreated and fully verified the dataset,
+views, environment, W&B access, and A40 health on a replacement host. Task 014
+is paused while Task 014B replaces the superseded California-specific model
+config with a dedicated suite config based on the intended later root PS8B
+recipe. See `docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 

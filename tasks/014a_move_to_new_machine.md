@@ -1,6 +1,6 @@
 # Task 014A: Move the experiment environment to a replacement GPU machine
 
-Status: Pending
+Status: Complete
 
 Depends on: Tasks 010–013
 
@@ -195,10 +195,114 @@ uv run ruff check .
 - ML systems engineer: verify the CUDA sustained-load gate, resolved paths, and
   fresh smoke/production namespace isolation.
 
-## Outcome template
+## Progress
 
-Record replacement connection alias, repo branch/commit, GPU/driver/PyTorch
-identity, roots, exact preparation and materialization commands, archive
-receipt/checksum, link and DataModule audits, W&B and GPU preflight evidence,
-runner dry-run result, any recovered historical artifacts, unresolved issues,
-and the exact Task 014 restart command.
+Replacement-host work began on 2026-07-21 on
+`sky-0e14-kyledorman-a5c6fb1d-head`, using branch `main` at commit
+`5461cfeb45aab216d43cd8d80451d8a420ae00f0`. The selected roots remain the
+recommended `/home/sky/dataset-staging`, `/home/sky/data`, and
+`/home/sky/experiments/planet8b-loro-v1`; the root filesystem had 799 GiB
+available before transfer.
+
+The locked environment resolves to Python 3.12.11 and PyTorch 2.12.0+cu130.
+CUDA sees one NVIDIA A40 with driver 610.43.02. A 30-second matrix-multiplication
+load held 100% GPU utilization at the configured 140 W power limit, peaked at
+50 C, reported no thermal throttling or volatile uncorrectable ECC errors, and
+left CUDA visibility intact. Authenticated read access to
+`kdorman90-ucla/kelpseg` also passed without exposing credentials.
+
+The user-supplied Drive folder was inspected through both Drive metadata and
+its public folder payload. Its two entries are shortcuts whose targets are the
+same original ZIP and checksum IDs already embedded in the preparation script,
+not independent file copies. The checksum sidecar downloaded and matched the
+approved content, but the ZIP request returned a 2,009-byte Google Drive
+quota-exceeded HTML response instead of the required 44,859,496,084-byte
+archive. That response is retained as
+`/home/sky/dataset-staging/planet8b_all_regions_1024_512_v2.zip.quota-error.html`;
+no invalid `.partial` remains.
+
+Two later user-supplied links were confirmed to be independent, non-shortcut
+files with the exact expected names and Drive-reported sizes. The public ZIP
+endpoint nevertheless returned the same quota response, and the connected
+Drive download action rejected the 44,859,496,084-byte file because it exceeds
+that connector's 100 MiB limit. Ranged Drive API requests recovered and
+byte-count-validated the first 8,589,934,592 bytes as sixteen 512 MiB parts
+under
+`/home/sky/dataset-staging/planet8b_all_regions_1024_512_v2.zip.parts`, after
+which Drive persistently throttled further ranges. The user then supplied 11
+independently downloadable split parts. Every part passed the supplied checksum;
+their assembled archive matched the approved size and whole-file SHA-256.
+
+## Outcome
+
+Task 014A completed on replacement host
+`sky-0e14-kyledorman-a5c6fb1d-head`, branch `main`, commit
+`5461cfeb45aab216d43cd8d80451d8a420ae00f0`. The resolved roots are:
+
+```text
+repository:      /home/sky/hakai-ml-train
+archive staging: /home/sky/dataset-staging
+canonical data:  /home/sky/data/planet8b_all_regions_1024_512_v2
+experiment root: /home/sky/experiments/planet8b-loro-v1
+```
+
+The split-part workaround produced the exact 44,859,496,084-byte archive with
+SHA-256 `1244ecfe2cc4cee624bb5661087f0126ea239367bda60efd823b4fcb9b7399db`.
+The exact preparation command was:
+
+```bash
+scripts/prepare_remote_planet8b_dataset.sh \
+  --download-missing \
+  --staging-dir /home/sky/dataset-staging \
+  --data-parent /home/sky/data
+```
+
+The transactional verifier checked all 4,623 inventory members and published
+4,602 NPZs from 367 source TIFFs. Its durable receipt is
+`/home/sky/data/planet8b_all_regions_1024_512_v2/metadata/remote_archive_verification.log`.
+Baseline and all-region LORO materialization used the exact commands in this
+task, first with `--dry-run` and then in hard-link apply mode. Canonical and
+view roots shared device ID 174.
+
+An independent audit joined every selected fold row to its canonical NPZ,
+compared the complete view filesystem to each fold manifest, and checked source
+and destination device/inode identity for all 30,073 links. The baseline has
+2,565 links; the 12 LORO folds have 27,508. Source-TIFF split isolation and
+held-out-region isolation passed, as did one batch from all 39 fold/split
+combinations.
+
+The locked runtime is Python 3.12.11 with PyTorch 2.12.0+cu130. The NVIDIA A40
+uses driver 610.43.02. A bounded 30-second load held 100% utilization at the
+140 W power limit, peaked at 50 C, and produced no thermal-throttle, Xid,
+device-loss, or volatile uncorrectable ECC signal; post-task CUDA visibility
+remained healthy. Authenticated W&B access to `kdorman90-ucla/kelpseg` passed
+without recording credentials.
+
+`tests/test_run_planet8b_experiments.py` passed all six tests. All 13 smoke and
+all 13 production entries dry-ran against the replacement paths and current
+fold hashes. The checked-in fresh smoke identity is
+`planet8b-loro-v1-smoke-1epoch-v3`; the dry-runs created no registry or training
+process. No failed-host runtime evidence was recovered or imported.
+
+Changed repository files are `AGENTS.md`, `README.md`, `docs/index.md`,
+`docs/todo.md`, `tasks/README.md`, this task file,
+`tasks/014_build_training_runner.md`, and
+`configs/kelp-ps8b/generalization/experiment_matrix_v1.yaml`. `git diff --check`
+passes. Repository-wide Ruff validation remains blocked only by two pre-existing
+issues in unchanged `notebooks/create_skema_aux_files.ipynb`: formatting and
+unused loop variable `i` in cells 4 and 9. Download parts, quota-response
+evidence, and the earlier 8 GiB ranged attempt remain in staging; they were not
+deleted as part of this task.
+
+At Task 014A completion, the prepared Task 014 restart command was:
+
+```bash
+uv run python scripts/run_planet8b_experiments.py \
+  --matrix configs/kelp-ps8b/generalization/experiment_matrix_v1.yaml \
+  --registry /home/sky/experiments/planet8b-loro-v1/experiment_registry.jsonl \
+  --pending --smoke
+```
+
+Do not run it yet. The subsequent model-config clarification makes Task 014B
+the exact next action; that task must correct and validate the matrix config
+before Task 014 resumes.

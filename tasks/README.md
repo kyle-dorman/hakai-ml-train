@@ -54,8 +54,9 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [011](011_materialize_baseline_dataset.md) | Remote | Complete | 010 | Baseline train/val/test views |
 | [012](012_materialize_loro_datasets.md) | Remote | Complete | 010, 011 | One dataset view per held-out region |
 | [013](013_add_wandb_run_context.md) | Remote/code | Complete | 011, 012 | Consistent W&B context and artifacts |
-| [014](014_build_training_runner.md) | Remote/code | Paused | 013, 014A restart gate | Runner implemented; final smoke awaits replacement host |
-| [014A](014a_move_to_new_machine.md) | Remote/data | Pending | 010–013 | Verified replacement host, data, and hard-linked views |
+| [014](014_build_training_runner.md) | Remote/code | Paused | 013, 014A, 014B | Runner awaits corrected model-config gate |
+| [014A](014a_move_to_new_machine.md) | Remote/data | Complete | 010–013 | Verified replacement host, data, and hard-linked views |
+| [014B](014b_correct_generalization_model_config.md) | Remote/config | Pending | 013, 014A | Dedicated config from intended root PS8B recipe |
 | [015](015_run_new_baseline.md) | Remote | Pending | 014 | Expanded-data baseline checkpoint |
 | [016](016_run_loro_training.md) | Remote | Pending | 015 | Complete LORO checkpoint suite |
 | [017](017_build_prediction_evaluator.md) | Remote/code | Pending | 015 | Chip- and TIFF-level prediction metrics |
@@ -87,6 +88,7 @@ task contract.
 | 013 | W&B group, run names, checkpoint upload policy, and smoke-run grouping. |
 | 014 | Base model config, seed policy, training budget, execution mode, and failure policy. |
 | 014A | Replacement host, repo commit, storage roots, and disposition of recoverable old-host evidence. |
+| 014B | Root PS8B recipe is selected; ask only if compatibility validation requires a scientific-policy change. |
 | 015 | Confirm resolved full baseline only if it differs from the approved Task 014 matrix. |
 | 016 | First full LORO fold, pause-versus-continue point, and run order. |
 | 017 | Overlap combination confirmation, binary threshold, prediction-raster retention, and raster dtype/compression. |

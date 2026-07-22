@@ -45,10 +45,14 @@ canonical root `/home/sky/data/planet8b_all_regions_1024_512_v2`; v1 remains
 historical evidence. Tasks 011–012 materialized the temporal baseline and all
 12 LORO views beneath that canonical root. Task 013 added validated W&B run
 context and artifact logging. Task 014's runner is implemented, but its A40
-host failed during the final smoke; Task 014A now owns replacement-host setup,
-the verified v2 re-download, and hard-link rematerialization before Task 014
-restarts. The complete
-ordered queue is in `docs/todo.md`; detailed contracts are in `tasks/`.
+host failed during the final smoke. Task 014A completed replacement-host setup,
+the verified v2 re-download, hard-link rematerialization, and all preflight
+gates. Before Task 014 restarts its complete 13-entry smoke suite, the user
+clarified that the intended baseline is the later root PS8B recipe,
+not the California-specific config currently in the matrix. Task 014B is next
+to correct and validate the dedicated suite config before Task 014 restarts.
+The complete ordered queue is in `docs/todo.md`; detailed contracts are in
+`tasks/`.
 
 Do not start multiple numbered tasks in one window. Close the selected task,
 update its outcome and `docs/todo.md`, and stop.

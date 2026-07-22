@@ -1,6 +1,6 @@
 schema_version: 1
 experiment_version: planet8b-loro-v1
-smoke_experiment_version: planet8b-loro-v1-smoke-1epoch-v2
+smoke_experiment_version: planet8b-loro-v1-smoke-1epoch-v3
 dataset_root: /home/sky/data/planet8b_all_regions_1024_512_v2
 experiment_root: /home/sky/experiments/planet8b-loro-v1
 model_config: configs/kelp-ps8b/california/segformer_b3.yaml

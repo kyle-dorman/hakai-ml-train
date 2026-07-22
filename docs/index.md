@@ -22,8 +22,11 @@ downloaded, checksum-verified, and fully validated that archive remotely. Task
 011 materialized the temporal baseline view, Task 012 materialized all 12 LORO
 views, and Task 013 added validated W&B run context and artifacts. Task 014's
 runner is implemented, but its original GPU host failed during the final smoke.
-Task 014A is next to verify a replacement host and rematerialize the data views;
-Task 014 then restarts its 13-entry one-epoch smoke suite.
+Task 014A verified a replacement A40 host, redownloaded and fully validated the
+canonical archive, rematerialized every hard-link view, and passed all service,
+GPU, DataModule, and runner preflight gates. Task 014B is next to create and
+validate a dedicated suite config from the intended later root PS8B baseline
+recipe before Task 014 restarts its 13-entry one-epoch smoke suite.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles
