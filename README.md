@@ -36,11 +36,11 @@ Task 010 downloaded and fully verified only v2 at the remote canonical root
 `/home/sky/data/planet8b_all_regions_1024_512_v2`; Tasks 011–012 materialized
 the baseline and all 12 LORO views there. That GPU host has since failed during
 Task 014's final smoke. Task 014A recreated and fully verified the dataset,
-views, environment, W&B access, and A40 health on a replacement host. Task 014
-is paused while Task 014B replaces the superseded California-specific model
-config with a dedicated suite config based on the intended later root PS8B
-recipe, benchmarks the constant-effective-batch runtime pair, and prepares the
-tiered EMA-aware smoke profile. See `docs/todo.md` and `tasks/README.md`.
+views, environment, W&B access, and A40 health on a replacement host. Task 014B
+created the dedicated later-root SegFormer B3 suite config, selected
+micro-batch 3 with accumulation 8 at effective batch 24, and validated the
+tiered EMA-aware smoke profile. Task 014 is ready to resume the 13-entry smoke
+suite. See `docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 
@@ -102,9 +102,9 @@ paired 8-band GeoTIFF imagery and labels
   -> paired matching-TIFF baseline/LORO comparison
 ```
 
-The current reference model surface is the binary SegFormer B3 PS8B config
-under `configs/kelp-ps8b/california/`. Dataset paths and run metadata in that
-config will be revised by the numbered tasks before the new full training run.
+The current comparison-suite model surface is
+`configs/kelp-ps8b/generalization/segformer_b3_v1.yaml`; fold paths and run
+identity are injected by the validated experiment runner.
 
 ## Current tracked dataset metadata
 

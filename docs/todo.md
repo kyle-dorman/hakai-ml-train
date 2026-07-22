@@ -21,27 +21,29 @@ Task 014A rebuilt the replacement A40 host boundary at commit
 reassembled from checksum-verified Drive parts, fully verified and extracted,
 and all 30,073 baseline/LORO links passed independent inode and batch audits.
 Python/CUDA, W&B, sustained GPU health, and all smoke/production runner
-dry-runs passed without launching training. The fresh smoke identity is
-`planet8b-loro-v1-smoke-1epoch-v3`.
+dry-runs passed without launching training.
+
+Task 014B created the dedicated later-root SegFormer B3 suite config, preserved
+the approved SMP eight-band ImageNet adaptation, selected micro-batch 3 with
+accumulation 8 at effective batch 24, and implemented the tiered EMA smoke
+profile. All config checks and 26 real-fold dry-runs passed. The fresh smoke
+identity is `planet8b-loro-v1-smoke-tiered-ema-v1`.
 
 Current active task:
 
 ```text
-Task 014B: Pending and approved for implementation. Create and validate a
-dedicated generalization config from the intended root PS8B SegFormer B3
-recipe, preserve its established SMP eight-band ImageNet adaptation, benchmark
-constant-effective-batch runtime pairs, and add a two-tier EMA-aware smoke plan
-alongside the current ignore-index, budget, checkpoint, W&B, and runner
-contracts. Do not launch experiment training.
-tasks/014b_correct_generalization_model_config.md
+Task 014: Resume and verify the 13-entry tiered EMA smoke suite with the
+dedicated config and fresh smoke identity. No production training belongs in
+this task.
+tasks/014_build_training_runner.md
 ```
 
 Next task:
 
 ```text
-Task 014: Resume the 13-entry tiered EMA smoke suite only after Task 014B closes
-the corrected model-config, batch benchmark, runner, and smoke-identity gate.
-tasks/014_build_training_runner.md
+Task 015: Run and verify the expanded-data temporal baseline after Task 014's
+smoke suite closes.
+tasks/015_run_new_baseline.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -133,14 +135,11 @@ Remote experiment preparation and execution:
   validated temporal baseline view.
 - Task 012: complete; materialized and validated all 12 LORO dataset views.
 - Task 013: complete; added validated W&B context and artifact logging.
-- Task 014: paused; the runner and replacement-host gate are complete, but its
-  matrix still names the superseded California-specific model config.
+- Task 014: ready to resume the validated 13-entry tiered EMA smoke suite.
 - Task 014A: complete; rebuilt and verified the environment, canonical dataset,
   and all baseline/LORO hard-link views on the replacement A40 host.
-- Task 014B: pending and approved for implementation; create the dedicated
-  suite config from the intended later root PS8B recipe with its established
-  initialization, benchmark the fixed-effective-batch runtime pair, and add the
-  tiered EMA-aware smoke gate.
+- Task 014B: complete; created the dedicated later-root suite config, selected
+  the fixed-effective-batch runtime pair, and added the tiered EMA smoke gate.
 - Tasks 015–016: run the baseline and LORO training suite.
 - Tasks 017–018: build and run chip/TIFF prediction evaluation.
 - Task 019: compare accuracy on matching source TIFFs.

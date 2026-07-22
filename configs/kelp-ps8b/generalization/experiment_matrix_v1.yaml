@@ -1,13 +1,18 @@
 schema_version: 1
 experiment_version: planet8b-loro-v1
-smoke_experiment_version: planet8b-loro-v1-smoke-1epoch-v3
+smoke_experiment_version: planet8b-loro-v1-smoke-tiered-ema-v1
 dataset_root: /home/sky/data/planet8b_all_regions_1024_512_v2
 experiment_root: /home/sky/experiments/planet8b-loro-v1
-model_config: configs/kelp-ps8b/california/segformer_b3.yaml
-smoke_model_config: configs/kelp-ps8b/california/segformer_b3.yaml
+model_config: configs/kelp-ps8b/generalization/segformer_b3_v1.yaml
+smoke_model_config: configs/kelp-ps8b/generalization/segformer_b3_v1.yaml
 seed: 42
 max_epochs: 100
-smoke_max_epochs: 1
+smoke_deep_run_keys: [baseline-temporal-v1, loro-bc-v1]
+smoke_deep_max_epochs: 2
+smoke_shallow_max_epochs: 1
+smoke_shallow_optimizer_updates: 2
+smoke_shallow_limit_val_batches: 2
+smoke_shallow_limit_test_batches: 2
 execution_mode: sequential
 failure_policy: continue
 runs:

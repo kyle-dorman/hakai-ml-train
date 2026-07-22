@@ -41,6 +41,12 @@ registry:
 Names must be predictable and unique. Use region IDs, not potentially duplicated
 region names, in LORO run names.
 
+The current smoke identity is `planet8b-loro-v1-smoke-tiered-ema-v1`.
+Baseline and `loro-bc-v1` use two full epochs so EMA crosses its update gate;
+the other 11 LORO folds use one epoch capped at two optimizer updates, two
+validation batches, and two test batches. Smoke limits are runner-owned and
+never apply to the uniform 100-epoch production suite.
+
 `src/run_context.py` owns the required JSON-compatible context. Generate it
 from the dataset and fold files with `scripts/build_planet8b_run_context.py`,
 then pass it to `trainer.py fit --run_context <path>`. The trainer rehashes all

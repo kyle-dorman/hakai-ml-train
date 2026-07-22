@@ -54,9 +54,9 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [011](011_materialize_baseline_dataset.md) | Remote | Complete | 010 | Baseline train/val/test views |
 | [012](012_materialize_loro_datasets.md) | Remote | Complete | 010, 011 | One dataset view per held-out region |
 | [013](013_add_wandb_run_context.md) | Remote/code | Complete | 011, 012 | Consistent W&B context and artifacts |
-| [014](014_build_training_runner.md) | Remote/code | Paused | 013, 014A, 014B | Runner awaits corrected model-config gate |
+| [014](014_build_training_runner.md) | Remote/code | Ready to resume | 013, 014A, 014B | Run and verify the tiered EMA smoke suite |
 | [014A](014a_move_to_new_machine.md) | Remote/data | Complete | 010–013 | Verified replacement host, data, and hard-linked views |
-| [014B](014b_correct_generalization_model_config.md) | Remote/config | Pending; approved | 013, 014A | Dedicated config, batch benchmark, and tiered EMA smoke |
+| [014B](014b_correct_generalization_model_config.md) | Remote/config | Complete | 013, 014A | Dedicated config, batch benchmark, and tiered EMA smoke |
 | [015](015_run_new_baseline.md) | Remote | Pending | 014 | Expanded-data baseline checkpoint |
 | [016](016_run_loro_training.md) | Remote | Pending | 015 | Complete LORO checkpoint suite |
 | [017](017_build_prediction_evaluator.md) | Remote/code | Pending | 015 | Chip- and TIFF-level prediction metrics |

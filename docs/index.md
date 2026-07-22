@@ -24,10 +24,10 @@ views, and Task 013 added validated W&B run context and artifacts. Task 014's
 runner is implemented, but its original GPU host failed during the final smoke.
 Task 014A verified a replacement A40 host, redownloaded and fully validated the
 canonical archive, rematerialized every hard-link view, and passed all service,
-GPU, DataModule, and runner preflight gates. Task 014B is next to create and
-validate a dedicated suite config from the intended later root PS8B baseline
-recipe, benchmark the constant-effective-batch runtime pair, and implement the
-approved tiered EMA-aware smoke profile before Task 014 restarts.
+GPU, DataModule, and runner preflight gates. Task 014B created and validated a
+dedicated suite config from the intended later root PS8B baseline recipe,
+selected the constant-effective-batch runtime pair, and implemented the
+approved tiered EMA-aware smoke profile. Task 014 is ready to resume.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles
@@ -64,7 +64,9 @@ src/prepare/remove_tiles_with_nodata_areas.py
 src/data.py
 src/models/smp.py
 trainer.py
-configs/kelp-ps8b/california/segformer_b3.yaml
+configs/kelp-ps8b/generalization/segformer_b3_v1.yaml
+configs/kelp-ps8b/generalization/experiment_matrix_v1.yaml
+scripts/run_planet8b_experiments.py
 ```
 
 Other config families and deployment modules remain in the repository but are

@@ -77,7 +77,12 @@ def load_matrix(path: Path, repo_root: Path) -> dict[str, Any]:
         "smoke_model_config",
         "seed",
         "max_epochs",
-        "smoke_max_epochs",
+        "smoke_deep_run_keys",
+        "smoke_deep_max_epochs",
+        "smoke_shallow_max_epochs",
+        "smoke_shallow_optimizer_updates",
+        "smoke_shallow_limit_val_batches",
+        "smoke_shallow_limit_test_batches",
         "execution_mode",
         "failure_policy",
         "runs",
@@ -89,8 +94,17 @@ def load_matrix(path: Path, repo_root: Path) -> dict[str, Any]:
         raise RunnerError("Only sequential execution is approved")
     if matrix["failure_policy"] not in {"continue", "stop"}:
         raise RunnerError("failure_policy must be 'continue' or 'stop'")
-    if matrix["max_epochs"] != 100 or matrix["smoke_max_epochs"] != 1:
-        raise RunnerError("Approved budgets are 100 production and 1 smoke epoch")
+    if matrix["max_epochs"] != 100:
+        raise RunnerError("Approved production budget is 100 epochs")
+    if (
+        matrix["smoke_deep_run_keys"] != ["baseline-temporal-v1", "loro-bc-v1"]
+        or matrix["smoke_deep_max_epochs"] != 2
+        or matrix["smoke_shallow_max_epochs"] != 1
+        or matrix["smoke_shallow_optimizer_updates"] != 2
+        or matrix["smoke_shallow_limit_val_batches"] != 2
+        or matrix["smoke_shallow_limit_test_batches"] != 2
+    ):
+        raise RunnerError("Matrix does not match the approved tiered smoke profile")
     runs = matrix["runs"]
     if not isinstance(runs, list) or len(runs) != 13:
         raise RunnerError("Matrix must contain exactly 13 runs")
@@ -108,6 +122,8 @@ def load_matrix(path: Path, repo_root: Path) -> dict[str, Any]:
         if not resolved.is_file():
             raise RunnerError(f"Missing {field}: {resolved}")
         matrix[field] = str(resolved)
+    if matrix["model_config"] != matrix["smoke_model_config"]:
+        raise RunnerError("Smoke and production must use one model config")
     matrix["dataset_root"] = str(Path(matrix["dataset_root"]).resolve())
     matrix["experiment_root"] = str(Path(matrix["experiment_root"]).resolve())
     return matrix
@@ -213,10 +229,21 @@ def _event(
     return event
 
 
-def _resolved_config(base: Path, output: Path, root: Path, epochs: int) -> None:
+def _resolved_config(
+    base: Path,
+    output: Path | None,
+    root: Path,
+    epochs: int,
+    *,
+    context: dict[str, Any] | None = None,
+    limits: dict[str, int] | None = None,
+) -> dict[str, Any]:
     config = _load_yaml(base)
     config["trainer"]["max_epochs"] = epochs
     config["trainer"]["default_root_dir"] = str(root)
+    for key in ("limit_train_batches", "limit_val_batches", "limit_test_batches"):
+        config["trainer"].pop(key, None)
+    config["trainer"].update(limits or {})
     checkpoint = next(
         callback["init_args"]
         for callback in config["trainer"]["callbacks"]
@@ -224,10 +251,48 @@ def _resolved_config(base: Path, output: Path, root: Path, epochs: int) -> None:
     )
     checkpoint["save_top_k"] = 1
     checkpoint["save_last"] = True
+    if context is not None:
+        config["data"]["init_args"].update(
+            train_chip_dir=context["data_paths"]["train"],
+            val_chip_dir=context["data_paths"]["val"],
+            test_chip_dir=context["data_paths"]["test"],
+        )
+        logger = config["trainer"]["logger"][0]["init_args"]
+        logger.update(
+            entity=context["wandb_entity"],
+            project=context["wandb_project"],
+            group=context["wandb_group"],
+            name=context["wandb_name"],
+            job_type=context["wandb_job_type"],
+            tags=context["wandb_tags"],
+            offline=context["wandb_offline"],
+            log_model=False,
+            save_dir=str(root),
+        )
+    if output is None:
+        return config
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists():
         raise RunnerError(f"Refusing to overwrite resolved config: {output}")
     output.write_text(yaml.safe_dump(config, sort_keys=False))
+    return config
+
+
+def _run_profile(
+    matrix: dict[str, Any], run: dict[str, Any], config: dict[str, Any], smoke: bool
+) -> tuple[int, dict[str, int]]:
+    if not smoke:
+        return matrix["max_epochs"], {}
+    if run["run_key"] in matrix["smoke_deep_run_keys"]:
+        return matrix["smoke_deep_max_epochs"], {}
+    accumulation = config["trainer"]["accumulate_grad_batches"]
+    return matrix["smoke_shallow_max_epochs"], {
+        "limit_train_batches": (
+            matrix["smoke_shallow_optimizer_updates"] * accumulation
+        ),
+        "limit_val_batches": matrix["smoke_shallow_limit_val_batches"],
+        "limit_test_batches": matrix["smoke_shallow_limit_test_batches"],
+    }
 
 
 def _run_logged(command: list[str], log_path: Path, env: dict[str, str]) -> int:
@@ -351,13 +416,21 @@ def execute_run(
         offline=offline,
     )
     context["experiment_version"] = version
-    context["training_budget_epochs"] = (
-        matrix["smoke_max_epochs"] if smoke else matrix["max_epochs"]
-    )
+    base_config = _load_yaml(model_config)
+    epochs, limits = _run_profile(matrix, run, base_config, smoke)
+    context["training_budget_epochs"] = epochs
+    context["batch_limits"] = limits
     context["checkpoint_policy"] = "best_plus_local_last"
     resolved = attempt_root / "resolved_config.yaml"
     context_path = attempt_root / "run_context.json"
-    epochs = context["training_budget_epochs"]
+    resolved_config = _resolved_config(
+        model_config,
+        None,
+        attempt_root,
+        epochs,
+        context=context,
+        limits=limits,
+    )
     fit_command = [
         "uv",
         "run",
@@ -380,13 +453,32 @@ def execute_run(
                     "epochs": epochs,
                     "fold_root": str(fold_root),
                     "fold_manifest_sha256": context["fold_manifest_sha256"],
+                    "model_config_sha256": context["model_config_sha256"],
+                    "batch_size": resolved_config["data"]["init_args"]["batch_size"],
+                    "accumulate_grad_batches": resolved_config["trainer"][
+                        "accumulate_grad_batches"
+                    ],
+                    "batch_limits": limits,
+                    "data_paths": context["data_paths"],
+                    "wandb": {
+                        key: resolved_config["trainer"]["logger"][0]["init_args"][key]
+                        for key in ("entity", "project", "group", "name", "job_type")
+                    },
+                    "checkpoint_root": str(attempt_root),
                     "fit_command": fit_command,
                 },
                 sort_keys=True,
             )
         )
         return True
-    _resolved_config(model_config, resolved, attempt_root, epochs)
+    _resolved_config(
+        model_config,
+        resolved,
+        attempt_root,
+        epochs,
+        context=context,
+        limits=limits,
+    )
     write_run_context(context, context_path)
     wandb_run_id = uuid.uuid4().hex[:8]
     common = {

@@ -1,6 +1,6 @@
 # Task 014: Build the experiment registry and training runner
 
-Status: Paused; model-config correction requires Task 014B
+Status: Ready to resume; Task 014B gate complete
 
 Depends on: Tasks 013, 014A, and 014B
 
@@ -193,8 +193,8 @@ smoke run results, failure/resume evidence, validation, and Task 015 command.
 
 ## Progress
 
-The final approved policy is owned by Task 014B and will be recorded in the
-updated matrix: dedicated later-root SegFormer B3 recipe, retained SMP
+The final approved policy is recorded in the updated matrix: dedicated
+later-root SegFormer B3 recipe, retained SMP
 eight-band ImageNet adaptation, benchmark-selected effective batch size 24,
 seed `42`, 100 production epochs, no early stopping, best `val/iou_epoch`
 checkpoint plus local `last.ckpt`, sequential execution, and
@@ -217,11 +217,10 @@ marked complete.
 The original host is no longer available. Task 014A completed the replacement
 A40 host gate at commit `5461cfeb45aab216d43cd8d80451d8a420ae00f0`, including
 the canonical dataset, all hard-linked views, W&B/CUDA/GPU preflight, and all
-13 runner dry-runs. The checked-in matrix still names the unused pre-014B smoke
-identity `planet8b-loro-v1-smoke-1epoch-v3`; no failed-host v2 registry was
-imported. Task 014B must replace that misleading identity with
-`planet8b-loro-v1-smoke-tiered-ema-v1` after verifying that no real v3 event
-exists. After Task 014B closes, resume Task 014 with:
+13 runner dry-runs. Task 014B created and validated the dedicated config,
+selected micro-batch 3 with accumulation 8, replaced the unused pre-014B smoke
+identity after confirming no real v3 registry event exists, and passed all 13
+smoke plus all 13 production dry-runs. Resume Task 014 with:
 
 ```bash
 uv run python scripts/run_planet8b_experiments.py \
@@ -230,7 +229,5 @@ uv run python scripts/run_planet8b_experiments.py \
   --pending --smoke
 ```
 
-Do not run this command until Task 014B closes. Task 014B owns the dedicated
-generalization config, batch benchmark, tiered-smoke runner/matrix adjustments,
-compatibility validation, identity update, and renewed dry-run gate before this
-task resumes.
+This is now the exact clean restart command for the validated
+`planet8b-loro-v1-smoke-tiered-ema-v1` suite.

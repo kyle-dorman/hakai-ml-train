@@ -10,6 +10,7 @@ from run_planet8b_experiments import (
     RunnerError,
     _best_metric,
     _resolved_config,
+    _run_profile,
     append_event,
     latest_states,
     load_matrix,
@@ -21,8 +22,9 @@ from run_planet8b_experiments import (
 def _matrix(tmp_path: Path) -> tuple[Path, Path]:
     repo = tmp_path / "repo"
     repo.mkdir()
-    (repo / "production.yaml").write_text("trainer:\n  callbacks: []\n")
-    (repo / "smoke.yaml").write_text("trainer:\n  callbacks: []\n")
+    (repo / "model.yaml").write_text(
+        "trainer:\n  accumulate_grad_batches: 8\n  callbacks: []\n"
+    )
     runs = [
         {
             "run_key": "baseline-temporal-v1",
@@ -47,11 +49,16 @@ def _matrix(tmp_path: Path) -> tuple[Path, Path]:
         "smoke_experiment_version": "smoke-1epoch",
         "dataset_root": str(tmp_path / "dataset"),
         "experiment_root": str(tmp_path / "experiments"),
-        "model_config": "production.yaml",
-        "smoke_model_config": "smoke.yaml",
+        "model_config": "model.yaml",
+        "smoke_model_config": "model.yaml",
         "seed": 42,
         "max_epochs": 100,
-        "smoke_max_epochs": 1,
+        "smoke_deep_run_keys": ["baseline-temporal-v1", "loro-bc-v1"],
+        "smoke_deep_max_epochs": 2,
+        "smoke_shallow_max_epochs": 1,
+        "smoke_shallow_optimizer_updates": 2,
+        "smoke_shallow_limit_val_batches": 2,
+        "smoke_shallow_limit_test_batches": 2,
         "execution_mode": "sequential",
         "failure_policy": "continue",
         "runs": runs,
@@ -66,7 +73,8 @@ def test_matrix_requires_complete_approved_suite_and_budgets(tmp_path: Path) -> 
     matrix = load_matrix(path, repo)
     assert len(matrix["runs"]) == 13
     assert matrix["max_epochs"] == 100
-    assert matrix["smoke_max_epochs"] == 1
+    assert matrix["smoke_deep_max_epochs"] == 2
+    assert matrix["smoke_shallow_max_epochs"] == 1
 
     value = yaml.safe_load(path.read_text())
     value["runs"].pop()
@@ -150,6 +158,133 @@ trainer:
 
     with pytest.raises(RunnerError, match="overwrite"):
         _resolved_config(base, output, run_root, 100)
+
+
+def test_tiered_smoke_profile_has_deep_and_bounded_entries(tmp_path: Path) -> None:
+    path, repo = _matrix(tmp_path)
+    matrix = load_matrix(path, repo)
+    config = yaml.safe_load(Path(matrix["model_config"]).read_text())
+    baseline = matrix["runs"][0]
+    bc = next(run for run in matrix["runs"] if run["run_key"] == "loro-bc-v1")
+    shallow = next(run for run in matrix["runs"] if run["run_key"] == "loro-ca_001-v1")
+    assert _run_profile(matrix, baseline, config, True) == (2, {})
+    assert _run_profile(matrix, bc, config, True) == (2, {})
+    assert _run_profile(matrix, shallow, config, True) == (
+        1,
+        {
+            "limit_train_batches": 16,
+            "limit_val_batches": 2,
+            "limit_test_batches": 2,
+        },
+    )
+    assert _run_profile(matrix, shallow, config, False) == (100, {})
+
+
+def test_pure_resolution_injects_paths_wandb_limits_and_root(tmp_path: Path) -> None:
+    repo = Path(__file__).resolve().parents[1]
+    base = repo / "configs/kelp-ps8b/generalization/segformer_b3_v1.yaml"
+    root = tmp_path / "attempt-01"
+    context = {
+        "data_paths": {
+            "train": "/fold/train",
+            "val": "/fold/val",
+            "test": "/fold/test",
+        },
+        "wandb_entity": "kdorman90-ucla",
+        "wandb_project": "kelpseg",
+        "wandb_group": "smoke",
+        "wandb_name": "smoke-loro-ca_001-v1",
+        "wandb_job_type": "smoke",
+        "wandb_tags": ["planet8b-loro-v1", "smoke"],
+        "wandb_offline": True,
+    }
+    limits = {
+        "limit_train_batches": 16,
+        "limit_val_batches": 2,
+        "limit_test_batches": 2,
+    }
+    resolved = _resolved_config(base, None, root, 1, context=context, limits=limits)
+    assert resolved["trainer"]["max_epochs"] == 1
+    assert resolved["trainer"]["default_root_dir"] == str(root)
+    assert {key: resolved["trainer"][key] for key in limits} == limits
+    assert resolved["data"]["init_args"]["train_chip_dir"] == "/fold/train"
+    logger = resolved["trainer"]["logger"][0]["init_args"]
+    assert (logger["entity"], logger["project"], logger["group"]) == (
+        "kdorman90-ucla",
+        "kelpseg",
+        "smoke",
+    )
+    assert logger["save_dir"] == str(root)
+
+
+def test_generalization_config_preserves_recipe_and_safety_contract() -> None:
+    repo = Path(__file__).resolve().parents[1]
+    config_path = repo / "configs/kelp-ps8b/generalization/segformer_b3_v1.yaml"
+    matrix = yaml.safe_load(
+        (
+            repo / "configs/kelp-ps8b/generalization/experiment_matrix_v1.yaml"
+        ).read_text()
+    )
+    config = yaml.safe_load(config_path.read_text())
+    model = config["model"]["init_args"]
+    data = config["data"]["init_args"]
+    trainer = config["trainer"]
+
+    assert matrix["model_config"] == matrix["smoke_model_config"]
+    assert matrix["model_config"].endswith("generalization/segformer_b3_v1.yaml")
+    assert model["architecture"] == "Segformer"
+    assert model["encoder_name"] == "mit_b3"
+    assert model["model_opts"] == {"encoder_weights": "imagenet", "in_channels": 8}
+    assert model["optimizer_opts"] == {
+        "lr": 0.0003,
+        "weight_decay": 0.01,
+        "betas": [0.9, 0.95],
+    }
+    assert model["lr_scheduler_class"] == "src.schedulers.LinearWarmupCosineDecayLR"
+    assert model["lr_scheduler_opts"] == {"warmup_epochs": 5, "min_lr": 0.000003}
+    assert model["lr_scheduler_interval"] == "step"
+    assert model["loss"] == "LabelSmoothingLovasz"
+    assert model["loss_opts"] == {
+        "mode": "binary",
+        "ce_weight": 0.7,
+        "lovasz_weight": 0.3,
+        "ignore_index": -100,
+    }
+    assert model["ignore_index"] == -100
+    assert data["batch_size"] * trainer["accumulate_grad_batches"] == 24
+    assert trainer["max_epochs"] == 100
+    callbacks = trainer["callbacks"]
+    classes = [callback["class_path"] for callback in callbacks]
+    assert classes.count("src.callbacks.EMAWeightAveraging") == 1
+    assert "lightning.pytorch.callbacks.EarlyStopping" not in classes
+    assert classes.count("lightning.pytorch.callbacks.ModelCheckpoint") == 1
+    checkpoint = next(
+        callback["init_args"]
+        for callback in callbacks
+        if callback["class_path"] == "lightning.pytorch.callbacks.ModelCheckpoint"
+    )
+    assert checkpoint["save_top_k"] == 1
+    assert checkpoint["save_last"] is True
+    assert len(trainer["logger"]) == 1
+    logger = trainer["logger"][0]["init_args"]
+    assert (logger["entity"], logger["project"], logger["group"]) == (
+        "kdorman90-ucla",
+        "kelpseg",
+        "planet8b-loro-v1",
+    )
+    assert logger["log_model"] is False
+    mask_transforms = [
+        transform
+        for group in (data["train_transforms"], data["test_transforms"])
+        for transform in group["transform"]["transforms"]
+        if "fill_mask" in transform
+    ]
+    assert {transform["__class_fullname__"] for transform in mask_transforms} == {
+        "RandomCrop",
+        "CoarseDropout",
+        "PadIfNeeded",
+    }
+    assert all(transform["fill_mask"] == -100 for transform in mask_transforms)
 
 
 def test_registry_rejects_invalid_jsonl(tmp_path: Path) -> None:
