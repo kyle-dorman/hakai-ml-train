@@ -51,7 +51,9 @@ selected micro-batch 3 with accumulation 8 at effective batch 24, and validated
 the tiered EMA-aware smoke profile. Task 014 completed all 13 entries under
 `planet8b-loro-v1-smoke-tiered-ema-v1`, including both deep EMA gates, every
 bounded fold test, and failure/interruption/pending-state checks. Task 015 is
-ready for the user to launch the production temporal baseline.
+complete: W&B run `24f6a23a`, the validation-selected best checkpoint, local
+`last.ckpt`, and full baseline test execution were verified. Task 016 is
+current and ready for the user-confirmed `ca_006`-first production LORO suite.
 The complete ordered queue is in `docs/todo.md`; detailed contracts are in
 `tasks/`.
 

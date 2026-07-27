@@ -34,13 +34,14 @@ source fragments, and clean-extraction verified the v2 portable archive at
 `/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip`.
 Task 010 downloaded and fully verified only v2 at the remote canonical root
 `/home/sky/data/planet8b_all_regions_1024_512_v2`; Tasks 011–012 materialized
-the baseline and all 12 LORO views there. That GPU host has since failed during
-Task 014's final smoke. Task 014A recreated and fully verified the dataset,
-views, environment, W&B access, and A40 health on a replacement host. Task 014B
-created the dedicated later-root SegFormer B3 suite config, selected
-micro-batch 3 with accumulation 8 at effective batch 24, and validated the
-tiered EMA-aware smoke profile. Task 014 is ready to resume the 13-entry smoke
-suite. See `docs/todo.md` and `tasks/README.md`.
+the baseline and all 12 LORO views there. Task 014A recreated and fully
+verified the dataset, views, environment, W&B access, and A40 health on the
+replacement host after the original GPU failed. Task 014B established the
+dedicated SegFormer B3 config and constant effective batch 24, and Task 014
+completed the 13-entry tiered EMA smoke suite. Task 015 then completed and
+verified the 100-epoch production temporal baseline. Task 016 is current and
+ready for the `ca_006`-first production LORO suite. See `docs/todo.md` and
+`tasks/README.md`.
 
 ## Documentation
 

@@ -35,23 +35,29 @@ and local `last.ckpt` files. The baseline and BC deep gates reached optimizer
 steps 176 and 172; every shallow fold reached exactly two optimizer updates and
 tested exactly two batches from its selected best checkpoint. Failure,
 interruption, pending-state, and production-isolation checks passed. No
-production training has started.
+production training was launched by Task 014.
+
+Task 015 completed the 100-epoch production temporal baseline in one attempt.
+W&B run `24f6a23a` is finished; epoch 98 selected the hash-verified best
+checkpoint at `val/iou_epoch = 0.70966`, the local `last.ckpt` is present, and
+the selected best checkpoint completed the full 185-chip test scope. Task 016
+is current with the user-confirmed `ca_006`-first sequential policy.
 
 Current active task:
 
 ```text
-Task 015: The user launches the approved 100-epoch expanded-data temporal
-baseline; the agent verifies the resulting registry, logs, W&B run, and
-checkpoints on follow-up.
-tasks/015_run_new_baseline.md
+Task 016: Launch `loro-ca_006-v1`, verify the first complete production fold,
+then run the remaining 11 LORO entries sequentially in deterministic region-ID
+order unless a failure or operational correction requires a pause.
+tasks/016_run_loro_training.md
 ```
 
 Next task:
 
 ```text
-Task 016: Run and verify the 12 LORO production models after the baseline
-closes.
-tasks/016_run_loro_training.md
+Task 017: Build the overlap-aware chip/TIFF prediction evaluator using the
+completed production baseline checkpoint.
+tasks/017_build_prediction_evaluator.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -149,8 +155,10 @@ Remote experiment preparation and execution:
   and all baseline/LORO hard-link views on the replacement A40 host.
 - Task 014B: complete; created the dedicated later-root suite config, selected
   the fixed-effective-batch runtime pair, and added the tiered EMA smoke gate.
-- Task 015: ready for the user to launch the approved production baseline.
-- Task 016: pending; run the LORO production suite after Task 015.
+- Task 015: complete; verified the production baseline registry, W&B run,
+  best/last checkpoints, and full test execution.
+- Task 016: current and ready for the user to launch `loro-ca_006-v1`, followed
+  by the remaining deterministic sequential suite.
 - Tasks 017–018: build and run chip/TIFF prediction evaluation.
 - Task 019: compare accuracy on matching source TIFFs.
 

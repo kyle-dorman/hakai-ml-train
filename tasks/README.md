@@ -57,8 +57,8 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [014](014_build_training_runner.md) | Remote/code | Complete | 013, 014A, 014B | Verified 13-entry tiered EMA smoke suite |
 | [014A](014a_move_to_new_machine.md) | Remote/data | Complete | 010–013 | Verified replacement host, data, and hard-linked views |
 | [014B](014b_correct_generalization_model_config.md) | Remote/config | Complete | 013, 014A | Dedicated config, batch benchmark, and tiered EMA smoke |
-| [015](015_run_new_baseline.md) | Remote | Ready for user launch | 014 | Expanded-data baseline checkpoint |
-| [016](016_run_loro_training.md) | Remote | Pending | 015 | Complete LORO checkpoint suite |
+| [015](015_run_new_baseline.md) | Remote | Complete | 014 | Verified expanded-data baseline checkpoint |
+| [016](016_run_loro_training.md) | Remote | Current; ready for user launch | 015 | Complete LORO checkpoint suite |
 | [017](017_build_prediction_evaluator.md) | Remote/code | Pending | 015 | Chip- and TIFF-level prediction metrics |
 | [018](018_run_prediction_suite.md) | Remote | Pending | 016, 017 | Predictions for every relevant run |
 | [019](019_compare_matching_tiffs.md) | Remote/analysis | Pending | 018 | Paired cross-run accuracy comparison |

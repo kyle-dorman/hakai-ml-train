@@ -1,6 +1,6 @@
 # Task 016: Run the leave-one-region-out training suite
 
-Status: Pending
+Status: Current; ready for user launch
 
 Depends on: Tasks 015 and 014
 
@@ -33,15 +33,15 @@ W&B context, checkpoints, and registry state.
 
 ## User decisions required
 
-Before launching the suite, confirm:
+The user confirmed readiness to begin Task 016 on `2026-07-27`. The approved
+execution policy is:
 
 1. First full LORO fold: **`ca_006`**, selected as a moderate-size California
    fold (1,898 train, 261 validation, and 110 test chips).
 2. Continue through all remaining folds sequentially after `ca_006`; do not
    pause for another approval unless a failure or operational correction needs
    user input.
-3. Run order if compute scheduling matters. Default: deterministic region-ID
-   order after the first fold.
+3. Use deterministic region-ID order after the first fold.
 
 Do not change model, seed, budget, or filtering policy per fold.
 

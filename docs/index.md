@@ -27,9 +27,11 @@ DataModule, and runner preflight gates. Task 014B created and validated a
 dedicated suite config from the intended later root PS8B baseline recipe and
 implemented the approved tiered EMA-aware smoke profile. Task 014 then
 completed all 13 smoke entries with verified best/last checkpoints, deep EMA
-gates, bounded shallow folds, and isolated registry state. Task 015 is ready
-for the user to launch the production temporal baseline. `docs/todo.md` owns
-the current queue and status.
+gates, bounded shallow folds, and isolated registry state. Task 015 completed
+and verified the 100-epoch production temporal baseline, its W&B run, selected
+best checkpoint, local recovery checkpoint, and full test execution. Task 016
+is current and ready for the user-confirmed `ca_006`-first LORO launch.
+`docs/todo.md` owns the current queue and status.
 
 ## Document roles
 
