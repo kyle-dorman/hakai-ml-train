@@ -1,8 +1,8 @@
-# Task 019: Compare accuracy on matching source TIFFs
+# Task 020: Compare accuracy on matching source TIFFs
 
 Status: Pending
 
-Depends on: Task 018
+Depends on: Task 019
 
 Execution: Analysis/report task; no training or prediction.
 
@@ -11,7 +11,7 @@ Execution: Analysis/report task; no training or prediction.
 Compare the temporal baseline with each LORO model on identical source TIFFs
 that were unseen by both models, while separately reporting every LORO model's
 full held-out-region performance. The default unit is the original TIFF, using
-unique-pixel overlap-reconstructed confusion counts from Task 017. This task
+unique-pixel overlap-reconstructed confusion counts from Task 018. This task
 must not compare only one aggregate number from differently sized test sets.
 
 ## Goal
@@ -22,7 +22,7 @@ gap.
 
 ## Inputs
 
-- Task 018 suite inventory and all `tiff_metrics.csv`, `region_metrics.csv`, and
+- Task 019 suite inventory and all `tiff_metrics.csv`, `region_metrics.csv`, and
   evaluation metadata
 - `planet8b_temporal_image_splits.csv`
 - Raster manifest for region/date labels
@@ -121,7 +121,7 @@ full analysis.
   LORO match or an explicit exclusion.
 - No train/validation baseline TIFF enters paired comparison.
 - No TIFF from the wrong held-out region enters a pair.
-- Recomputed metrics agree with Task 017 outputs within tolerance.
+- Recomputed metrics agree with Task 018 outputs within tolerance.
 - Pooled confusion tables equal sums of their constituent TIFF rows.
 - Plot data reconcile to saved tables.
 - W&B artifacts identify source run/checkpoint/fold hashes.

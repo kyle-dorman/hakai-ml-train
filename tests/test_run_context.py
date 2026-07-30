@@ -165,6 +165,27 @@ def test_build_and_revalidate_baseline_context(tmp_path: Path) -> None:
     assert loaded["git_dirty"] is False
 
 
+def test_run_context_accepts_explicit_v2_suite_identity(tmp_path: Path) -> None:
+    paths = _fixture(tmp_path)
+    context = build_run_context(
+        dataset_root=paths["dataset"],
+        fold_root=paths["fold"],
+        model_config_path=paths["model"],
+        repo_root=paths["repo"],
+        run_type="baseline_training",
+        fold_id="baseline_temporal_v1",
+        held_out_region=None,
+        seed=42,
+        experiment_version="planet8b-loro-v2",
+        run_name="baseline-temporal-v2",
+    )
+
+    assert context["experiment_version"] == "planet8b-loro-v2"
+    assert context["wandb_group"] == "planet8b-loro-v2"
+    assert context["wandb_name"] == "baseline-temporal-v2"
+    assert context["wandb_tags"][0] == "planet8b-loro-v2"
+
+
 def test_changed_fold_manifest_fails_revalidation(tmp_path: Path) -> None:
     paths = _fixture(tmp_path)
     output = tmp_path / "context.json"

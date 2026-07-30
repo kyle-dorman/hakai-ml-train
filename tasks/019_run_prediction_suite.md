@@ -1,14 +1,14 @@
-# Task 018: Run the complete prediction suite
+# Task 019: Run the complete prediction suite
 
 Status: Pending
 
-Depends on: Tasks 016 and 017
+Depends on: Tasks 017 and 018
 
 Execution: Remote multi-run inference task.
 
 ## Abstract
 
-Run the Task 017 evaluator for the completed baseline and all 12 LORO
+Run the Task 018 evaluator for the completed v2 baseline and all 12 v2 LORO
 checkpoints. The baseline predicts only its temporal test set; each LORO model
 predicts the complete held-out region. The task verifies fold/checkpoint/output
 identity and produces one uniform result package per run. It does not perform
@@ -21,19 +21,18 @@ metrics, region summaries, and test summaries for every approved run.
 
 ## Inputs
 
-- Task 016 completed LORO registry/checkpoints
-- Task 015 baseline registry/checkpoint
-- Task 017 evaluator, threshold, reconstruction, output, and W&B policy
+- Task 017 completed v2 baseline/LORO registry and checkpoints
+- Task 018 evaluator, threshold, reconstruction, output, and W&B policy
 - Task 011 baseline fold manifest
 - Task 012 LORO fold manifests
 - Canonical chip/raster manifests
 
 ## User decisions required
 
-None if Tasks 016–017 contain approved checkpoints, threshold, raster-retention
+None if Tasks 017–018 contain approved checkpoints, threshold, raster-retention
 policy, and output root. If storage estimates for approved prediction rasters
 materially exceed available disk, stop with an estimate and ask whether to use
-the Task 017 lower-storage option; do not silently drop outputs.
+the Task 018 lower-storage option; do not silently drop outputs.
 
 ## Planned execution surface
 
@@ -66,7 +65,7 @@ TIFF/chip counts.
 
 1. Dry-run all 13 entries and reconcile counts/hashes.
 2. Verify disk estimate and W&B connectivity/offline behavior.
-3. Re-run/verify baseline output from Task 017 rather than duplicating it.
+3. Re-run/verify baseline output from Task 018 rather than duplicating it.
 4. Run one completed LORO fold and audit output end to end.
 5. Run remaining pending predictions in deterministic region-ID order.
 6. Resume failures without recomputing verified source TIFFs.
@@ -91,7 +90,7 @@ For every run:
   region after universal filtering;
 - TIFF accounting and pooled confusion sums reconcile;
 - threshold/reconstruction/schema hashes are identical;
-- W&B compact tables/artifacts exist according to Task 017 policy;
+- W&B compact tables/artifacts exist according to Task 018 policy;
 - resume reports no work after suite completion.
 
 Run focused tests/Ruff for any runner code and `git diff --check`.
@@ -102,7 +101,7 @@ Run focused tests/Ruff for any runner code and `git diff --check`.
 - Every completed training run has exactly one current compatible evaluation.
 - Full-region LORO and temporal baseline test scopes are explicit.
 - Suite inventory has no missing, duplicate, or misidentified run.
-- Task 019 can join TIFF results without opening model checkpoints or NPZ chips.
+- Task 020 can join TIFF results without opening model checkpoints or NPZ chips.
 
 ## Non-goals
 
@@ -115,4 +114,4 @@ Run focused tests/Ruff for any runner code and `git diff --check`.
 
 Record dry-run matrix, storage estimate, exact commands, completed/retried
 predictions, suite inventory, output/W&B paths, validation, missing items, and
-Task 019 inputs.
+Task 020 inputs.

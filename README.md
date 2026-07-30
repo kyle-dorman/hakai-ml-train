@@ -39,8 +39,9 @@ verified the dataset, views, environment, W&B access, and A40 health on the
 replacement host after the original GPU failed. Task 014B established the
 dedicated SegFormer B3 config and constant effective batch 24, and Task 014
 completed the 13-entry tiered EMA smoke suite. Task 015 then completed and
-verified the 100-epoch production temporal baseline. Task 016 is current and
-ready for the `ca_006`-first production LORO suite. See `docs/todo.md` and
+verified the 100-epoch production temporal baseline. Task 016 closed the partial
+v1 suite and prepared the clean v2 identity. Task 017 is current and ready for
+the user-run v2 baseline plus all 12 LORO folds. See `docs/todo.md` and
 `tasks/README.md`.
 
 ## Documentation
@@ -142,6 +143,6 @@ entity: kdorman90-ucla
 project: kelpseg
 ```
 
-The comparison-suite group is `planet8b-loro-v1`; smoke runs use the separate
+The active comparison-suite group is `planet8b-loro-v2`; smoke runs use the separate
 `smoke` group. W&B values in legacy configs are not the active tracking
 contract.

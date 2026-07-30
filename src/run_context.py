@@ -257,6 +257,8 @@ def build_run_context(
     seed: int,
     smoke: bool = False,
     offline: bool = False,
+    experiment_version: str = EXPERIMENT_VERSION,
+    run_name: str | None = None,
 ) -> dict[str, Any]:
     """Build and validate one immutable run-context record from source files."""
     dataset_root = dataset_root.resolve()
@@ -309,7 +311,7 @@ def build_run_context(
     filtering = dataset_metadata.get("filtering", {})
     background = dataset_metadata.get("background_selection", {})
     git_commit, git_dirty = _git_state(repo_root)
-    base_name = (
+    base_name = run_name or (
         "baseline-temporal-v1"
         if run_type == "baseline_training"
         else f"loro-{held_out_region}-v1"
@@ -317,7 +319,7 @@ def build_run_context(
 
     context: dict[str, Any] = {
         "context_schema_version": CONTEXT_SCHEMA_VERSION,
-        "experiment_version": EXPERIMENT_VERSION,
+        "experiment_version": experiment_version,
         "run_type": run_type,
         "fold_id": fold_id,
         "held_out_region": held_out_region,
@@ -342,10 +344,10 @@ def build_run_context(
         "hostname": socket.gethostname(),
         "wandb_entity": WANDB_ENTITY,
         "wandb_project": WANDB_PROJECT,
-        "wandb_group": "smoke" if smoke else EXPERIMENT_VERSION,
+        "wandb_group": "smoke" if smoke else experiment_version,
         "wandb_name": f"smoke-{base_name}" if smoke else base_name,
         "wandb_job_type": "smoke" if smoke else "train",
-        "wandb_tags": [EXPERIMENT_VERSION, run_type, fold_id]
+        "wandb_tags": [experiment_version, run_type, fold_id]
         + (["smoke"] if smoke else []),
         "wandb_offline": offline,
         "checkpoint_policy": "best_plus_local_last",

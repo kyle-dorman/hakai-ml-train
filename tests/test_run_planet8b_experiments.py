@@ -138,6 +138,8 @@ def test_resolved_config_sets_budget_root_and_recovery_checkpoint(
     base = tmp_path / "base.yaml"
     base.write_text(
         """
+data:
+  init_args: {}
 trainer:
   max_epochs: 250
   default_root_dir: old
@@ -154,6 +156,7 @@ trainer:
     resolved = yaml.safe_load(output.read_text())
     assert resolved["trainer"]["max_epochs"] == 100
     assert resolved["trainer"]["default_root_dir"] == str(run_root)
+    assert resolved["data"]["init_args"]["test_every_val_epoch"] is True
     checkpoint = resolved["trainer"]["callbacks"][0]["init_args"]
     assert checkpoint == {"save_top_k": 1, "save_last": True}
 
@@ -223,7 +226,7 @@ def test_generalization_config_preserves_recipe_and_safety_contract() -> None:
     config_path = repo / "configs/kelp-ps8b/generalization/segformer_b3_v1.yaml"
     matrix = yaml.safe_load(
         (
-            repo / "configs/kelp-ps8b/generalization/experiment_matrix_v1.yaml"
+            repo / "configs/kelp-ps8b/generalization/experiment_matrix_v2.yaml"
         ).read_text()
     )
     config = yaml.safe_load(config_path.read_text())
@@ -253,6 +256,7 @@ def test_generalization_config_preserves_recipe_and_safety_contract() -> None:
     }
     assert model["ignore_index"] == -100
     assert data["batch_size"] * trainer["accumulate_grad_batches"] == 24
+    assert data["test_every_val_epoch"] is True
     assert trainer["max_epochs"] == 100
     callbacks = trainer["callbacks"]
     classes = [callback["class_path"] for callback in callbacks]
@@ -271,7 +275,7 @@ def test_generalization_config_preserves_recipe_and_safety_contract() -> None:
     assert (logger["entity"], logger["project"], logger["group"]) == (
         "kdorman90-ucla",
         "kelpseg",
-        "planet8b-loro-v1",
+        "planet8b-loro-v2",
     )
     assert logger["log_model"] is False
     mask_transforms = [

@@ -17,10 +17,12 @@ This is the destination used by the current California SegFormer config and its
 remote smoke config. Other PS8B configs contain historical values; do not treat
 them as the new suite's tracking contract.
 
-The comparison-suite group is `planet8b-loro-v1`. Baseline and LORO training
-runs use `baseline-temporal-v1` and `loro-<region_id>-v1`; the region ID is the
-canonical fold key. Smoke runs use the separate `smoke` group, a `smoke` job
-type/tag, and the corresponding `smoke-` name prefix.
+The active comparison-suite group is `planet8b-loro-v2`. Baseline and LORO
+training runs use `baseline-temporal-v2` and `loro-<region_id>-v2`; the region
+ID is the canonical fold key. Smoke runs use the separate `smoke` group, a
+`smoke` job type/tag, and the corresponding `smoke-` name prefix. The partial
+`planet8b-loro-v1` production suite and its registry/artifacts remain historical
+evidence and must not be relabeled or overwritten.
 
 ## Run organization
 
@@ -41,11 +43,12 @@ registry:
 Names must be predictable and unique. Use region IDs, not potentially duplicated
 region names, in LORO run names.
 
-The current smoke identity is `planet8b-loro-v1-smoke-tiered-ema-v1`.
-Baseline and `loro-bc-v1` use two full epochs so EMA crosses its update gate;
-the other 11 LORO folds use one epoch capped at two optimizer updates, two
-validation batches, and two test batches. Smoke limits are runner-owned and
-never apply to the uniform 100-epoch production suite.
+The v2 smoke identity is `planet8b-loro-v2-smoke-tiered-ema-v1`. Baseline and
+`loro-bc-v2` use two full epochs so EMA crosses its update gate; the other 11
+LORO folds use one epoch capped at two optimizer updates, two validation
+batches, and two test batches. Smoke limits are runner-owned and never apply to
+the uniform 100-epoch production suite. The completed v1 smoke suite remains
+valid historical gate evidence.
 
 `src/run_context.py` owns the required JSON-compatible context. Generate it
 from the dataset and fold files with `scripts/build_planet8b_run_context.py`,
@@ -71,7 +74,13 @@ reproducible; their archive checksum and manifest identity are the contract.
 Training runs keep one validation-selected best checkpoint (`save_top_k=1`) and
 a local `last.ckpt` for exact interruption recovery. Only the best checkpoint is
 logged as the W&B model artifact at fit end; `last.ckpt` remains a local recovery
-artifact.
+artifact. Production LORO fits also evaluate the complete held-out test loader
+after every validation epoch and log epoch-level
+`test/current/*_epoch` diagnostics. These curves are observational only:
+`val/iou_epoch` remains the sole checkpoint-selection metric, and held-out test
+trajectories must not change later folds or training policy. The runner still
+performs a final full test from the validation-selected best checkpoint under
+the separate `test/best/*_epoch` namespace before marking a run complete.
 Metadata and best-checkpoint artifacts use the same path in online and offline
 mode; offline run directories remain syncable later. The metadata artifact
 contains the generated context, resolved Lightning config, fold manifest and

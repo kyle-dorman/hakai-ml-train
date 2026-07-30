@@ -86,7 +86,8 @@ class SMPBinarySegmentationModel(
         )
         self.train_metrics = metrics.clone(prefix="train/")
         self.val_metrics = metrics.clone(prefix="val/")
-        self.test_metrics = metrics.clone(prefix="test/")
+        self.current_test_metrics = metrics.clone(prefix="test/current/")
+        self.test_metrics = metrics.clone(prefix="test/best/")
 
     @property
     def backbone(self):
@@ -98,19 +99,50 @@ class SMPBinarySegmentationModel(
     def training_step(self, batch: torch.Tensor, batch_idx: int):
         return self._phase_step(batch, batch_idx, phase="train")
 
-    def validation_step(self, batch: torch.Tensor, batch_idx: int):
-        return self._phase_step(batch, batch_idx, phase="val")
+    def validation_step(
+        self, batch: torch.Tensor, batch_idx: int, dataloader_idx: int = 0
+    ):
+        if dataloader_idx == 0:
+            return self._phase_step(batch, batch_idx, phase="val")
+        if dataloader_idx == 1:
+            if self.trainer.sanity_checking:
+                return None
+            self._test_during_fit_updated = True
+            return self._phase_step(
+                batch,
+                batch_idx,
+                phase="current_test",
+                log_prefix="test/current",
+            )
+        raise RuntimeError(f"Unexpected validation dataloader index: {dataloader_idx}")
 
     def test_step(self, batch: torch.Tensor, batch_idx: int):
-        return self._phase_step(batch, batch_idx, phase="test")
+        return self._phase_step(
+            batch,
+            batch_idx,
+            phase="test",
+            log_prefix="test/best",
+        )
 
-    def _phase_step(self, batch: torch.Tensor, batch_idx: int, phase: str):
+    def _phase_step(
+        self,
+        batch: torch.Tensor,
+        batch_idx: int,
+        phase: str,
+        log_prefix: str | None = None,
+    ):
+        log_prefix = log_prefix or phase
         x, y = batch
         logits = self.forward(x)
 
         # Explicitly compute loss in f32 (not bf16, etc.)
         loss = self.loss_fn(logits.float(), y.long().unsqueeze(1))
-        self.log(f"{phase}/loss", loss, prog_bar=(phase == "train"), sync_dist=True)
+        self.log(
+            f"{log_prefix}/loss",
+            loss,
+            prog_bar=(phase == "train"),
+            sync_dist=True,
+        )
 
         probs = self.activation_fn(logits)
         metrics = getattr(self, f"{phase}_metrics")
@@ -128,6 +160,22 @@ class SMPBinarySegmentationModel(
             sync_dist=True,
         )
         self.val_metrics.reset()
+        if getattr(self, "_test_during_fit_updated", False):
+            computed = self.current_test_metrics.compute()
+            self.log_dict(
+                {f"{key}_epoch": value for key, value in computed.items()},
+                sync_dist=True,
+            )
+            self.current_test_metrics.reset()
+            self._test_during_fit_updated = False
+
+    def on_test_epoch_end(self) -> None:
+        computed = self.test_metrics.compute()
+        self.log_dict(
+            {f"{key}_epoch": value for key, value in computed.items()},
+            sync_dist=True,
+        )
+        self.test_metrics.reset()
 
     def configure_optimizers(self):
         return _configure_optimizers(self)
@@ -157,7 +205,8 @@ class SMPMulticlassSegmentationModel(SMPBinarySegmentationModel):
         )
         self.train_metrics = metrics.clone(prefix="train/")
         self.val_metrics = metrics.clone(prefix="val/")
-        self.test_metrics = metrics.clone(prefix="test/")
+        self.current_test_metrics = metrics.clone(prefix="test/current/")
+        self.test_metrics = metrics.clone(prefix="test/best/")
 
         # Override parent's activation function to remove .squeeze(1) for multiclass
         self.activation_fn = lambda x: torch.softmax(x, dim=1)
@@ -184,35 +233,86 @@ class SMPMulticlassSegmentationModel(SMPBinarySegmentationModel):
             self.log(f"val/f1_epoch/{class_name}", f1_per_class[i], sync_dist=True)
         self.log("val/iou_epoch", iou_per_class[1:].mean(), sync_dist=True)
         self.val_metrics.reset()
+        if getattr(self, "_test_during_fit_updated", False):
+            self._log_multiclass_test_epoch_metrics(
+                self.current_test_metrics,
+                "test/current",
+            )
+            self._test_during_fit_updated = False
 
-    def _phase_step(self, batch: torch.Tensor, batch_idx: int, phase: str):
+    def on_test_epoch_end(self) -> None:
+        self._log_multiclass_test_epoch_metrics(self.test_metrics, "test/best")
+
+    def _log_multiclass_test_epoch_metrics(
+        self,
+        metrics: tm.MetricCollection,
+        log_prefix: str,
+    ) -> None:
+        computed = metrics.compute()
+        self.log(
+            f"{log_prefix}/accuracy_epoch",
+            computed[f"{log_prefix}/accuracy"],
+            sync_dist=True,
+        )
+        for metric_name in ("iou", "recall", "precision", "f1"):
+            values = computed[f"{log_prefix}/{metric_name}"]
+            for index, class_name in enumerate(self.class_names):
+                self.log(
+                    f"{log_prefix}/{metric_name}_epoch/{class_name}",
+                    values[index],
+                    sync_dist=True,
+                )
+        self.log(
+            f"{log_prefix}/iou_epoch",
+            computed[f"{log_prefix}/iou"][1:].mean(),
+            sync_dist=True,
+        )
+        metrics.reset()
+
+    def _phase_step(
+        self,
+        batch: torch.Tensor,
+        batch_idx: int,
+        phase: str,
+        log_prefix: str | None = None,
+    ):
+        log_prefix = log_prefix or phase
         x, y = batch
         logits = self.forward(x)
 
         # Explicitly compute loss in f32 (not bf16, etc.)
         loss = self.loss_fn(logits.float(), y.long())
-        self.log(f"{phase}/loss", loss, prog_bar=(phase == "train"), sync_dist=True)
+        self.log(
+            f"{log_prefix}/loss",
+            loss,
+            prog_bar=(phase == "train"),
+            sync_dist=True,
+        )
 
         probs = self.activation_fn(logits)
         metrics = getattr(self, f"{phase}_metrics")
         step_values = metrics(probs, y)
 
-        self.log(f"{phase}/accuracy", step_values[f"{phase}/accuracy"], sync_dist=True)
+        self.log(
+            f"{log_prefix}/accuracy",
+            step_values[f"{log_prefix}/accuracy"],
+            sync_dist=True,
+        )
 
-        iou_per_class = step_values[f"{phase}/iou"]
-        precision_per_class = step_values[f"{phase}/precision"]
-        recall_per_class = step_values[f"{phase}/recall"]
-        f1_per_class = step_values[f"{phase}/f1"]
+        iou_per_class = step_values[f"{log_prefix}/iou"]
+        precision_per_class = step_values[f"{log_prefix}/precision"]
+        recall_per_class = step_values[f"{log_prefix}/recall"]
+        f1_per_class = step_values[f"{log_prefix}/f1"]
         for i, class_name in enumerate(self.class_names):
             self.log_dict(
                 {
-                    f"{phase}/iou_{class_name}": iou_per_class[i],
-                    f"{phase}/recall_{class_name}": recall_per_class[i],
-                    f"{phase}/precision_{class_name}": precision_per_class[i],
-                    f"{phase}/f1_{class_name}": f1_per_class[i],
+                    f"{log_prefix}/iou_{class_name}": iou_per_class[i],
+                    f"{log_prefix}/recall_{class_name}": recall_per_class[i],
+                    f"{log_prefix}/precision_{class_name}": precision_per_class[i],
+                    f"{log_prefix}/f1_{class_name}": f1_per_class[i],
                 },
                 sync_dist=True,
             )
-        self.log(f"{phase}/iou", iou_per_class[1:].mean(), sync_dist=True)
+        self.log(f"{log_prefix}/iou", iou_per_class[1:].mean(), sync_dist=True)
 
         return loss

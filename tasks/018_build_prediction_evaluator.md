@@ -1,10 +1,10 @@
-# Task 017: Build overlap-aware chip and source-TIFF evaluation
+# Task 018: Build overlap-aware chip and source-TIFF evaluation
 
 Status: Pending
 
-Depends on: Tasks 003 and 015
+Depends on: Tasks 003 and 017
 
-Execution: Remote-aware code task using the completed baseline checkpoint.
+Execution: Remote-aware code task using the completed v2 baseline checkpoint.
 
 ## Abstract
 
@@ -14,7 +14,7 @@ default per-TIFF metrics. With 1024 chips and 512 stride, summing chip confusion
 counts would double-count overlap pixels and produce invalid TIFF/region
 accuracy. This task implements one probability-combination, threshold, coverage,
 and metric contract and validates it on synthetic overlap plus the baseline test
-set. Task 018 runs it for every model.
+set. Task 019 runs it for every model.
 
 ## Goal
 
@@ -25,7 +25,7 @@ auditable chip/TIFF/region/test-set results tied to run and manifest hashes.
 ## Inputs
 
 - Task 003 approved overlap contract and chip window manifest fields
-- Task 015 baseline best checkpoint and W&B/registry identity
+- Task 017 v2 baseline best checkpoint and W&B/registry identity
 - Task 011 baseline test fold manifest
 - Canonical chip/raster manifests and portable `raster_metadata.csv`
 - `src/models/smp.py`
@@ -60,13 +60,13 @@ Recommended entry point:
 
 ```bash
 uv run python scripts/evaluate_planet8b_run.py \
-  --run-key baseline-temporal-v1 \
+  --run-key baseline-temporal-v2 \
   --registry <experiment_registry.jsonl> \
   --fold-manifest <baseline>/fold_manifest.csv \
   --chip-manifest <canonical>/chip_manifest.csv \
   --raster-manifest <canonical>/raster_manifest.csv \
   --raster-metadata <canonical>/raster_metadata.csv \
-  --output-root <predictions-root>/baseline-temporal-v1 \
+  --output-root <predictions-root>/baseline-temporal-v2 \
   --threshold <approved-value> \
   [--save-rasters] \
   [--resume]
@@ -188,7 +188,7 @@ Baseline test validation:
 - Chip diagnostics cannot be mistaken for additive pooled metrics.
 - Per-TIFF output is the default comparison surface.
 - Resume and identity mismatch behavior are tested.
-- Task 018 can enumerate/run the evaluator without manual path editing.
+- Task 019 can enumerate/run the evaluator without manual path editing.
 
 ## Non-goals
 
@@ -208,4 +208,4 @@ Baseline test validation:
 
 Record user decisions, CLI/schema, reconstruction/metric formulas, tests,
 baseline evaluation artifacts/counts/coverage, W&B artifact, validation, and
-Task 018 command template.
+Task 019 command template.

@@ -91,7 +91,8 @@ the runner's recorded resume path rather than starting an ambiguous duplicate.
   complete merely because compute stopped.
 - Best checkpoint path/hash and W&B run ID are recorded.
 - Final validation/test metrics are attached without tuning on test.
-- Task 017 can use this checkpoint for evaluator development.
+- Task 018 can use this historical checkpoint for evaluator scaffolding, while
+  the active comparison evaluator uses the v2 baseline from Task 017.
 - `docs/todo.md` advances to Task 016 only after genuine completion.
 
 ## Non-goals

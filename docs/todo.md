@@ -41,23 +41,29 @@ Task 015 completed the 100-epoch production temporal baseline in one attempt.
 W&B run `24f6a23a` is finished; epoch 98 selected the hash-verified best
 checkpoint at `val/iou_epoch = 0.70966`, the local `last.ckpt` is present, and
 the selected best checkpoint completed the full 185-chip test scope. Task 016
-is current with the user-confirmed `ca_006`-first sequential policy.
+started a v1 LORO suite, but the user chose to stop that partial suite and
+restart the baseline plus all 12 LORO folds under `planet8b-loro-v2`. V2 has a
+separate experiment root, registry identity, W&B group, and run keys. It logs
+held-out diagnostics under `test/current/*` every epoch and the
+validation-selected final checkpoint under `test/best/*`. Task 016 is complete:
+it preserved the stopped partial v1 evidence and validated all v2 dry-runs.
+Task 017 now owns the user-executed v2 training cycle.
 
 Current active task:
 
 ```text
-Task 016: Launch `loro-ca_006-v1`, verify the first complete production fold,
-then run the remaining 11 LORO entries sequentially in deterministic region-ID
-order unless a failure or operational correction requires a pause.
-tasks/016_run_loro_training.md
+Task 017: Launch and verify `baseline-temporal-v2`, then run all 12 v2 LORO
+entries sequentially unless a failure or operational correction requires a
+pause.
+tasks/017_run_v2_training_cycle.md
 ```
 
 Next task:
 
 ```text
-Task 017: Build the overlap-aware chip/TIFF prediction evaluator using the
-completed production baseline checkpoint.
-tasks/017_build_prediction_evaluator.md
+Task 018: Build the overlap-aware chip/TIFF prediction evaluator using the
+completed v2 production baseline checkpoint.
+tasks/018_build_prediction_evaluator.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -157,17 +163,18 @@ Remote experiment preparation and execution:
   the fixed-effective-batch runtime pair, and added the tiered EMA smoke gate.
 - Task 015: complete; verified the production baseline registry, W&B run,
   best/last checkpoints, and full test execution.
-- Task 016: current and ready for the user to launch `loro-ca_006-v1`, followed
-  by the remaining deterministic sequential suite.
-- Tasks 017–018: build and run chip/TIFF prediction evaluation.
-- Task 019: compare accuracy on matching source TIFFs.
+- Task 016: complete; stopped and preserved partial v1, added per-epoch test
+  diagnostics, and validated the clean v2 identity and matrix.
+- Task 017: current; user launches the v2 baseline and all 12 v2 LORO runs.
+- Tasks 018–019: build and run chip/TIFF prediction evaluation.
+- Task 020: compare accuracy on matching source TIFFs.
 
 See `tasks/README.md` for status and direct task links. Detailed acceptance and
 outcomes belong in the task files, not here.
 
 ## Completed maintenance
 
-- Task 020 restructured active documentation around the PS8B project, corrected
+- Task 021 restructured active documentation around the PS8B project, corrected
   the W&B destination to `kdorman90-ucla/kelpseg`, and routed project context out
   of the former catch-all `AGENTS.md` and README.
 

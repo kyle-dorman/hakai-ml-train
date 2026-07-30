@@ -97,8 +97,7 @@ def load_matrix(path: Path, repo_root: Path) -> dict[str, Any]:
     if matrix["max_epochs"] != 100:
         raise RunnerError("Approved production budget is 100 epochs")
     if (
-        matrix["smoke_deep_run_keys"] != ["baseline-temporal-v1", "loro-bc-v1"]
-        or matrix["smoke_deep_max_epochs"] != 2
+        matrix["smoke_deep_max_epochs"] != 2
         or matrix["smoke_shallow_max_epochs"] != 1
         or matrix["smoke_shallow_optimizer_updates"] != 2
         or matrix["smoke_shallow_limit_val_batches"] != 2
@@ -117,6 +116,12 @@ def load_matrix(path: Path, repo_root: Path) -> dict[str, Any]:
         raise RunnerError("Matrix requires one baseline with no held-out region")
     if sorted(run.get("held_out_region") for run in loros) != REGIONS:
         raise RunnerError("Matrix requires exactly one LORO run per approved region")
+    bc_run = next(run for run in loros if run["held_out_region"] == "bc")
+    expected_deep_runs = [baselines[0]["run_key"], bc_run["run_key"]]
+    if matrix["smoke_deep_run_keys"] != expected_deep_runs:
+        raise RunnerError(
+            "smoke_deep_run_keys must contain the matrix baseline and BC run keys"
+        )
     for field in ("model_config", "smoke_model_config"):
         resolved = (repo_root / matrix[field]).resolve()
         if not resolved.is_file():
@@ -241,6 +246,7 @@ def _resolved_config(
     config = _load_yaml(base)
     config["trainer"]["max_epochs"] = epochs
     config["trainer"]["default_root_dir"] = str(root)
+    config["data"]["init_args"]["test_every_val_epoch"] = True
     for key in ("limit_train_batches", "limit_val_batches", "limit_test_batches"):
         config["trainer"].pop(key, None)
     config["trainer"].update(limits or {})
@@ -414,6 +420,8 @@ def execute_run(
         seed=matrix["seed"],
         smoke=smoke,
         offline=offline,
+        experiment_version=version,
+        run_name=run["run_key"],
     )
     context["experiment_version"] = version
     base_config = _load_yaml(model_config)
@@ -421,6 +429,11 @@ def execute_run(
     context["training_budget_epochs"] = epochs
     context["batch_limits"] = limits
     context["checkpoint_policy"] = "best_plus_local_last"
+    context["test_evaluation_policy"] = {
+        "cadence": "every_validation_epoch_plus_best_checkpoint_at_fit_end",
+        "checkpoint_selection": "validation_only",
+        "diagnostic_only": True,
+    }
     resolved = attempt_root / "resolved_config.yaml"
     context_path = attempt_root / "run_context.json"
     resolved_config = _resolved_config(
@@ -459,6 +472,10 @@ def execute_run(
                         "accumulate_grad_batches"
                     ],
                     "batch_limits": limits,
+                    "test_every_val_epoch": resolved_config["data"]["init_args"][
+                        "test_every_val_epoch"
+                    ],
+                    "test_evaluation_policy": context["test_evaluation_policy"],
                     "data_paths": context["data_paths"],
                     "wandb": {
                         key: resolved_config["trainer"]["logger"][0]["init_args"][key]

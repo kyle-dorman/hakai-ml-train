@@ -37,6 +37,7 @@ data:
     num_workers: 8
     pin_memory: true
     persistent_workers: true
+    test_every_val_epoch: true
     train_transforms:
       __version__: 2.0.8
       transform:
@@ -124,18 +125,18 @@ trainer:
   accumulate_grad_batches: 8
   gradient_clip_val: 0.8
   detect_anomaly: false
-  default_root_dir: /home/sky/experiments/planet8b-loro-v1/default
+  default_root_dir: /home/sky/experiments/planet8b-loro-v2/default
   fast_dev_run: false
   logger:
     - class_path: lightning.pytorch.loggers.WandbLogger
       init_args:
         entity: kdorman90-ucla
         project: kelpseg
-        name: baseline-temporal-v1
-        group: planet8b-loro-v1
+        name: baseline-temporal-v2
+        group: planet8b-loro-v2
         job_type: train
         log_model: false
-        tags: [planet8b-loro-v1, baseline_training]
+        tags: [planet8b-loro-v2, baseline_training]
   callbacks:
     - class_path: src.callbacks.EMAWeightAveraging
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint

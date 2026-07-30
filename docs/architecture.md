@@ -48,6 +48,8 @@ the next stage without inferring identity from folder order.
 - `trainer.py`: Lightning CLI entry point.
 - `configs/kelp-ps8b/generalization/segformer_b3_v1.yaml`: dedicated current
   SegFormer B3 comparison-suite recipe.
+- `configs/kelp-ps8b/generalization/experiment_matrix_v2.yaml`: active clean
+  restart identity for the baseline and 12 LORO runs.
 - `scripts/run_planet8b_experiments.py`: validates the experiment matrix and
   resolves fold paths, run context, production budgets, and tiered smoke limits.
 

@@ -80,6 +80,7 @@ class DataModule(pl.LightningDataModule):
         num_workers: int = os.cpu_count() or 0,
         pin_memory: bool = True,
         persistent_workers: bool = False,
+        test_every_val_epoch: bool = False,
         train_transforms: Any | None = None,
         test_transforms: Any | None = None,
     ):
@@ -92,6 +93,7 @@ class DataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.pin_memory = pin_memory
         self.persistent_workers = persistent_workers
+        self.test_every_val_epoch = test_every_val_epoch
 
         self.train_trans = (
             A.from_dict(train_transforms) if train_transforms is not None else None
@@ -116,7 +118,9 @@ class DataModule(pl.LightningDataModule):
                 self.val_data_dir,
                 transforms=self.test_trans,
             )
-        if stage == "test":
+        if stage == "test" or (
+            stage in {"fit", "validate", None} and self.test_every_val_epoch
+        ):
             self.ds_test = NpzSegmentationDataset(
                 self.test_data_dir,
                 transforms=self.test_trans,
@@ -139,7 +143,7 @@ class DataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self, *args, **kwargs) -> DataLoader | list[DataLoader]:
-        return DataLoader(
+        validation = DataLoader(
             self.ds_val,
             shuffle=False,
             batch_size=self.batch_size,
@@ -147,6 +151,17 @@ class DataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=self.persistent_workers,
         )
+        if not self.test_every_val_epoch:
+            return validation
+        test = DataLoader(
+            self.ds_test,
+            shuffle=False,
+            batch_size=self.batch_size,
+            pin_memory=self.pin_memory,
+            num_workers=self.num_workers,
+            persistent_workers=self.persistent_workers,
+        )
+        return [validation, test]
 
     def test_dataloader(self, *args, **kwargs) -> DataLoader | list[DataLoader]:
         return DataLoader(

@@ -30,7 +30,9 @@ completed all 13 smoke entries with verified best/last checkpoints, deep EMA
 gates, bounded shallow folds, and isolated registry state. Task 015 completed
 and verified the 100-epoch production temporal baseline, its W&B run, selected
 best checkpoint, local recovery checkpoint, and full test execution. Task 016
-is current and ready for the user-confirmed `ca_006`-first LORO launch.
+closed the stopped partial v1 suite as historical evidence and validated the
+clean v2 identity. Task 017 is current and ready for the user-executed v2
+baseline-plus-12-LORO cycle with per-epoch held-out test diagnostics.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles
@@ -68,7 +70,7 @@ src/data.py
 src/models/smp.py
 trainer.py
 configs/kelp-ps8b/generalization/segformer_b3_v1.yaml
-configs/kelp-ps8b/generalization/experiment_matrix_v1.yaml
+configs/kelp-ps8b/generalization/experiment_matrix_v2.yaml
 scripts/run_planet8b_experiments.py
 ```
 
