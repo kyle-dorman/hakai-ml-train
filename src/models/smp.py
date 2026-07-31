@@ -145,7 +145,7 @@ class SMPBinarySegmentationModel(
         )
 
         probs = self.activation_fn(logits)
-        metrics = getattr(self, f"{phase}_metrics")
+        metrics: tm.MetricCollection = getattr(self, f"{phase}_metrics")
         self.log_dict(metrics(probs, y), sync_dist=True)
 
         return loss
@@ -181,138 +181,138 @@ class SMPBinarySegmentationModel(
         return _configure_optimizers(self)
 
 
-class SMPMulticlassSegmentationModel(SMPBinarySegmentationModel):
-    def __init__(
-        self, *args, class_names: tuple[str, ...] = ("bg", "macro", "nereo"), **kwargs
-    ):
-        super().__init__(*args, **kwargs)
-        self.class_names = class_names
+# class SMPMulticlassSegmentationModel(SMPBinarySegmentationModel):
+#     def __init__(
+#         self, *args, class_names: tuple[str, ...] = ("bg", "macro", "nereo"), **kwargs
+#     ):
+#         super().__init__(*args, **kwargs)
+#         self.class_names = class_names
 
-        # metrics — override parent with per-class (average="none") variants
-        metric_kwargs = dict(
-            task="multiclass",
-            num_classes=self.hparams.num_classes,
-            ignore_index=self.hparams.ignore_index,
-        )
-        metrics = tm.MetricCollection(
-            {
-                "accuracy": fm.Accuracy(**metric_kwargs),
-                "iou": fm.JaccardIndex(**metric_kwargs, average="none"),
-                "recall": fm.Recall(**metric_kwargs, average="none"),
-                "precision": fm.Precision(**metric_kwargs, average="none"),
-                "f1": fm.F1Score(**metric_kwargs, average="none"),
-            }
-        )
-        self.train_metrics = metrics.clone(prefix="train/")
-        self.val_metrics = metrics.clone(prefix="val/")
-        self.current_test_metrics = metrics.clone(prefix="test/current/")
-        self.test_metrics = metrics.clone(prefix="test/best/")
+#         # metrics — override parent with per-class (average="none") variants
+#         metric_kwargs = dict(
+#             task="multiclass",
+#             num_classes=self.hparams.num_classes,
+#             ignore_index=self.hparams.ignore_index,
+#         )
+#         metrics = tm.MetricCollection(
+#             {
+#                 "accuracy": fm.Accuracy(**metric_kwargs),
+#                 "iou": fm.JaccardIndex(**metric_kwargs, average="none"),
+#                 "recall": fm.Recall(**metric_kwargs, average="none"),
+#                 "precision": fm.Precision(**metric_kwargs, average="none"),
+#                 "f1": fm.F1Score(**metric_kwargs, average="none"),
+#             }
+#         )
+#         self.train_metrics = metrics.clone(prefix="train/")
+#         self.val_metrics = metrics.clone(prefix="val/")
+#         self.current_test_metrics = metrics.clone(prefix="test/current/")
+#         self.test_metrics = metrics.clone(prefix="test/best/")
 
-        # Override parent's activation function to remove .squeeze(1) for multiclass
-        self.activation_fn = lambda x: torch.softmax(x, dim=1)
+#         # Override parent's activation function to remove .squeeze(1) for multiclass
+#         self.activation_fn = lambda x: torch.softmax(x, dim=1)
 
-    def on_validation_epoch_end(self) -> None:
-        computed = self.val_metrics.compute()
-        self.log("val/accuracy_epoch", computed["val/accuracy"], sync_dist=True)
+#     def on_validation_epoch_end(self) -> None:
+#         computed = self.val_metrics.compute()
+#         self.log("val/accuracy_epoch", computed["val/accuracy"], sync_dist=True)
 
-        iou_per_class = computed["val/iou"]
-        precision_per_class = computed["val/precision"]
-        recall_per_class = computed["val/recall"]
-        f1_per_class = computed["val/f1"]
+#         iou_per_class = computed["val/iou"]
+#         precision_per_class = computed["val/precision"]
+#         recall_per_class = computed["val/recall"]
+#         f1_per_class = computed["val/f1"]
 
-        for i, class_name in enumerate(self.class_names):
-            self.log(f"val/iou_epoch/{class_name}", iou_per_class[i], sync_dist=True)
-            self.log(
-                f"val/recall_epoch/{class_name}", recall_per_class[i], sync_dist=True
-            )
-            self.log(
-                f"val/precision_epoch/{class_name}",
-                precision_per_class[i],
-                sync_dist=True,
-            )
-            self.log(f"val/f1_epoch/{class_name}", f1_per_class[i], sync_dist=True)
-        self.log("val/iou_epoch", iou_per_class[1:].mean(), sync_dist=True)
-        self.val_metrics.reset()
-        if getattr(self, "_test_during_fit_updated", False):
-            self._log_multiclass_test_epoch_metrics(
-                self.current_test_metrics,
-                "test/current",
-            )
-            self._test_during_fit_updated = False
+#         for i, class_name in enumerate(self.class_names):
+#             self.log(f"val/iou_epoch/{class_name}", iou_per_class[i], sync_dist=True)
+#             self.log(
+#                 f"val/recall_epoch/{class_name}", recall_per_class[i], sync_dist=True
+#             )
+#             self.log(
+#                 f"val/precision_epoch/{class_name}",
+#                 precision_per_class[i],
+#                 sync_dist=True,
+#             )
+#             self.log(f"val/f1_epoch/{class_name}", f1_per_class[i], sync_dist=True)
+#         self.log("val/iou_epoch", iou_per_class[1:].mean(), sync_dist=True)
+#         self.val_metrics.reset()
+#         if getattr(self, "_test_during_fit_updated", False):
+#             self._log_multiclass_test_epoch_metrics(
+#                 self.current_test_metrics,
+#                 "test/current",
+#             )
+#             self._test_during_fit_updated = False
 
-    def on_test_epoch_end(self) -> None:
-        self._log_multiclass_test_epoch_metrics(self.test_metrics, "test/best")
+#     def on_test_epoch_end(self) -> None:
+#         self._log_multiclass_test_epoch_metrics(self.test_metrics, "test/best")
 
-    def _log_multiclass_test_epoch_metrics(
-        self,
-        metrics: tm.MetricCollection,
-        log_prefix: str,
-    ) -> None:
-        computed = metrics.compute()
-        self.log(
-            f"{log_prefix}/accuracy_epoch",
-            computed[f"{log_prefix}/accuracy"],
-            sync_dist=True,
-        )
-        for metric_name in ("iou", "recall", "precision", "f1"):
-            values = computed[f"{log_prefix}/{metric_name}"]
-            for index, class_name in enumerate(self.class_names):
-                self.log(
-                    f"{log_prefix}/{metric_name}_epoch/{class_name}",
-                    values[index],
-                    sync_dist=True,
-                )
-        self.log(
-            f"{log_prefix}/iou_epoch",
-            computed[f"{log_prefix}/iou"][1:].mean(),
-            sync_dist=True,
-        )
-        metrics.reset()
+#     def _log_multiclass_test_epoch_metrics(
+#         self,
+#         metrics: tm.MetricCollection,
+#         log_prefix: str,
+#     ) -> None:
+#         computed = metrics.compute()
+#         self.log(
+#             f"{log_prefix}/accuracy_epoch",
+#             computed[f"{log_prefix}/accuracy"],
+#             sync_dist=True,
+#         )
+#         for metric_name in ("iou", "recall", "precision", "f1"):
+#             values = computed[f"{log_prefix}/{metric_name}"]
+#             for index, class_name in enumerate(self.class_names):
+#                 self.log(
+#                     f"{log_prefix}/{metric_name}_epoch/{class_name}",
+#                     values[index],
+#                     sync_dist=True,
+#                 )
+#         self.log(
+#             f"{log_prefix}/iou_epoch",
+#             computed[f"{log_prefix}/iou"][1:].mean(),
+#             sync_dist=True,
+#         )
+#         metrics.reset()
 
-    def _phase_step(
-        self,
-        batch: torch.Tensor,
-        batch_idx: int,
-        phase: str,
-        log_prefix: str | None = None,
-    ):
-        log_prefix = log_prefix or phase
-        x, y = batch
-        logits = self.forward(x)
+#     def _phase_step(
+#         self,
+#         batch: torch.Tensor,
+#         batch_idx: int,
+#         phase: str,
+#         log_prefix: str | None = None,
+#     ):
+#         log_prefix = log_prefix or phase
+#         x, y = batch
+#         logits = self.forward(x)
 
-        # Explicitly compute loss in f32 (not bf16, etc.)
-        loss = self.loss_fn(logits.float(), y.long())
-        self.log(
-            f"{log_prefix}/loss",
-            loss,
-            prog_bar=(phase == "train"),
-            sync_dist=True,
-        )
+#         # Explicitly compute loss in f32 (not bf16, etc.)
+#         loss = self.loss_fn(logits.float(), y.long())
+#         self.log(
+#             f"{log_prefix}/loss",
+#             loss,
+#             prog_bar=(phase == "train"),
+#             sync_dist=True,
+#         )
 
-        probs = self.activation_fn(logits)
-        metrics = getattr(self, f"{phase}_metrics")
-        step_values = metrics(probs, y)
+#         probs = self.activation_fn(logits)
+#         metrics = getattr(self, f"{phase}_metrics")
+#         step_values = metrics(probs, y)
 
-        self.log(
-            f"{log_prefix}/accuracy",
-            step_values[f"{log_prefix}/accuracy"],
-            sync_dist=True,
-        )
+#         self.log(
+#             f"{log_prefix}/accuracy",
+#             step_values[f"{log_prefix}/accuracy"],
+#             sync_dist=True,
+#         )
 
-        iou_per_class = step_values[f"{log_prefix}/iou"]
-        precision_per_class = step_values[f"{log_prefix}/precision"]
-        recall_per_class = step_values[f"{log_prefix}/recall"]
-        f1_per_class = step_values[f"{log_prefix}/f1"]
-        for i, class_name in enumerate(self.class_names):
-            self.log_dict(
-                {
-                    f"{log_prefix}/iou_{class_name}": iou_per_class[i],
-                    f"{log_prefix}/recall_{class_name}": recall_per_class[i],
-                    f"{log_prefix}/precision_{class_name}": precision_per_class[i],
-                    f"{log_prefix}/f1_{class_name}": f1_per_class[i],
-                },
-                sync_dist=True,
-            )
-        self.log(f"{log_prefix}/iou", iou_per_class[1:].mean(), sync_dist=True)
+#         iou_per_class = step_values[f"{log_prefix}/iou"]
+#         precision_per_class = step_values[f"{log_prefix}/precision"]
+#         recall_per_class = step_values[f"{log_prefix}/recall"]
+#         f1_per_class = step_values[f"{log_prefix}/f1"]
+#         for i, class_name in enumerate(self.class_names):
+#             self.log_dict(
+#                 {
+#                     f"{log_prefix}/iou_{class_name}": iou_per_class[i],
+#                     f"{log_prefix}/recall_{class_name}": recall_per_class[i],
+#                     f"{log_prefix}/precision_{class_name}": precision_per_class[i],
+#                     f"{log_prefix}/f1_{class_name}": f1_per_class[i],
+#                 },
+#                 sync_dist=True,
+#             )
+#         self.log(f"{log_prefix}/iou", iou_per_class[1:].mean(), sync_dist=True)
 
-        return loss
+#         return loss

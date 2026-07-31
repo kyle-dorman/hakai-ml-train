@@ -47,22 +47,24 @@ separate experiment root, registry identity, W&B group, and run keys. It logs
 held-out diagnostics under `test/current/*` every epoch and the
 validation-selected final checkpoint under `test/best/*`. Task 016 is complete:
 it preserved the stopped partial v1 evidence and validated all v2 dry-runs.
-Task 017 now owns the user-executed v2 training cycle.
+Task 017 now owns the user-executed training cycle. The user stopped the first
+v2 baseline during its plateau and approved a clean v3 restart with a uniform
+70-epoch budget and `3e-5` minimum learning rate; no LORO v2 run was started.
 
 Current active task:
 
 ```text
-Task 017: Launch and verify `baseline-temporal-v2`, then run all 12 v2 LORO
-entries sequentially unless a failure or operational correction requires a
-pause.
-tasks/017_run_v2_training_cycle.md
+Task 017: Prepare, launch, and verify `baseline-temporal-v3`, then run all 12
+v3 LORO entries sequentially unless a failure or operational correction
+requires a pause.
+tasks/017_run_v3_training_cycle.md
 ```
 
 Next task:
 
 ```text
 Task 018: Build the overlap-aware chip/TIFF prediction evaluator using the
-completed v2 production baseline checkpoint.
+completed v3 production baseline checkpoint.
 tasks/018_build_prediction_evaluator.md
 ```
 
@@ -165,7 +167,8 @@ Remote experiment preparation and execution:
   best/last checkpoints, and full test execution.
 - Task 016: complete; stopped and preserved partial v1, added per-epoch test
   diagnostics, and validated the clean v2 identity and matrix.
-- Task 017: current; user launches the v2 baseline and all 12 v2 LORO runs.
+- Task 017: current; the approved 70-epoch v3 restart is validated and ready
+  for the user to launch its baseline, then all 12 v3 LORO runs.
 - Tasks 018–019: build and run chip/TIFF prediction evaluation.
 - Task 020: compare accuracy on matching source TIFFs.
 

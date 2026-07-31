@@ -31,8 +31,10 @@ gates, bounded shallow folds, and isolated registry state. Task 015 completed
 and verified the 100-epoch production temporal baseline, its W&B run, selected
 best checkpoint, local recovery checkpoint, and full test execution. Task 016
 closed the stopped partial v1 suite as historical evidence and validated the
-clean v2 identity. Task 017 is current and ready for the user-executed v2
-baseline-plus-12-LORO cycle with per-epoch held-out test diagnostics.
+clean v2 identity. During Task 017 the user stopped the plateaued v2 baseline
+and approved a clean 70-epoch v3 restart with a `3e-5` LR floor. Task 017 is
+current and has prepared the user-executed v3 baseline-plus-12-LORO cycle with
+per-epoch held-out test diagnostics.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles
@@ -69,8 +71,8 @@ src/prepare/remove_tiles_with_nodata_areas.py
 src/data.py
 src/models/smp.py
 trainer.py
-configs/kelp-ps8b/generalization/segformer_b3_v1.yaml
-configs/kelp-ps8b/generalization/experiment_matrix_v2.yaml
+configs/kelp-ps8b/generalization/segformer_b3_v3.yaml
+configs/kelp-ps8b/generalization/experiment_matrix_v3.yaml
 scripts/run_planet8b_experiments.py
 ```
 

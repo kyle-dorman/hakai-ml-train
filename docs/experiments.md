@@ -17,12 +17,13 @@ This is the destination used by the current California SegFormer config and its
 remote smoke config. Other PS8B configs contain historical values; do not treat
 them as the new suite's tracking contract.
 
-The active comparison-suite group is `planet8b-loro-v2`. Baseline and LORO
-training runs use `baseline-temporal-v2` and `loro-<region_id>-v2`; the region
+The active comparison-suite group is `planet8b-loro-v3`. Baseline and LORO
+training runs use `baseline-temporal-v3` and `loro-<region_id>-v3`; the region
 ID is the canonical fold key. Smoke runs use the separate `smoke` group, a
 `smoke` job type/tag, and the corresponding `smoke-` name prefix. The partial
-`planet8b-loro-v1` production suite and its registry/artifacts remain historical
-evidence and must not be relabeled or overwritten.
+`planet8b-loro-v1` production suite and interrupted `planet8b-loro-v2`
+baseline, together with their registries and artifacts, remain historical
+evidence and must not be resumed, relabeled, or overwritten.
 
 ## Run organization
 
@@ -43,11 +44,11 @@ registry:
 Names must be predictable and unique. Use region IDs, not potentially duplicated
 region names, in LORO run names.
 
-The v2 smoke identity is `planet8b-loro-v2-smoke-tiered-ema-v1`. Baseline and
-`loro-bc-v2` use two full epochs so EMA crosses its update gate; the other 11
+The v3 smoke identity is `planet8b-loro-v3-smoke-tiered-ema-v1`. Baseline and
+`loro-bc-v3` use two full epochs so EMA crosses its update gate; the other 11
 LORO folds use one epoch capped at two optimizer updates, two validation
 batches, and two test batches. Smoke limits are runner-owned and never apply to
-the uniform 100-epoch production suite. The completed v1 smoke suite remains
+the uniform 70-epoch production suite. The completed v1 smoke suite remains
 valid historical gate evidence.
 
 `src/run_context.py` owns the required JSON-compatible context. Generate it

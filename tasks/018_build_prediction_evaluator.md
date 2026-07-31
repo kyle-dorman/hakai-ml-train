@@ -4,7 +4,7 @@ Status: Pending
 
 Depends on: Tasks 003 and 017
 
-Execution: Remote-aware code task using the completed v2 baseline checkpoint.
+Execution: Remote-aware code task using the completed v3 baseline checkpoint.
 
 ## Abstract
 
@@ -25,7 +25,7 @@ auditable chip/TIFF/region/test-set results tied to run and manifest hashes.
 ## Inputs
 
 - Task 003 approved overlap contract and chip window manifest fields
-- Task 017 v2 baseline best checkpoint and W&B/registry identity
+- Task 017 v3 baseline best checkpoint and W&B/registry identity
 - Task 011 baseline test fold manifest
 - Canonical chip/raster manifests and portable `raster_metadata.csv`
 - `src/models/smp.py`
@@ -60,13 +60,13 @@ Recommended entry point:
 
 ```bash
 uv run python scripts/evaluate_planet8b_run.py \
-  --run-key baseline-temporal-v2 \
+  --run-key baseline-temporal-v3 \
   --registry <experiment_registry.jsonl> \
   --fold-manifest <baseline>/fold_manifest.csv \
   --chip-manifest <canonical>/chip_manifest.csv \
   --raster-manifest <canonical>/raster_manifest.csv \
   --raster-metadata <canonical>/raster_metadata.csv \
-  --output-root <predictions-root>/baseline-temporal-v2 \
+  --output-root <predictions-root>/baseline-temporal-v3 \
   --threshold <approved-value> \
   [--save-rasters] \
   [--resume]

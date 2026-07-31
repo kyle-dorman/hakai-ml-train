@@ -26,6 +26,7 @@ if __package__ in {None, ""}:
 from src.run_context import build_run_context, sha256_file, write_run_context
 
 REGIONS = ["bc", *(f"ca_{index:03d}" for index in range(1, 12))]
+APPROVED_PRODUCTION_EPOCHS = {70, 100}
 STATUSES = {"planned", "running", "completed", "failed", "interrupted", "skipped"}
 REGISTRY_FIELDS = [
     "timestamp",
@@ -94,8 +95,9 @@ def load_matrix(path: Path, repo_root: Path) -> dict[str, Any]:
         raise RunnerError("Only sequential execution is approved")
     if matrix["failure_policy"] not in {"continue", "stop"}:
         raise RunnerError("failure_policy must be 'continue' or 'stop'")
-    if matrix["max_epochs"] != 100:
-        raise RunnerError("Approved production budget is 100 epochs")
+    if matrix["max_epochs"] not in APPROVED_PRODUCTION_EPOCHS:
+        approved = ", ".join(str(value) for value in sorted(APPROVED_PRODUCTION_EPOCHS))
+        raise RunnerError(f"Approved production budgets are {approved} epochs")
     if (
         matrix["smoke_deep_max_epochs"] != 2
         or matrix["smoke_shallow_max_epochs"] != 1

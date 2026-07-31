@@ -8,7 +8,7 @@ Execution: Remote multi-run inference task.
 
 ## Abstract
 
-Run the Task 018 evaluator for the completed v2 baseline and all 12 v2 LORO
+Run the Task 018 evaluator for the completed v3 baseline and all 12 v3 LORO
 checkpoints. The baseline predicts only its temporal test set; each LORO model
 predicts the complete held-out region. The task verifies fold/checkpoint/output
 identity and produces one uniform result package per run. It does not perform
@@ -21,7 +21,7 @@ metrics, region summaries, and test summaries for every approved run.
 
 ## Inputs
 
-- Task 017 completed v2 baseline/LORO registry and checkpoints
+- Task 017 completed v3 baseline/LORO registry and checkpoints
 - Task 018 evaluator, threshold, reconstruction, output, and W&B policy
 - Task 011 baseline fold manifest
 - Task 012 LORO fold manifests

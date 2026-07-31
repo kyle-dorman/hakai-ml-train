@@ -53,7 +53,7 @@ def _matrix(tmp_path: Path) -> tuple[Path, Path]:
         "model_config": "model.yaml",
         "smoke_model_config": "model.yaml",
         "seed": 42,
-        "max_epochs": 100,
+        "max_epochs": 70,
         "smoke_deep_run_keys": ["baseline-temporal-v1", "loro-bc-v1"],
         "smoke_deep_max_epochs": 2,
         "smoke_shallow_max_epochs": 1,
@@ -73,7 +73,7 @@ def test_matrix_requires_complete_approved_suite_and_budgets(tmp_path: Path) -> 
     path, repo = _matrix(tmp_path)
     matrix = load_matrix(path, repo)
     assert len(matrix["runs"]) == 13
-    assert matrix["max_epochs"] == 100
+    assert matrix["max_epochs"] == 70
     assert matrix["smoke_deep_max_epochs"] == 2
     assert matrix["smoke_shallow_max_epochs"] == 1
 
@@ -81,6 +81,21 @@ def test_matrix_requires_complete_approved_suite_and_budgets(tmp_path: Path) -> 
     value["runs"].pop()
     path.write_text(yaml.safe_dump(value))
     with pytest.raises(RunnerError, match="exactly 13"):
+        load_matrix(path, repo)
+
+
+def test_matrix_accepts_historical_budget_and_rejects_unapproved_budget(
+    tmp_path: Path,
+) -> None:
+    path, repo = _matrix(tmp_path)
+    value = yaml.safe_load(path.read_text())
+    value["max_epochs"] = 100
+    path.write_text(yaml.safe_dump(value))
+    assert load_matrix(path, repo)["max_epochs"] == 100
+
+    value["max_epochs"] = 69
+    path.write_text(yaml.safe_dump(value))
+    with pytest.raises(RunnerError, match="70, 100"):
         load_matrix(path, repo)
 
 
@@ -181,7 +196,7 @@ def test_tiered_smoke_profile_has_deep_and_bounded_entries(tmp_path: Path) -> No
             "limit_test_batches": 2,
         },
     )
-    assert _run_profile(matrix, shallow, config, False) == (100, {})
+    assert _run_profile(matrix, shallow, config, False) == (70, {})
 
 
 def test_pure_resolution_injects_paths_wandb_limits_and_root(tmp_path: Path) -> None:
@@ -221,12 +236,12 @@ def test_pure_resolution_injects_paths_wandb_limits_and_root(tmp_path: Path) -> 
     assert logger["save_dir"] == str(root)
 
 
-def test_generalization_config_preserves_recipe_and_safety_contract() -> None:
+def test_active_generalization_config_preserves_recipe_and_safety_contract() -> None:
     repo = Path(__file__).resolve().parents[1]
-    config_path = repo / "configs/kelp-ps8b/generalization/segformer_b3_v1.yaml"
+    config_path = repo / "configs/kelp-ps8b/generalization/segformer_b3_v3.yaml"
     matrix = yaml.safe_load(
         (
-            repo / "configs/kelp-ps8b/generalization/experiment_matrix_v2.yaml"
+            repo / "configs/kelp-ps8b/generalization/experiment_matrix_v3.yaml"
         ).read_text()
     )
     config = yaml.safe_load(config_path.read_text())
@@ -235,7 +250,8 @@ def test_generalization_config_preserves_recipe_and_safety_contract() -> None:
     trainer = config["trainer"]
 
     assert matrix["model_config"] == matrix["smoke_model_config"]
-    assert matrix["model_config"].endswith("generalization/segformer_b3_v1.yaml")
+    assert matrix["max_epochs"] == 70
+    assert matrix["model_config"].endswith("generalization/segformer_b3_v3.yaml")
     assert model["architecture"] == "Segformer"
     assert model["encoder_name"] == "mit_b3"
     assert model["model_opts"] == {"encoder_weights": "imagenet", "in_channels": 8}
@@ -245,7 +261,7 @@ def test_generalization_config_preserves_recipe_and_safety_contract() -> None:
         "betas": [0.9, 0.95],
     }
     assert model["lr_scheduler_class"] == "src.schedulers.LinearWarmupCosineDecayLR"
-    assert model["lr_scheduler_opts"] == {"warmup_epochs": 5, "min_lr": 0.000003}
+    assert model["lr_scheduler_opts"] == {"warmup_epochs": 5, "min_lr": 0.00003}
     assert model["lr_scheduler_interval"] == "step"
     assert model["loss"] == "LabelSmoothingLovasz"
     assert model["loss_opts"] == {
@@ -257,7 +273,7 @@ def test_generalization_config_preserves_recipe_and_safety_contract() -> None:
     assert model["ignore_index"] == -100
     assert data["batch_size"] * trainer["accumulate_grad_batches"] == 24
     assert data["test_every_val_epoch"] is True
-    assert trainer["max_epochs"] == 100
+    assert trainer["max_epochs"] == 70
     callbacks = trainer["callbacks"]
     classes = [callback["class_path"] for callback in callbacks]
     assert classes.count("src.callbacks.EMAWeightAveraging") == 1
@@ -275,7 +291,7 @@ def test_generalization_config_preserves_recipe_and_safety_contract() -> None:
     assert (logger["entity"], logger["project"], logger["group"]) == (
         "kdorman90-ucla",
         "kelpseg",
-        "planet8b-loro-v2",
+        "planet8b-loro-v3",
     )
     assert logger["log_model"] is False
     mask_transforms = [

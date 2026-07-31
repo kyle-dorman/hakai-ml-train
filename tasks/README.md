@@ -59,9 +59,9 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [014B](014b_correct_generalization_model_config.md) | Remote/config | Complete | 013, 014A | Dedicated config, batch benchmark, and tiered EMA smoke |
 | [015](015_run_new_baseline.md) | Remote | Complete | 014 | Verified expanded-data baseline checkpoint |
 | [016](016_run_loro_training.md) | Remote/code | Complete | 015 | Closed partial v1 suite and prepared clean v2 identity |
-| [017](017_run_v2_training_cycle.md) | Remote | Current; ready for user launch | 014–016 | Complete baseline plus LORO v2 checkpoint suite |
+| [017](017_run_v3_training_cycle.md) | Remote | Current; v3 baseline ready for user launch | 014–016 | Complete baseline plus LORO v3 checkpoint suite |
 | [018](018_build_prediction_evaluator.md) | Remote/code | Pending | 003, 017 | Chip- and TIFF-level prediction metrics |
-| [019](019_run_prediction_suite.md) | Remote | Pending | 017, 018 | Predictions for every v2 run |
+| [019](019_run_prediction_suite.md) | Remote | Pending | 017, 018 | Predictions for every v3 run |
 | [020](020_compare_matching_tiffs.md) | Remote/analysis | Pending | 019 | Paired cross-run accuracy comparison |
 | [021](021_restructure_project_docs.md) | Local/docs | Complete | — | PS8B-focused documentation structure |
 
@@ -92,7 +92,7 @@ task contract.
 | 014B | None; ImageNet initialization, constant-effective-batch benchmark, and baseline/BC deep-smoke plus shallow remaining folds are approved. |
 | 015 | Confirm resolved full baseline only if it differs from the approved Task 014 matrix. |
 | 016 | Complete; user chose a clean v2 restart after closing partial v1. |
-| 017 | None; v2 identity, policy, order, and user execution are approved. |
+| 017 | None; 70-epoch v3 identity, `3e-5` LR floor, policy, order, and user execution are approved. |
 | 018 | Overlap combination confirmation, binary threshold, prediction-raster retention, and raster dtype/compression. |
 | 019 | None unless approved prediction outputs exceed remote storage. |
 | 020 | Primary metric, paired statistical summary, plot set, and report destination. |

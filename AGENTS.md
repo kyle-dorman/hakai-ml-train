@@ -55,9 +55,10 @@ complete: W&B run `24f6a23a`, the validation-selected best checkpoint, local
 `last.ckpt`, and full baseline test execution were verified. Task 016 closed
 the stopped partial v1 production suite as historical evidence, added separate
 per-epoch-current and final-best test metrics, and validated the clean
-`planet8b-loro-v2` identity. Task 017 is current and ready for the user to run
-the v2 baseline plus all 12 LORO folds with validation-only checkpoint
-selection.
+`planet8b-loro-v2` identity. During Task 017 the user stopped the first v2
+baseline after its plateau and approved a clean `planet8b-loro-v3` restart with
+70 epochs and a `3e-5` minimum LR. Task 017 is current and has prepared that new
+baseline plus all 12 LORO folds with validation-only checkpoint selection.
 The complete ordered queue is in `docs/todo.md`; detailed contracts are in
 `tasks/`.
 
@@ -123,7 +124,7 @@ entity: kdorman90-ucla
 project: kelpseg
 ```
 
-The active comparison-suite group is `planet8b-loro-v2`; smoke runs use the separate
+The active comparison-suite group is `planet8b-loro-v3`; smoke runs use the separate
 `smoke` group. Do not copy W&B identity or grouping from legacy configs into
 new work. Read `docs/experiments.md` before changing W&B configuration or run
 metadata.
