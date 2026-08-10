@@ -47,17 +47,18 @@ separate experiment root, registry identity, W&B group, and run keys. It logs
 held-out diagnostics under `test/current/*` every epoch and the
 validation-selected final checkpoint under `test/best/*`. Task 016 is complete:
 it preserved the stopped partial v1 evidence and validated all v2 dry-runs.
-Task 017 now owns the user-executed training cycle. The user stopped the first
-v2 baseline during its plateau and approved a clean v3 restart with a uniform
-70-epoch budget and `3e-5` minimum learning rate; no LORO v2 run was started.
+Task 017 completed the clean `planet8b-loro-v3` production suite: the temporal
+baseline and all 12 LORO folds have completed. The suite preserves the stopped
+v1/v2 evidence, uses the approved 70-epoch budget and `3e-5` minimum learning
+rate, and has one validation-selected best checkpoint plus local `last.ckpt`
+for every run. Task 018 is now current.
 
 Current active task:
 
 ```text
-Task 017: Prepare, launch, and verify `baseline-temporal-v3`, then run all 12
-v3 LORO entries sequentially unless a failure or operational correction
-requires a pause.
-tasks/017_run_v3_training_cycle.md
+Task 018: Build the overlap-aware chip/TIFF prediction evaluator using the
+completed v3 production baseline checkpoint.
+tasks/018_build_prediction_evaluator.md
 ```
 
 Next task:
@@ -167,9 +168,10 @@ Remote experiment preparation and execution:
   best/last checkpoints, and full test execution.
 - Task 016: complete; stopped and preserved partial v1, added per-epoch test
   diagnostics, and validated the clean v2 identity and matrix.
-- Task 017: current; the approved 70-epoch v3 restart is validated and ready
-  for the user to launch its baseline, then all 12 v3 LORO runs.
-- Tasks 018–019: build and run chip/TIFF prediction evaluation.
+- Task 017: complete; the temporal baseline and all 12 LORO v3 runs completed
+  with validation-selected best checkpoints and local recovery checkpoints.
+- Task 018: current; build the overlap-aware chip/TIFF prediction evaluator.
+- Task 019: run the prediction suite for all completed v3 checkpoints.
 - Task 020: compare accuracy on matching source TIFFs.
 
 See `tasks/README.md` for status and direct task links. Detailed acceptance and

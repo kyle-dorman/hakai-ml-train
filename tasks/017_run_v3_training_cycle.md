@@ -1,6 +1,6 @@
 # Task 017: Run the complete v3 training cycle
 
-Status: Current; v3 baseline ready for user launch
+Status: Complete
 
 Depends on: Tasks 014–016
 
@@ -228,3 +228,34 @@ Record exact launch commands, per-run registry/W&B/checkpoint identities,
 epochwise-current and final-best metric evidence, failures/retries, runtime and
 compute notes, suite consistency audit, unresolved/resume state, and exact
 Task 018 handoff.
+
+## Outcome
+
+Task 017 completed the `planet8b-loro-v3` production suite. The registry at
+`/home/sky/experiments/planet8b-loro-v3/experiment_registry.jsonl` records 13
+completed run keys with exit code zero: `baseline-temporal-v3` and
+`loro-{bc,ca_001,...,ca_011}-v3`. Each final registry event identifies a
+validation-selected best checkpoint and SHA-256; the corresponding run
+directory contains that checkpoint and `last.ckpt`. The W&B summaries contain
+the final `test/best/iou_epoch` for all 13 runs.
+
+The final completed attempts are one for the baseline, BC, and all California
+folds except `ca_004` (attempt 2), `ca_009` (attempt 5), and `ca_010`
+(attempt 3). Earlier failed/interrupted attempts remain preserved in the
+registry as required. No v1/v2 artifact was resumed, overwritten, or relabeled.
+
+Validation completed on 2026-08-10: the registry latest-state audit found
+13/13 completed entries; all have a best-checkpoint hash, best checkpoint,
+local `last.ckpt`, and final-best W&B metric. A `--pending --dry-run` against
+the v3 matrix exited successfully with no work. No repository code changed;
+the unrelated untracked `merge_files.sh` was left untouched.
+
+Changed repo files: `AGENTS.md`, `README.md`, `docs/index.md`,
+`docs/todo.md`, `tasks/README.md`, and this task file. Durable external
+artifacts: the v3 registry and run directories under
+`/home/sky/experiments/planet8b-loro-v3/planet8b-loro-v3/runs` plus their W&B
+runs in `kdorman90-ucla/kelpseg` group `planet8b-loro-v3`.
+
+Unresolved issues: none for Task 017. Exact next action: start Task 018 and
+build the overlap-aware chip/TIFF prediction evaluator from the completed v3
+baseline checkpoint.

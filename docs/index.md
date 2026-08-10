@@ -31,10 +31,10 @@ gates, bounded shallow folds, and isolated registry state. Task 015 completed
 and verified the 100-epoch production temporal baseline, its W&B run, selected
 best checkpoint, local recovery checkpoint, and full test execution. Task 016
 closed the stopped partial v1 suite as historical evidence and validated the
-clean v2 identity. During Task 017 the user stopped the plateaued v2 baseline
-and approved a clean 70-epoch v3 restart with a `3e-5` LR floor. Task 017 is
-current and has prepared the user-executed v3 baseline-plus-12-LORO cycle with
-per-epoch held-out test diagnostics.
+clean v2 identity. Task 017 then completed the clean 70-epoch
+`planet8b-loro-v3` temporal baseline plus all 12 LORO folds with a `3e-5` LR
+floor, validation-only checkpoint selection, and per-epoch held-out test
+diagnostics. Task 018 is current.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles

@@ -59,8 +59,8 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [014B](014b_correct_generalization_model_config.md) | Remote/config | Complete | 013, 014A | Dedicated config, batch benchmark, and tiered EMA smoke |
 | [015](015_run_new_baseline.md) | Remote | Complete | 014 | Verified expanded-data baseline checkpoint |
 | [016](016_run_loro_training.md) | Remote/code | Complete | 015 | Closed partial v1 suite and prepared clean v2 identity |
-| [017](017_run_v3_training_cycle.md) | Remote | Current; v3 baseline ready for user launch | 014–016 | Complete baseline plus LORO v3 checkpoint suite |
-| [018](018_build_prediction_evaluator.md) | Remote/code | Pending | 003, 017 | Chip- and TIFF-level prediction metrics |
+| [017](017_run_v3_training_cycle.md) | Remote | Complete | 014–016 | Completed baseline plus 12 LORO v3 checkpoint suite |
+| [018](018_build_prediction_evaluator.md) | Remote/code | Current | 003, 017 | Chip- and TIFF-level prediction metrics |
 | [019](019_run_prediction_suite.md) | Remote | Pending | 017, 018 | Predictions for every v3 run |
 | [020](020_compare_matching_tiffs.md) | Remote/analysis | Pending | 019 | Paired cross-run accuracy comparison |
 | [021](021_restructure_project_docs.md) | Local/docs | Complete | — | PS8B-focused documentation structure |
