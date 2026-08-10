@@ -1,6 +1,6 @@
 # Task 019: Run the complete prediction suite
 
-Status: Pending
+Status: In progress
 
 Depends on: Tasks 017 and 018
 
