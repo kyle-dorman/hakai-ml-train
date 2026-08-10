@@ -1,6 +1,6 @@
 # Task 019: Run the complete prediction suite
 
-Status: In progress
+Status: Complete
 
 Depends on: Tasks 017 and 018
 
@@ -115,3 +115,47 @@ Run focused tests/Ruff for any runner code and `git diff --check`.
 Record dry-run matrix, storage estimate, exact commands, completed/retried
 predictions, suite inventory, output/W&B paths, validation, missing items, and
 Task 020 inputs.
+
+## Outcome
+
+The dry-run reconciled all 13 completed v3 training entries: the temporal
+baseline was already verified (53 TIFFs/185 chips) and the 12 LORO entries were
+pending. The approved observed-suite estimate was 6.03 GiB against 683 GiB
+free before launch. The final retained suite occupies 6.2 GiB with 677 GiB
+free, so no lower-storage policy was needed.
+
+Changed repository files: `scripts/run_planet8b_predictions.py` now executes
+the identity-validated suite sequentially with per-source resume, validates
+completed packages, and writes `suite_inventory.csv`; focused coverage is in
+`tests/test_run_planet8b_predictions.py`.
+
+Durable external artifacts: all 13 packages are under
+`/home/sky/experiments/planet8b-loro-v3/predictions/<run_key>`, with the
+complete 13-row inventory at
+`/home/sky/experiments/planet8b-loro-v3/predictions/suite_inventory.csv`.
+They contain 417 source TIFF rows and 1,513 selected test chips in total.
+Every package retains tiled/LZW float32 probability and tiled/LZW uint8 mask
+GeoTIFFs. The baseline W&B prediction run is `0u0c5m1j`; the 12 LORO compact
+prediction artifacts were written in W&B offline mode because no API key was
+configured, and their local syncable run IDs are recorded in the inventory and
+each package metadata. The 12 syncable offline run directories are retained at
+`/home/sky/experiments/planet8b-loro-v3/predictions/wandb_offline_task019`.
+
+Execution used `uv run python scripts/run_planet8b_predictions.py --dry-run`,
+then `--run-key loro-bc-v3 --wandb-mode offline`, followed by the full
+`--wandb-mode offline` resume. An external interruption during `ca_008` left 42
+valid per-source completions; rerunning safely reused them and completed the
+remaining sources without recomputation.
+
+Validation: the final dry-run reports 13 verified and zero pending packages;
+all 417 TIFF rows, 1,513 chip counts, checkpoint/fold hashes, completion files,
+and pooled unique-pixel confusion sums reconcile. Sampled rasters from every
+package meet the approved dtype, LZW, and tiling contract. A final resume
+reported no work. Focused runner/evaluator tests passed (7 tests); changed-file
+format checks and `git diff --check` passed. Repository-wide Ruff still reports
+three pre-existing unrelated findings in two legacy notebooks and `trainer.py`.
+
+Unresolved issue: sync the 12 offline W&B prediction runs when credentials are
+available; the external prediction packages are complete and usable now.
+Next action: Task 020 should consume `suite_inventory.csv` plus each run's
+`tiff_metrics.csv` to construct matching-TIFF baseline/LORO comparisons.

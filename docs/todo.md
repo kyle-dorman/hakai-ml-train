@@ -56,20 +56,21 @@ evaluation. It averages foreground probabilities per covered source pixel,
 thresholds once at 0.5, and retains tiled/compressed float32 probability plus
 uint8 mask GeoTIFFs under `/home/sky/experiments/planet8b-loro-v3/predictions`.
 The measured full-suite estimate is 6.03 GiB (15.28 GiB uncompressed), within
-the 683 GiB available on the experiment volume. Task 019 is now current.
+the 683 GiB available on the experiment volume. Task 019 completed every v3
+prediction package and its suite inventory; Task 020 is now current.
 
 Current active task:
 
 ```text
-Task 019: Run predictions for every completed v3 checkpoint.
-tasks/019_run_prediction_suite.md
+Task 020: Compare accuracy on matching source TIFFs.
+tasks/020_compare_matching_tiffs.md
 ```
 
 Next task:
 
 ```text
-Task 019: Run predictions for every completed v3 checkpoint.
-tasks/019_run_prediction_suite.md
+Task 020: Compare accuracy on matching source TIFFs.
+tasks/020_compare_matching_tiffs.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -174,8 +175,8 @@ Remote experiment preparation and execution:
 - Task 017: complete; the temporal baseline and all 12 LORO v3 runs completed
   with validation-selected best checkpoints and local recovery checkpoints.
 - Task 018: complete; baseline output validates the overlap-aware evaluator.
-- Task 019: current; run the prediction suite for all completed v3 checkpoints.
-- Task 020: compare accuracy on matching source TIFFs.
+- Task 019: complete; 13 verified v3 prediction packages and suite inventory.
+- Task 020: current; compare accuracy on matching source TIFFs.
 
 See `tasks/README.md` for status and direct task links. Detailed acceptance and
 outcomes belong in the task files, not here.
