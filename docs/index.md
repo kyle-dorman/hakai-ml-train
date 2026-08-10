@@ -34,7 +34,8 @@ closed the stopped partial v1 suite as historical evidence and validated the
 clean v2 identity. Task 017 then completed the clean 70-epoch
 `planet8b-loro-v3` temporal baseline plus all 12 LORO folds with a `3e-5` LR
 floor, validation-only checkpoint selection, and per-epoch held-out test
-diagnostics. Task 018 is current.
+diagnostics. Task 018 completed the overlap-aware evaluator and baseline
+prediction package; Task 019 is current.
 `docs/todo.md` owns the current queue and status.
 
 ## Document roles

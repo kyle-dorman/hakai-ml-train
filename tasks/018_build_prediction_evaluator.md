@@ -1,6 +1,6 @@
 # Task 018: Build overlap-aware chip and source-TIFF evaluation
 
-Status: Pending
+Status: Complete
 
 Depends on: Tasks 003 and 017
 
@@ -53,6 +53,11 @@ Confirm before implementation:
    GeoTIFF for masks.
 
 Record exact choices here and in `docs/experiments.md`.
+
+Approved 2026-08-10: average foreground probabilities per covered source pixel,
+threshold the average once at `0.5`, retain all per-source rasters, and write
+tiled/compressed float32 probability and tiled/compressed uint8 mask GeoTIFFs.
+Prediction output root: `/home/sky/experiments/planet8b-loro-v3/predictions`.
 
 ## Planned CLI
 
@@ -209,3 +214,39 @@ Baseline test validation:
 Record user decisions, CLI/schema, reconstruction/metric formulas, tests,
 baseline evaluation artifacts/counts/coverage, W&B artifact, validation, and
 Task 019 command template.
+
+## Outcome
+
+Approved choices: average foreground probabilities on each covered source
+pixel, threshold once at `0.5`, retain all source rasters as tiled/LZW float32
+probability and tiled/LZW uint8 mask GeoTIFFs. Outputs are rooted at
+`/home/sky/experiments/planet8b-loro-v3/predictions/<run_key>`.
+
+Changed repository files: `scripts/evaluate_planet8b_run.py`,
+`src/evaluation/planet8b.py`, `src/evaluation/__init__.py`,
+`tests/test_evaluate_planet8b_run.py`, `docs/experiments.md`,
+`docs/todo.md`, and this task file. The evaluator resolves the completed
+registry checkpoint, applies the recorded deterministic test transform, crops
+padding back to manifest window dimensions, validates overlapping labels,
+averages probabilities once per source pixel, and derives TIFF/region/test
+metrics only from summed unique-pixel TIFF counts. Per-source completion JSON
+keys resume behavior by schema, threshold, run, checkpoint, and fold hashes.
+
+The baseline output at
+`/home/sky/experiments/planet8b-loro-v3/predictions/baseline-temporal-v3`
+contains 53 source TIFF rows, 185 non-additive chip diagnostics, 53 probability
+and 53 mask GeoTIFFs, consolidated CSV/JSON tables, and an evaluation log. Its
+accounting reconciles for every TIFF. It scored 165,677,400 pixels, left
+215,332,297 uncovered source pixels, and ignored 25,291,096 covered pixels.
+The compact artifact was logged to W&B prediction run `0u0c5m1j` in
+`kdorman90-ucla/kelpseg`.
+
+The baseline result package occupies 802,219,863 bytes for 2,031,503,965 bytes
+of uncompressed raster payload. Applying that observed 0.3949 ratio to all 13
+Task 019 test scopes estimates 6,476,969,201 bytes (6.03 GiB), versus 15.28
+GiB uncompressed; 683 GiB was available before Task 019.
+
+Validation: six focused evaluator tests passed; `uv run ruff format --check
+scripts src tests`, `uv run ruff check scripts src tests`, and `git diff
+--check` passed. The exact next action is Task 019's 13-run dry-run followed by
+the deterministic prediction suite; do not tune the 0.5 threshold on test data.

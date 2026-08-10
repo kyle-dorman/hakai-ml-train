@@ -88,6 +88,16 @@ contains the generated context, resolved Lightning config, fold manifest and
 summary, canonical dataset metadata, archive verification receipt, chip
 manifest, and model config. Canonical NPZs are not uploaded.
 
+## Prediction evaluation
+
+Prediction evaluation uses the training registry's validation-selected best
+checkpoint, averages foreground probabilities at each covered source pixel,
+then thresholds once at the fixed pre-test value `0.5`. It retains tiled/LZW
+float32 probability GeoTIFFs and tiled/LZW uint8 mask GeoTIFFs outside git at
+`/home/sky/experiments/planet8b-loro-v3/predictions/<run_key>`. A separate
+`prediction` W&B run logs the compact CSV/JSON result package and one paired
+QA raster example; full raster collections remain in that external output root.
+
 ## Local experiment registry
 
 W&B is the live review surface, not the only record. Maintain a machine-readable

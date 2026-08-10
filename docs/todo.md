@@ -51,22 +51,25 @@ Task 017 completed the clean `planet8b-loro-v3` production suite: the temporal
 baseline and all 12 LORO folds have completed. The suite preserves the stopped
 v1/v2 evidence, uses the approved 70-epoch budget and `3e-5` minimum learning
 rate, and has one validation-selected best checkpoint plus local `last.ckpt`
-for every run. Task 018 is now current.
+for every run. Task 018 completed the overlap-aware evaluator and baseline
+evaluation. It averages foreground probabilities per covered source pixel,
+thresholds once at 0.5, and retains tiled/compressed float32 probability plus
+uint8 mask GeoTIFFs under `/home/sky/experiments/planet8b-loro-v3/predictions`.
+The measured full-suite estimate is 6.03 GiB (15.28 GiB uncompressed), within
+the 683 GiB available on the experiment volume. Task 019 is now current.
 
 Current active task:
 
 ```text
-Task 018: Build the overlap-aware chip/TIFF prediction evaluator using the
-completed v3 production baseline checkpoint.
-tasks/018_build_prediction_evaluator.md
+Task 019: Run predictions for every completed v3 checkpoint.
+tasks/019_run_prediction_suite.md
 ```
 
 Next task:
 
 ```text
-Task 018: Build the overlap-aware chip/TIFF prediction evaluator using the
-completed v3 production baseline checkpoint.
-tasks/018_build_prediction_evaluator.md
+Task 019: Run predictions for every completed v3 checkpoint.
+tasks/019_run_prediction_suite.md
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -170,8 +173,8 @@ Remote experiment preparation and execution:
   diagnostics, and validated the clean v2 identity and matrix.
 - Task 017: complete; the temporal baseline and all 12 LORO v3 runs completed
   with validation-selected best checkpoints and local recovery checkpoints.
-- Task 018: current; build the overlap-aware chip/TIFF prediction evaluator.
-- Task 019: run the prediction suite for all completed v3 checkpoints.
+- Task 018: complete; baseline output validates the overlap-aware evaluator.
+- Task 019: current; run the prediction suite for all completed v3 checkpoints.
 - Task 020: compare accuracy on matching source TIFFs.
 
 See `tasks/README.md` for status and direct task links. Detailed acceptance and

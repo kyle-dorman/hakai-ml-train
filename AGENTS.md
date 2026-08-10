@@ -57,8 +57,9 @@ the stopped partial v1 production suite as historical evidence, added separate
 per-epoch-current and final-best test metrics, and validated the clean
 `planet8b-loro-v2` identity. Task 017 completed the clean
 `planet8b-loro-v3` suite: its 70-epoch temporal baseline and all 12 LORO folds
-use a `3e-5` minimum LR and validation-only checkpoint selection. Task 018 is
-current and will build the overlap-aware chip/TIFF prediction evaluator.
+use a `3e-5` minimum LR and validation-only checkpoint selection. Task 018
+completed the overlap-aware evaluator and baseline prediction package. Task 019
+is current and will run the remaining v3 prediction suite.
 The complete ordered queue is in `docs/todo.md`; detailed contracts are in
 `tasks/`.
 
