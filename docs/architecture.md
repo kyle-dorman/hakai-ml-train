@@ -106,10 +106,18 @@ source pixels. Dimensions at least 1024 pixels retain full windows only, so
 trailing edge strips outside the regular grid remain uncovered. Training views
 retain all eligible overlapping chips. Validation and test views select the
 non-overlapping subset where both pixel offsets are multiples of 1024;
-evaluation coverage must be reported. This is a manifest selection from one
-canonical chip family, not a second evaluation artifact. Any later transform
-that pads a small canonical chip must fill its mask with the `-100` ignore
-index, not class-0 background.
+these folders are the bounded training-time validation/test loader inputs, not
+the complete primary post-training inference scope. Primary prediction resolves
+the selected test rows plus the corresponding manifest-recorded overlap
+exclusions directly from the canonical post-nodata collection. This is a
+manifest selection from one canonical chip family, not a second evaluation
+artifact. Evaluation coverage must be reported. Any later transform that pads
+a small canonical chip must fill its mask with the `-100` ignore index, not
+class-0 background. Prediction must also invert that transform's spatial
+placement before reconstructing the source grid. For the recorded centered
+`PadIfNeeded` transform, crop probabilities by the centered row/column offsets
+and require the transformed-label interior to equal the original chip label;
+top-left cropping is invalid for undersized chips.
 
 The approved and materialized LORO policy is:
 
@@ -133,14 +141,18 @@ The comparison suite should use one selected model config, seed policy, and
 training budget. Dataset and W&B context should be injected by the runner rather
 than maintained through 13 manually edited YAML copies.
 
-Prediction must save chip diagnostics plus source-window identity. For
-overlapping chips, reconstruct one probability per covered source pixel before
-thresholding and calculating TIFF confusion counts. Region and test-set metrics
-then sum the non-overlapping TIFF confusion counts. Do not sum overlapping chip
-confusion counts into TIFF metrics. Ignore-index and uncovered pixels do not
-contribute, and coverage must be reported. Validation and final test evaluation
-use the non-overlapping materialized subset; overlap reconstruction remains
-required for any evaluation artifact that includes overlapping chips.
+Prediction must save chip diagnostics plus source-window identity. Primary
+post-training test evaluation uses every retained post-nodata chip in the
+relevant test source scope, including rows recorded as overlap exclusions in
+the materialized fold. It averages foreground probabilities per covered source
+pixel, thresholds the reconstructed source probability once, and then
+calculates TIFF confusion counts. Region and test-set metrics sum these
+unique-pixel TIFF counts. Do not sum overlapping chip confusion counts into
+TIFF metrics. Ignore-index and uncovered pixels do not contribute, and coverage
+must be reported. The materialized non-overlapping validation/test loaders
+remain the training-time diagnostic scope. Because the canonical grid contains
+no dynamically edge-anchored windows, trailing source strips outside that grid
+remain uncovered even in the all-retained evaluation.
 
 ## Compatibility boundary
 

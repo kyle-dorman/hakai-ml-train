@@ -62,8 +62,10 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [017](017_run_v3_training_cycle.md) | Remote | Complete | 014–016 | Completed baseline plus 12 LORO v3 checkpoint suite |
 | [018](018_build_prediction_evaluator.md) | Remote/code | Complete | 003, 017 | Chip- and TIFF-level prediction metrics |
 | [019](019_run_prediction_suite.md) | Remote | Complete | 017, 018 | Predictions for every v3 run |
-| [020](020_compare_matching_tiffs.md) | Remote/analysis | Current | 019 | Paired cross-run accuracy comparison |
+| [020](020_compare_matching_tiffs.md) | Remote/analysis | Complete | 019 | Paired cross-run accuracy comparison |
 | [021](021_restructure_project_docs.md) | Local/docs | Complete | — | PS8B-focused documentation structure |
+| [022](022_evaluate_all_retained_test_chips.md) | Remote/code | Complete | 018–020 | All-retained-chip overlap-stitched evaluation |
+| [023](023_fix_center_padded_prediction_alignment.md) | Remote/code | Complete | 022 | Corrected center-padded prediction suite and report |
 
 ## User decision checkpoints
 
@@ -95,8 +97,10 @@ task contract.
 | 017 | None; 70-epoch v3 identity, `3e-5` LR floor, policy, order, and user execution are approved. |
 | 018 | Overlap combination confirmation, binary threshold, prediction-raster retention, and raster dtype/compression. |
 | 019 | None unless approved prediction outputs exceed remote storage. |
-| 020 | Primary metric, paired statistical summary, plot set, and report destination. |
+| 020 | Complete; user approved kelp IoU, descriptive paired bootstrap summaries, all proposed plots, and an external report. |
 | 021 | None; completed documentation maintenance. |
+| 022 | Complete decision; use every valid post-nodata test chip and overlap-average source probabilities. |
+| 023 | Complete decision; correct center-padded prediction alignment and republish the evaluation. |
 
 ## Task sizing
 

@@ -53,6 +53,7 @@ def test_build_plan_only_verifies_complete_compatible_package(tmp_path: Path) ->
     (baseline / "evaluation_metadata.json").write_text(
         json.dumps(
             {
+                "schema_version": 1,
                 "checkpoint_sha256": identity["checkpoint_sha256"],
                 "fold_manifest_sha256": identity["fold_manifest_sha256"],
                 "threshold": 0.5,

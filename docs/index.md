@@ -35,8 +35,13 @@ clean v2 identity. Task 017 then completed the clean 70-epoch
 `planet8b-loro-v3` temporal baseline plus all 12 LORO folds with a `3e-5` LR
 floor, validation-only checkpoint selection, and per-epoch held-out test
 diagnostics. Task 018 completed the overlap-aware evaluator and baseline
-prediction package; Task 019 is current.
-`docs/todo.md` owns the current queue and status.
+prediction package, Task 019 completed all 13 verified prediction packages, and
+Task 020 completed the matching-TIFF comparison and separate full-region LORO
+reporting. Task 022 expanded evaluation to the all-retained post-nodata test
+scope, but its small-chip audit found a prediction-crop alignment bug. Task 023
+corrected that alignment, republished all 13 schema-3 prediction packages, and
+completed the corrected 54-of-54 comparison. The numbered queue is closed;
+`docs/todo.md` owns the next user-selected action.
 
 ## Document roles
 

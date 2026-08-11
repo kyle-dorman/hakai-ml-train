@@ -94,9 +94,19 @@ Prediction evaluation uses the training registry's validation-selected best
 checkpoint, averages foreground probabilities at each covered source pixel,
 then thresholds once at the fixed pre-test value `0.5`. It retains tiled/LZW
 float32 probability GeoTIFFs and tiled/LZW uint8 mask GeoTIFFs outside git at
-`/home/sky/experiments/planet8b-loro-v3/predictions/<run_key>`. A separate
-`prediction` W&B run logs the compact CSV/JSON result package and one paired
-QA raster example; full raster collections remain in that external output root.
+`/home/sky/experiments/planet8b-loro-v3/predictions_all_retained_v2/<run_key>`.
+The primary `all_retained_test_chips` scope includes selected test rows and
+their corresponding overlap-exclusion rows from the canonical post-nodata
+collection. Evaluation schema 3 records that scope plus corrected centered-pad
+alignment and prevents resume from the invalid schema-2 outputs. A separate
+`prediction` W&B run logs the compact CSV/JSON result
+package and one paired QA raster example; full raster collections remain in
+that external output root. Task 022's `predictions_all_retained_v1` packages are
+preserved but invalid for scientific use because they top-left-cropped centered
+padding. The earlier
+`/home/sky/experiments/planet8b-loro-v3/predictions` packages are preserved as
+historical `selected_nonoverlap` evidence and have the same undersized-chip
+alignment limitation.
 
 ## Local experiment registry
 
@@ -120,3 +130,8 @@ the expected fold, manifest hash, checkpoint, and prediction outputs.
 - Paired baseline/LORO comparison uses matching TIFFs unseen by both runs.
 - Full held-out-region LORO performance is reported separately from the paired
   baseline comparison.
+- The primary versioned comparison is
+  `/home/sky/experiments/planet8b-loro-v3/comparisons/matched_tiffs_all_retained_v2`;
+  `matched_tiffs_all_retained_v1` is superseded/invalid, and `matched_tiffs_v1`
+  remains historical non-overlapping-input evidence with the same small-chip
+  alignment limitation.

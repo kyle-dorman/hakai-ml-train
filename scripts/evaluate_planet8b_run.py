@@ -25,9 +25,12 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.evaluation.planet8b import (
-    EVALUATION_SCHEMA_VERSION,
+    EVALUATION_SCOPES,
+    SELECTED_NONOVERLAP_SCOPE,
     SourceAccumulator,
     binary_metrics,
+    evaluation_schema_version,
+    select_evaluation_rows,
     sum_confusion,
 )
 from src.models.smp import SMPBinarySegmentationModel
@@ -128,9 +131,44 @@ def _model_predictor(
         with torch.inference_mode():
             logits = model(tensor)
             probability = torch.sigmoid(logits).squeeze().float().cpu().numpy()
-        return probability[: image.shape[0], : image.shape[1]]
+        return _crop_transformed_probability(
+            probability,
+            transformed_label=augmented["mask"],
+            original_label=label,
+        )
 
     return predict
+
+
+def _crop_transformed_probability(
+    probability: np.ndarray,
+    *,
+    transformed_label: np.ndarray | torch.Tensor,
+    original_label: np.ndarray,
+) -> np.ndarray:
+    """Undo the recorded centered test padding and prove label alignment."""
+    transformed = np.asarray(
+        transformed_label.detach().cpu()
+        if isinstance(transformed_label, torch.Tensor)
+        else transformed_label
+    )
+    if probability.ndim != 2 or transformed.ndim != 2 or original_label.ndim != 2:
+        raise EvaluatorError("Prediction and labels must be two-dimensional")
+    if probability.shape != transformed.shape:
+        raise EvaluatorError("Prediction and transformed label shapes differ")
+    height, width = original_label.shape
+    transformed_height, transformed_width = transformed.shape
+    if transformed_height < height or transformed_width < width:
+        raise EvaluatorError("Test transform shrank the original chip footprint")
+    row_off = (transformed_height - height) // 2
+    col_off = (transformed_width - width) // 2
+    window = np.s_[row_off : row_off + height, col_off : col_off + width]
+    if not np.array_equal(transformed[window], original_label):
+        raise EvaluatorError(
+            "Test transform does not preserve the original label at the expected "
+            "centered-padding offset"
+        )
+    return probability[window]
 
 
 def _write_rasters(
@@ -187,6 +225,7 @@ def evaluate(
     predictor: Callable[[np.ndarray, np.ndarray], np.ndarray],
     save_rasters: bool,
     resume: bool,
+    evaluation_scope: str = SELECTED_NONOVERLAP_SCOPE,
 ) -> list[dict[str, Any]]:
     """Evaluate all selected test chips. ``predictor`` makes this function testable."""
     if not 0 <= threshold <= 1:
@@ -200,6 +239,11 @@ def evaluate(
             "acquisition_date",
             "experiment_split",
             "selected",
+            *(
+                {"source_temporal_split", "selection_reason"}
+                if evaluation_scope != SELECTED_NONOVERLAP_SCOPE
+                else set()
+            ),
         },
     )
     chips = _read_csv(
@@ -228,11 +272,11 @@ def evaluate(
     if len(chip_by_id) != len(chips):
         raise EvaluatorError("Canonical chip manifest contains duplicate chip IDs")
     metadata = {row["source_tiff_id"]: row for row in metadata_rows}
-    selected = [
-        row
-        for row in folds
-        if row["experiment_split"] == "test" and row["selected"].lower() == "true"
-    ]
+    selected = select_evaluation_rows(
+        folds,
+        scope=evaluation_scope,
+        held_out_region=run_identity.get("held_out_region"),
+    )
     if not selected:
         raise EvaluatorError("Fold manifest has no selected test chips")
     groups: dict[str, list[dict[str, str]]] = defaultdict(list)
@@ -242,7 +286,8 @@ def evaluate(
             raise EvaluatorError(f"Fold chip identity failed for {fold['chip_id']}")
         groups[fold["source_tiff_id"]].append(fold)
     identity = {
-        "schema_version": EVALUATION_SCHEMA_VERSION,
+        "schema_version": evaluation_schema_version(evaluation_scope),
+        "evaluation_scope": evaluation_scope,
         "threshold": threshold,
         **run_identity,
     }
@@ -301,6 +346,7 @@ def evaluate(
                     "chip_id": chip["chip_id"],
                     "source_tiff_id": source,
                     "diagnostic_only_non_additive": True,
+                    "evaluation_scope": evaluation_scope,
                     **run_identity,
                     **binary_metrics(
                         label, (probability >= threshold).astype(np.uint8), covered
@@ -312,6 +358,7 @@ def evaluate(
             "source_tiff_id": source,
             "region_id": rows[0]["region_id"],
             "acquisition_date": rows[0]["acquisition_date"],
+            "evaluation_scope": evaluation_scope,
             **run_identity,
             **binary_metrics(accumulator.label, mask, covered),
         }
@@ -350,6 +397,7 @@ def evaluate(
         regions.append(
             {
                 "region_id": region,
+                "evaluation_scope": evaluation_scope,
                 **run_identity,
                 **sum_confusion(grouped),
                 "source_tiff_count": len(grouped),
@@ -363,6 +411,12 @@ def evaluate(
             **sum_confusion(result),
             "test_tiff_count": len(result),
             "test_chip_count": len(selected),
+            "selected_nonoverlap_chip_count": sum(
+                row["selected"].lower() == "true" for row in selected
+            ),
+            "overlap_chip_count": sum(
+                row["selected"].lower() == "false" for row in selected
+            ),
         },
     )
     return result
@@ -380,14 +434,22 @@ def log_wandb_artifact(
         entity="kdorman90-ucla",
         project="kelpseg",
         group=identity["experiment_version"],
-        name=f"{identity['run_key']}-prediction",
+        name=(
+            f"{identity['run_key']}-prediction"
+            if identity.get("evaluation_scope") in {None, SELECTED_NONOVERLAP_SCOPE}
+            else f"{identity['run_key']}-prediction-all-retained-v2"
+        ),
         job_type="prediction",
         tags=[identity["experiment_version"], "prediction", identity["fold_id"]],
         config=identity,
         mode=mode,
     )
     artifact = wandb.Artifact(
-        name=f"{identity['run_key']}-prediction-results",
+        name=(
+            f"{identity['run_key']}-prediction-results"
+            if identity.get("evaluation_scope") in {None, SELECTED_NONOVERLAP_SCOPE}
+            else f"{identity['run_key']}-prediction-all-retained-v2-results"
+        ),
         type="planet8b-prediction-results",
         metadata=identity,
     )
@@ -420,6 +482,11 @@ def main() -> int:
     parser.add_argument("--model-config", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--threshold", type=float, required=True)
+    parser.add_argument(
+        "--evaluation-scope",
+        choices=EVALUATION_SCOPES,
+        default=SELECTED_NONOVERLAP_SCOPE,
+    )
     parser.add_argument("--save-rasters", action="store_true", default=True)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
@@ -465,10 +532,14 @@ def main() -> int:
         predictor=predictor,
         save_rasters=args.save_rasters,
         resume=args.resume,
+        evaluation_scope=args.evaluation_scope,
         run_identity=identity,
     )
+    artifact_identity = json.loads(
+        (args.output_root / "evaluation_metadata.json").read_text()
+    )
     prediction_wandb_run_id = log_wandb_artifact(
-        args.output_root, identity, args.wandb_mode
+        args.output_root, artifact_identity, args.wandb_mode
     )
     if prediction_wandb_run_id:
         metadata_path = args.output_root / "evaluation_metadata.json"

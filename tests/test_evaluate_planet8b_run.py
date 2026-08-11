@@ -6,14 +6,164 @@ import numpy as np
 import pytest
 import rasterio
 
-from scripts.evaluate_planet8b_run import evaluate
+from scripts.evaluate_planet8b_run import (
+    EvaluatorError,
+    _crop_transformed_probability,
+    evaluate,
+)
 from src.evaluation.planet8b import (
+    ALL_RETAINED_TEST_SCOPE,
     IGNORE_INDEX,
     EvaluationError,
     SourceAccumulator,
     binary_metrics,
+    select_evaluation_rows,
     sum_confusion,
 )
+
+
+def _fold_row(
+    chip_id: str,
+    *,
+    region: str,
+    temporal_split: str,
+    experiment_split: str,
+    selected: str,
+    reason: str,
+) -> dict[str, str]:
+    return {
+        "chip_id": chip_id,
+        "source_tiff_id": "source",
+        "region_id": region,
+        "source_temporal_split": temporal_split,
+        "experiment_split": experiment_split,
+        "selected": selected,
+        "selection_reason": reason,
+    }
+
+
+def test_all_retained_scope_selects_permitted_overlap_rows() -> None:
+    baseline = [
+        _fold_row(
+            "selected",
+            region="r1",
+            temporal_split="TEST",
+            experiment_split="test",
+            selected="true",
+            reason="selected",
+        ),
+        _fold_row(
+            "overlap",
+            region="r1",
+            temporal_split="TEST",
+            experiment_split="",
+            selected="false",
+            reason="test_overlap_exclusion",
+        ),
+        _fold_row(
+            "train",
+            region="r1",
+            temporal_split="TRAIN",
+            experiment_split="train",
+            selected="true",
+            reason="selected",
+        ),
+    ]
+    selected = select_evaluation_rows(
+        baseline, scope=ALL_RETAINED_TEST_SCOPE, held_out_region=None
+    )
+    assert [row["chip_id"] for row in selected] == ["selected", "overlap"]
+
+    loro = [
+        _fold_row(
+            "heldout",
+            region="r1",
+            temporal_split="TRAIN",
+            experiment_split="test",
+            selected="true",
+            reason="held_out_region_test",
+        ),
+        _fold_row(
+            "heldout_overlap",
+            region="r1",
+            temporal_split="VAL",
+            experiment_split="",
+            selected="false",
+            reason="held_out_region_overlap_exclusion",
+        ),
+        _fold_row(
+            "other_region",
+            region="r2",
+            temporal_split="TEST",
+            experiment_split="",
+            selected="false",
+            reason="unused_temporal_test",
+        ),
+    ]
+    selected = select_evaluation_rows(
+        loro, scope=ALL_RETAINED_TEST_SCOPE, held_out_region="r1"
+    )
+    assert [row["chip_id"] for row in selected] == ["heldout", "heldout_overlap"]
+
+
+def test_all_retained_scope_rejects_unknown_candidate_reason() -> None:
+    row = _fold_row(
+        "bad",
+        region="r1",
+        temporal_split="TEST",
+        experiment_split="",
+        selected="false",
+        reason="unexpected",
+    )
+    with pytest.raises(EvaluationError, match="Unexpected fold row"):
+        select_evaluation_rows(
+            [row], scope=ALL_RETAINED_TEST_SCOPE, held_out_region=None
+        )
+
+
+@pytest.mark.parametrize(
+    ("shape", "padded_shape", "expected_offset"),
+    [
+        ((674, 1024), (1024, 1024), (175, 0)),
+        ((1016, 725), (1024, 1024), (4, 149)),
+        ((1024, 1024), (1024, 1024), (0, 0)),
+    ],
+)
+def test_center_padded_probability_is_cropped_to_original_label(
+    shape: tuple[int, int],
+    padded_shape: tuple[int, int],
+    expected_offset: tuple[int, int],
+) -> None:
+    label = np.arange(np.prod(shape), dtype=np.int32).reshape(shape)
+    transformed = np.full(padded_shape, IGNORE_INDEX, dtype=np.int32)
+    row_off, col_off = expected_offset
+    transformed[row_off : row_off + shape[0], col_off : col_off + shape[1]] = label
+    probability = np.arange(np.prod(padded_shape), dtype=np.float32).reshape(
+        padded_shape
+    )
+
+    cropped = _crop_transformed_probability(
+        probability,
+        transformed_label=transformed,
+        original_label=label,
+    )
+
+    np.testing.assert_array_equal(
+        cropped,
+        probability[row_off : row_off + shape[0], col_off : col_off + shape[1]],
+    )
+
+
+def test_center_padded_probability_rejects_unproven_alignment() -> None:
+    label = np.ones((4, 3), dtype=np.int16)
+    transformed = np.full((6, 7), IGNORE_INDEX, dtype=np.int16)
+    transformed[0:4, 0:3] = label
+    with pytest.raises(EvaluatorError, match="does not preserve"):
+        _crop_transformed_probability(
+            np.zeros((6, 7), dtype=np.float32),
+            transformed_label=transformed,
+            original_label=label,
+        )
 
 
 def test_overlap_averages_before_threshold_and_scores_unique_pixels() -> None:

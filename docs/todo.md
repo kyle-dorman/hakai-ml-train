@@ -57,20 +57,28 @@ thresholds once at 0.5, and retains tiled/compressed float32 probability plus
 uint8 mask GeoTIFFs under `/home/sky/experiments/planet8b-loro-v3/predictions`.
 The measured full-suite estimate is 6.03 GiB (15.28 GiB uncompressed), within
 the 683 GiB available on the experiment volume. Task 019 completed every v3
-prediction package and its suite inventory; Task 020 is now current.
+prediction package and its suite inventory. Task 020 completed the audited
+matching-TIFF comparison: 53 of 54 temporal-test TIFFs pair one-to-one, the one
+source absent from both prediction packages is explicit, full-region LORO
+results remain separate, and the versioned external report is logged to W&B.
+Task 022 expanded inference to every retained post-nodata test chip, but its
+follow-up audit found that centered padding for undersized chips was cropped
+from the top-left. Task 023 corrected and fail-closed that alignment, reran all
+13 packages under schema 3, verified exact v1→v2 membership and coverage, and
+published the corrected 54-of-54 report. Task 022 v1 and earlier affected
+prediction/report artifacts remain audit evidence but are invalid for
+scientific use.
 
 Current active task:
 
 ```text
-Task 020: Compare accuracy on matching source TIFFs.
-tasks/020_compare_matching_tiffs.md
+None. The numbered queue is closed.
 ```
 
 Next task:
 
 ```text
-Task 020: Compare accuracy on matching source TIFFs.
-tasks/020_compare_matching_tiffs.md
+User-selected follow-up, scoped as a new numbered task before implementation.
 ```
 
 Task 002 created the 26 GB canonical raw merge at
@@ -176,7 +184,9 @@ Remote experiment preparation and execution:
   with validation-selected best checkpoints and local recovery checkpoints.
 - Task 018: complete; baseline output validates the overlap-aware evaluator.
 - Task 019: complete; 13 verified v3 prediction packages and suite inventory.
-- Task 020: current; compare accuracy on matching source TIFFs.
+- Task 020: complete; audited matching-TIFF and full-region LORO comparison.
+- Task 022: complete; all-retained-chip overlap-stitched prediction and comparison.
+- Task 023: complete; corrected center-padding alignment and republished predictions/report.
 
 See `tasks/README.md` for status and direct task links. Detailed acceptance and
 outcomes belong in the task files, not here.

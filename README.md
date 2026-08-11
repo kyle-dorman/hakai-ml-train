@@ -42,8 +42,10 @@ completed the 13-entry tiered EMA smoke suite. Task 015 then completed and
 verified the 100-epoch production temporal baseline. Task 016 closed the partial
 v1 suite and prepared the clean v2 identity. Task 017 then completed the clean
 70-epoch v3 temporal baseline and all 12 LORO folds with a `3e-5` LR floor.
-Task 018 now owns the overlap-aware prediction evaluator. See `docs/todo.md` and
-`tasks/README.md`.
+Tasks 018–020 established the overlap-aware evaluator and initial comparison;
+Task 022 expanded it to all retained test chips. Task 023 corrected centered
+padding alignment for undersized chips and republished the 54-of-54 comparison
+under clean v2 artifact identities. See `docs/todo.md` and `tasks/README.md`.
 
 ## Documentation
 

@@ -59,7 +59,14 @@ per-epoch-current and final-best test metrics, and validated the clean
 `planet8b-loro-v3` suite: its 70-epoch temporal baseline and all 12 LORO folds
 use a `3e-5` minimum LR and validation-only checkpoint selection. Task 018
 completed the overlap-aware evaluator and baseline prediction package. Task 019
-is current and will run the remaining v3 prediction suite.
+completed all 13 verified prediction packages. Task 020 completed the audited
+matching-TIFF comparison, separate full-region LORO summaries, figures, and
+external report. Task 022 expanded prediction to every retained test chip, but
+its follow-up audit found a center-padding crop misalignment for undersized
+chips. Task 023 corrected the evaluator, reran all 13 packages under schema 3,
+verified exact scope/coverage identity, and published the corrected 54-of-54
+report. Earlier affected prediction/report artifacts are audit evidence only.
+The numbered queue is closed.
 The complete ordered queue is in `docs/todo.md`; detailed contracts are in
 `tasks/`.
 

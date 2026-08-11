@@ -202,6 +202,19 @@ Not tracked:
 8. Comparison artifacts: matched-TIFF tables, region summaries, and final plots
    or reports.
 
+The primary corrected v3 post-training prediction packages are rooted at
+`/home/sky/experiments/planet8b-loro-v3/predictions_all_retained_v2`; their
+verified inventory records the `all_retained_test_chips` scope, selected and
+overlap chip counts, checkpoint/fold hashes, coverage, and distinct W&B run
+IDs. The primary comparison is
+`/home/sky/experiments/planet8b-loro-v3/comparisons/matched_tiffs_all_retained_v2`.
+Task 022's `predictions_all_retained_v1` and
+`comparisons/matched_tiffs_all_retained_v1` roots are preserved but invalid for
+scientific use because undersized center-padded chips were spatially
+mis-cropped. The still-earlier `predictions` and `comparisons/matched_tiffs_v1`
+roots are historical non-overlapping-input evidence and share that padding bug
+for undersized chips. None is an alias for the primary result.
+
 ## Provenance requirements
 
 Nontrivial artifact-producing steps should record:

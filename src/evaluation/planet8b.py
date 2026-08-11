@@ -9,10 +9,66 @@ import numpy as np
 
 IGNORE_INDEX = -100
 EVALUATION_SCHEMA_VERSION = 1
+ALL_RETAINED_EVALUATION_SCHEMA_VERSION = 3
+SELECTED_NONOVERLAP_SCOPE = "selected_nonoverlap"
+ALL_RETAINED_TEST_SCOPE = "all_retained_test_chips"
+EVALUATION_SCOPES = (SELECTED_NONOVERLAP_SCOPE, ALL_RETAINED_TEST_SCOPE)
 
 
 class EvaluationError(ValueError):
     """Raised when prediction or source-grid identity is invalid."""
+
+
+def evaluation_schema_version(scope: str) -> int:
+    """Return the durable schema version for one explicit evaluation scope."""
+    if scope == SELECTED_NONOVERLAP_SCOPE:
+        return EVALUATION_SCHEMA_VERSION
+    if scope == ALL_RETAINED_TEST_SCOPE:
+        return ALL_RETAINED_EVALUATION_SCHEMA_VERSION
+    raise EvaluationError(f"Unknown evaluation scope: {scope}")
+
+
+def select_evaluation_rows(
+    rows: list[dict[str, str]],
+    *,
+    scope: str,
+    held_out_region: str | None,
+) -> list[dict[str, str]]:
+    """Select fold rows for a strict, identity-bearing evaluation scope."""
+    evaluation_schema_version(scope)
+    if scope == SELECTED_NONOVERLAP_SCOPE:
+        return [
+            row
+            for row in rows
+            if row["experiment_split"] == "test" and row["selected"].lower() == "true"
+        ]
+
+    selected: list[dict[str, str]] = []
+    if held_out_region is None:
+        candidates = [row for row in rows if row["source_temporal_split"] == "TEST"]
+        allowed = {
+            ("test", "true", "selected"),
+            ("", "false", "test_overlap_exclusion"),
+        }
+    else:
+        candidates = [row for row in rows if row["region_id"] == held_out_region]
+        allowed = {
+            ("test", "true", "held_out_region_test"),
+            ("", "false", "held_out_region_overlap_exclusion"),
+        }
+    for row in candidates:
+        identity = (
+            row["experiment_split"],
+            row["selected"].lower(),
+            row["selection_reason"],
+        )
+        if identity not in allowed:
+            raise EvaluationError(
+                "Unexpected fold row in all-retained test scope: "
+                f"chip_id={row['chip_id']} identity={identity}"
+            )
+        selected.append(row)
+    return selected
 
 
 @dataclass

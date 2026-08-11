@@ -37,9 +37,13 @@ preprocessing contract.
 - Baseline source TIFFs are split chronologically within each region.
 - Acquisition-date groups remain intact.
 - Chips inherit their source TIFF's baseline split.
-- LORO test sets contain every retained chip on the approved non-overlapping
-  evaluation grid in the held-out region; other held-out-region canonical chips
-  remain explicit overlap exclusions in the fold manifest.
+- Materialized validation/test loaders use the approved non-overlapping grid;
+  the fold manifest keeps the other retained canonical chips as explicit
+  overlap exclusions.
+- Primary post-training evaluation admits every retained post-nodata chip in
+  the relevant test source scope, including those overlap exclusions, and
+  averages overlapping probabilities on the original source grid before
+  thresholding once.
 - Nodata policy is selected and applied before any experimental split.
 - Background-only removal may affect training selection, not canonical or
   evaluation data.

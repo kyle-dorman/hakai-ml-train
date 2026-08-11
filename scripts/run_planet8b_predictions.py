@@ -15,6 +15,12 @@ from typing import Any
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from src.evaluation.planet8b import (
+    EVALUATION_SCOPES,
+    SELECTED_NONOVERLAP_SCOPE,
+    evaluation_schema_version,
+    select_evaluation_rows,
+)
 from src.run_context import sha256_file
 
 REGIONS = ["bc", *(f"ca_{number:03d}" for number in range(1, 12))]
@@ -31,9 +37,12 @@ INVENTORY_FIELDS = [
     "prediction_wandb_run_id",
     "checkpoint_sha256",
     "fold_manifest_sha256",
+    "evaluation_scope",
     "status",
     "test_tiff_count",
     "test_chip_count",
+    "selected_nonoverlap_chip_count",
+    "overlap_chip_count",
     "scored_pixel_count",
     "uncovered_pixel_count",
     "output_path",
@@ -55,14 +64,24 @@ def _latest_states(registry: Path, version: str) -> dict[str, dict[str, Any]]:
     return states
 
 
-def _test_scope(fold_manifest: Path) -> tuple[int, int]:
+def _test_scope(
+    fold_manifest: Path,
+    *,
+    evaluation_scope: str = SELECTED_NONOVERLAP_SCOPE,
+    held_out_region: str | None = None,
+) -> tuple[int, int, int, int]:
     with fold_manifest.open(newline="", encoding="utf-8") as handle:
-        rows = [
-            row
-            for row in csv.DictReader(handle)
-            if row["experiment_split"] == "test" and row["selected"].lower() == "true"
-        ]
-    return len(rows), len({row["source_tiff_id"] for row in rows})
+        rows = select_evaluation_rows(
+            list(csv.DictReader(handle)),
+            scope=evaluation_scope,
+            held_out_region=held_out_region,
+        )
+    return (
+        len(rows),
+        len({row["source_tiff_id"] for row in rows}),
+        sum(row["selected"].lower() == "true" for row in rows),
+        sum(row["selected"].lower() == "false" for row in rows),
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -80,6 +99,9 @@ def _verified_summary(
     event: dict[str, Any],
     expected_chips: int,
     expected_tiffs: int,
+    selected_nonoverlap_chips: int,
+    overlap_chips: int,
+    evaluation_scope: str,
 ) -> dict[str, Any] | None:
     """Return a compatible completed summary, otherwise ``None``.
 
@@ -95,6 +117,7 @@ def _verified_summary(
     summary = _read_json(summary_path)
     if (
         metadata.get("checkpoint_sha256") != event["checkpoint_sha256"]
+        or metadata.get("schema_version") != evaluation_schema_version(evaluation_scope)
         or metadata.get("fold_manifest_sha256") != event["fold_manifest_sha256"]
         or metadata.get("threshold") != 0.5
         or summary.get("checkpoint_sha256") != event["checkpoint_sha256"]
@@ -102,6 +125,19 @@ def _verified_summary(
         or summary.get("threshold") != 0.5
         or summary.get("test_chip_count") != expected_chips
         or summary.get("test_tiff_count") != expected_tiffs
+        or metadata.get("evaluation_scope", SELECTED_NONOVERLAP_SCOPE)
+        != evaluation_scope
+        or summary.get("evaluation_scope", SELECTED_NONOVERLAP_SCOPE)
+        != evaluation_scope
+        or (
+            evaluation_scope != SELECTED_NONOVERLAP_SCOPE
+            and summary.get("selected_nonoverlap_chip_count")
+            != selected_nonoverlap_chips
+        )
+        or (
+            evaluation_scope != SELECTED_NONOVERLAP_SCOPE
+            and summary.get("overlap_chip_count") != overlap_chips
+        )
     ):
         return None
     source_root = destination / "source_predictions"
@@ -139,7 +175,11 @@ def _atomic_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def build_plan(
-    registry: Path, output_root: Path, *, version: str
+    registry: Path,
+    output_root: Path,
+    *,
+    version: str,
+    evaluation_scope: str = SELECTED_NONOVERLAP_SCOPE,
 ) -> list[dict[str, Any]]:
     """Build the only approved baseline-plus-region order from completed runs."""
     states = _latest_states(registry, version)
@@ -161,9 +201,21 @@ def build_plan(
             raise PredictionRunnerError(f"Checkpoint identity failed: {run_key}")
         if not fold.is_file() or sha256_file(fold) != event.get("fold_manifest_sha256"):
             raise PredictionRunnerError(f"Fold identity failed: {run_key}")
-        chips, tiffs = _test_scope(fold)
+        chips, tiffs, selected_chips, overlap_chips = _test_scope(
+            fold,
+            evaluation_scope=evaluation_scope,
+            held_out_region=event.get("held_out_region"),
+        )
         destination = output_root / run_key
-        summary = _verified_summary(destination, event, chips, tiffs)
+        summary = _verified_summary(
+            destination,
+            event,
+            chips,
+            tiffs,
+            selected_chips,
+            overlap_chips,
+            evaluation_scope,
+        )
         plan.append(
             {
                 "run_key": run_key,
@@ -174,9 +226,12 @@ def build_plan(
                 "checkpoint_sha256": event["checkpoint_sha256"],
                 "fold_manifest": str(fold),
                 "fold_manifest_sha256": event["fold_manifest_sha256"],
+                "evaluation_scope": evaluation_scope,
                 "output_path": str(destination),
                 "test_chip_count": chips,
                 "test_tiff_count": tiffs,
+                "selected_nonoverlap_chip_count": selected_chips,
+                "overlap_chip_count": overlap_chips,
                 "status": "verified" if summary else "pending",
                 "prediction_wandb_run_id": (
                     summary.get("prediction_wandb_run_id") if summary else None
@@ -222,6 +277,8 @@ def evaluation_command(entry: dict[str, Any], *, args: argparse.Namespace) -> li
         entry["output_path"],
         "--threshold",
         "0.5",
+        "--evaluation-scope",
+        args.evaluation_scope,
         "--resume",
         "--wandb-mode",
         args.wandb_mode,
@@ -253,9 +310,19 @@ def main() -> int:
         "--wandb-mode", choices=("online", "offline", "disabled"), default="online"
     )
     parser.add_argument("--device", default="cuda")
+    parser.add_argument(
+        "--evaluation-scope",
+        choices=EVALUATION_SCOPES,
+        default=SELECTED_NONOVERLAP_SCOPE,
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
-    plan = build_plan(args.registry, args.output_root, version="planet8b-loro-v3")
+    plan = build_plan(
+        args.registry,
+        args.output_root,
+        version="planet8b-loro-v3",
+        evaluation_scope=args.evaluation_scope,
+    )
     print(json.dumps(plan, indent=2, sort_keys=True))
     if args.dry_run:
         return 0
@@ -274,7 +341,10 @@ def main() -> int:
             write_inventory(args.output_root, plan)
             return result.returncode
         refreshed = build_plan(
-            args.registry, args.output_root, version="planet8b-loro-v3"
+            args.registry,
+            args.output_root,
+            version="planet8b-loro-v3",
+            evaluation_scope=args.evaluation_scope,
         )
         entry.update(
             next(row for row in refreshed if row["run_key"] == entry["run_key"])
