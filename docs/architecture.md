@@ -1,162 +1,115 @@
 # Architecture contract
 
-For navigation, start with `docs/index.md`. Read this file when changing data
-flow, manifest schemas, preprocessing, split materialization, training,
-prediction, or metric aggregation.
+## Current implementation and replacement target
 
-## Active workflow
+The checkout still contains the legacy `src.*` modules, root `trainer.py`,
+`scripts/`, numerous unrelated configs, and focused tests. The current legacy
+recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
 
-```text
-California images/labels + BC 10-km tile images/labels
-  -> independent image copies + exact-grid derived labels
-  -> source-aware image nodata and KATE class 3 repair
-  -> raster manifest
-  -> overlapping NPZ chips under `all/`
-  -> chip manifest with dimensions, class counts, and nodata counts
-  -> universal nodata filtering
-  -> training-only background selection manifest
-  -> portable canonical archive
-  -> hard-linked baseline and LORO dataset views
-  -> Lightning training and W&B run records
-  -> chip predictions and additive confusion counts
-  -> source-TIFF, region, and test-set summaries
-```
-
-Each stage must be restartable and leave enough manifest evidence to validate
-the next stage without inferring identity from folder order.
-
-## Active components
-
-- `scripts/create_temporal_baseline_split.py`: deterministic baseline raster
-  assignment.
-- `src/prepare/make_chip_dataset.py`: restartable GeoTIFF-to-NPZ chip creation
-  with portable source-window identity, effective source nodata metadata, and
-  canonical chip statistics.
-- `scripts/repair_planet8b_nodata_metadata.py`: report-only and transactional
-  scoped repair for derived labels, source fragments, corrected statistics,
-  dependent membership, and audit evidence.
-- `src/prepare/remove_tiles_with_nodata_areas.py`: manifest-driven nodata
-  selection with a required percentage threshold, report-only dry runs, and a
-  quarantined transactional apply path that preserves filter history. Task 006
-  selected the universal 50% threshold, and Task 007 applied it.
-- `src/prepare/remove_bg_only_tiles.py`: manifest-only background classifier and
-  deterministic training selector. It writes one selection row per canonical
-  chip plus global, region, and source-TIFF audit summaries; it never opens or
-  deletes NPZ files.
-- `src/data.py`: NPZ-backed Lightning data module.
-- `src/models/smp.py`: binary segmentation Lightning module.
-- `trainer.py`: Lightning CLI entry point.
-- `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`: dedicated current
-  SegFormer B3 comparison-suite recipe.
-- `configs/kelp-ps8b/generalization/experiment_matrix_v3.yaml`: active clean
-  restart identity for the baseline and 12 LORO runs.
-- `scripts/run_planet8b_experiments.py`: validates the experiment matrix and
-  resolves fold paths, run context, production budgets, and tiered smoke limits.
-
-## Identity contracts
-
-The stable hierarchy is:
+The intended replacement is one installable `src/kelpseg/` package, using uv and
+`uv_build`, with a short CLI and explicit recipes. It has no `scripts/`
+directory, plugin framework, generic model zoo, or manual per-fold config copies.
+Task contracts introduce commands as they are implemented; this design is not
+an assertion that they already work.
 
 ```text
-dataset -> region_id -> source_tiff_id -> chip_id
+immutable original imagery/labels
+  -> documented, versioned cleaning and source manifest
+  -> one canonical chip collection and chip statistics
+  -> external temporal/LORO assignments and training eligibility
+  -> explicit band selection and training recipe
+  -> checkpoint
+  -> image-only tiled prediction and georeferenced reconstruction
+  -> optional label scoring, comparisons, and visual review
 ```
 
-- `region_id` is the unique geographic fold key.
-- `source_tiff_id` is the default cross-run comparison key.
-- `chip_id` is unique and maps to exactly one source TIFF.
-- Source TIFF stems must be unique across the canonical merged dataset.
-- A chip may appear in multiple hard-linked experiment views, but its canonical
-  identity and content do not change.
+Prefer small functions with explicit inputs/outputs. Keep expensive stages
+restartable; check existing input/output identities before resuming. Publish
+complete deterministic manifests atomically and refuse silent overwrites.
 
-Do not derive region or source membership from mutable split directories when a
-manifest field exists.
+## Researcher interface
 
-## Manifest contracts
+Use short recipes with ordinary values for bands, learning rate, augmentations,
+dataset, and checkpoint. Keep machine-specific paths in one place; changing
+datasets or machines must not require source edits. Avoid Python class paths
+and config inheritance chains in the researcher interface.
 
-The raster manifest owns source/merged paths, dataset, region, acquisition date,
-image/label pairing, image copy mode, and label-preparation mode. Label
-alignment provenance owns source/output grids and class-3 assignment counts;
-copy provenance owns source/output image checksums and inode independence.
-Portable raster metadata owns source grid shape, CRS, affine transform, and
-bounds after raw TIFFs are left out of the remote archive.
-The chip manifest owns chip path, source TIFF, effective source nodata value,
-region, date, source-window
-offsets/bounds, width, height, class pixel counts, ignore count, nodata count,
-and nodata percentage. The training-selection manifest owns derived class
-presence, the explicit background policy, and training eligibility. Fold
-manifests own experiment split and the reason each chip was selected.
+Use one documented run-folder convention for resolved settings, checkpoints,
+metrics, and figures. Before expensive work, show resolved input/output paths,
+band order, and relevant dataset counts. Reject unknown settings and explain
+how to fix invalid inputs; keep technical context in logs.
 
-Manifest writes should be deterministic and atomic. Filtering must preserve a
-separate removal or exclusion report rather than erasing provenance.
+At task completion, check that routine changes use documented settings, the
+implementation is traceable through straightforward functions, and obsolete
+options/imports/dependencies are removed as replacements land.
 
-## Split materialization
+## Identity and preparation
 
-The baseline joins chips to `planet8b_temporal_image_splits.csv` through source
-TIFF ID. LORO views use region ID. Hard links avoid duplicating canonical chip
-content. Both materializers join the Task 008 selection one-to-one by `chip_id`
-and require `selected_for_training = true` only for training rows. Baseline
-validation/test rows and LORO validation/test rows bypass that selector and
-remain representative of the canonical post-nodata collection.
+Preserve dataset/release, region ID, source TIFF ID, acquisition date, chip ID,
+source window, shape, CRS/transform, band names/order, dtype, label mapping, and
+nodata interpretation. Paths in portable manifests resolve from an explicit
+dataset root. Do not derive identity from mutable directories or list order.
 
-The canonical chip grid uses 1024-pixel windows at 512-pixel stride, anchored
-at the source raster's top-left pixel. A source dimension below 1024 pixels is
-represented by one true-size window spanning that dimension; canonical NPZs
-are not padded, and their manifest width, height, and bounds describe only real
-source pixels. Dimensions at least 1024 pixels retain full windows only, so
-trailing edge strips outside the regular grid remain uncovered. Training views
-retain all eligible overlapping chips. Validation and test views select the
-non-overlapping subset where both pixel offsets are multiples of 1024;
-these folders are the bounded training-time validation/test loader inputs, not
-the complete primary post-training inference scope. Primary prediction resolves
-the selected test rows plus the corresponding manifest-recorded overlap
-exclusions directly from the canonical post-nodata collection. This is a
-manifest selection from one canonical chip family, not a second evaluation
-artifact. Evaluation coverage must be reported. Any later transform that pads
-a small canonical chip must fill its mask with the `-100` ignore index, not
-class-0 background. Prediction must also invert that transform's spatial
-placement before reconstructing the source grid. For the recorded centered
-`PadIfNeeded` transform, crop probabilities by the centered row/column offsets
-and require the transformed-label interior to equal the original chip label;
-top-left cropping is invalid for undersized chips.
+Raw imagery and labels are immutable. Inventory originals and explain existing
+repairs before implementing a new cleaning release. Historical CA/BC cleanup
+included grid alignment, source-aware image nodata, and label repairs; those
+rules require provenance, fixtures, and real examples rather than blind reuse.
 
-The approved and materialized LORO policy is:
+A channel count is insufficient to specify a product. Select bands by explicit
+validated names/indices; RGB and RGB+NIR are not the first three/four PS8B bands.
+Record normalization and initialization appropriate to each band recipe.
 
-- test: the retained non-overlapping-grid chips from the held-out region;
-- train: baseline-TRAIN chips from other regions, with the selected
-  background-only training policy;
-- validation: baseline-VAL chips from other regions;
-- non-held-out baseline-TEST chips: unused in that LORO fold.
+Keep canonical background chips. Express nodata and training eligibility in
+metadata, retaining excluded identities/reasons; avoid destructive filtering
+machinery where an explicit manifest selection suffices. The historical
+1024/512 geometry, 50% nodata cutoff, and positive-only training selection are
+reference policies to re-examine during the data audit, not unexplained new
+defaults. Use ignore index `-100` for unscored labels and padding.
 
-The 12 hard-linked folds are rooted at
-`/home/sky/data/planet8b_all_regions_1024_512_v2/views/loro_v1`. `ca_005` and
-`ca_006` remain separate folds keyed by canonical region ID despite sharing a
-descriptive name.
+## Splits and loading
 
-Any change to that policy must be recorded in the relevant task before runs are
-launched.
+Store generated split assignments with the external dataset release. Keep split
+algorithms/configs in Git. Load one canonical collection through manifests;
+remove the requirement for hard-linked train/validation/test directory trees.
 
-## Training and evaluation
+Chips inherit source-level assignments, and acquisition-date groups remain
+intact in the temporal baseline. Match source assignments across spectral
+variants. LORO test is the complete held-out region; train/validation exclude
+that region. Document the remaining regions' train/validation selection when
+the replacement split task is selected. Training background exclusions never
+silently constrain evaluation. Validate all joins and leakage boundaries.
 
-The comparison suite should use one selected model config, seed policy, and
-training budget. Dataset and W&B context should be injected by the runner rather
-than maintained through 13 manually edited YAML copies.
+## Prediction and scoring
 
-Prediction must save chip diagnostics plus source-window identity. Primary
-post-training test evaluation uses every retained post-nodata chip in the
-relevant test source scope, including rows recorded as overlap exclusions in
-the materialized fold. It averages foreground probabilities per covered source
-pixel, thresholds the reconstructed source probability once, and then
-calculates TIFF confusion counts. Region and test-set metrics sum these
-unique-pixel TIFF counts. Do not sum overlapping chip confusion counts into
-TIFF metrics. Ignore-index and uncovered pixels do not contribute, and coverage
-must be reported. The materialized non-overlapping validation/test loaders
-remain the training-time diagnostic scope. Because the canonical grid contains
-no dynamically edge-anchored windows, trailing source strips outside that grid
-remain uncovered even in the all-retained evaluation.
+Share one image/window predictor between unlabeled inference and labeled
+evaluation. Labels are optional for scoring and must not be required to infer
+padding offsets or spatial alignment. Record padding placement explicitly and
+invert it before placing predictions on the source grid.
 
-## Compatibility boundary
+For overlap, average foreground probabilities at each covered source pixel,
+threshold once, and compute TIFF confusion counts. Sum those counts for region
+and dataset metrics. Ignore-index and uncovered pixels do not contribute.
+Preserve georeferencing and report source coverage, including omitted windows
+or nodata exclusions. Labeled and unlabeled paths must predict identically for
+the same image and recipe.
 
-Legacy configs and source modules may remain importable. They are not active
-documentation or design constraints for this project. Do not preserve a stale
-PS8B behavior if a numbered task deliberately replaces it, but do not perform
-unrelated repository-wide cleanup.
+The old chip grid omits some trailing edge strips and has true-size undersized
+chips. Preserve its behavior for the legacy reference. New unlabeled mapping
+should cover the full intended valid source footprint; specify and test edge
+windows in its own task rather than claiming old artifacts cover every pixel.
+
+## Local verification
+
+Exercise cleaning, chipping, band selection, splitting, loading, a tiny optimizer
+update, validation, checkpoint save/load/resume, prediction, scoring, and transfer
+locally. Keep real bounded examples alongside focused fixtures. Preserve useful
+existing tests for source-aware nodata, split leakage, manifest joins, overlap,
+centered padding, and corruption handling as implementations are replaced.
+CUDA behavior and production resource sizing remain remote-host checks.
+
+Establish automated focused CPU checks with the package task. These use small
+self-contained fixtures without Box/W&B access, a GPU, or large downloads.
+Start the reusable real-data walkthrough only after Box setup and the cleaned
+release are established (Task 031, after Tasks 027 and 030). Extend it through
+each later stage; the final handoff rehearses the complete workflow. Fetch its
+small external subset once, then allow routine checks without online services.

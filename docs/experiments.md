@@ -1,137 +1,83 @@
-# Experiment and W&B contract
+# Experiment and checkpoint contract
 
-For navigation, start with `docs/index.md`. Read this file before changing W&B,
-training orchestration, run naming, checkpoints, prediction artifacts, or
-cross-run comparisons.
+## Tracking and identity
 
-## W&B destination
+Keep W&B at `kdorman90-ucla/kelpseg`. The completed `planet8b-loro-v3` suite and
+all earlier suite identities are historical. New datasets and model recipes
+receive distinct run/group/output identities; do not resume or relabel old
+experiments as part of the rebuild. Keep smoke runs separate from production.
 
-New PlanetScope 8-band baseline and LORO work belongs in:
+Each run records dataset release, split/manifest identity and hashes, band
+names/order, normalization, model and initialization, resolved recipe, seed,
+budget, participating regions, checkpoint selection, Git commit, runtime,
+status, and output paths. Held-out region and adaptation case are explicit
+fields. Do not infer them from a run name.
 
-```text
-entity: kdorman90-ucla
-project: kelpseg
-```
+Local machine-readable records are required even when W&B is offline. Keep the
+implementation small; the legacy registry schema is not a compatibility target.
+Checkpoints, settings, dataset references, and compact results must be recoverable
+outside ephemeral compute, using Box as specified in `data_artifacts.md`.
 
-This is the destination used by the current California SegFormer config and its
-remote smoke config. Other PS8B configs contain historical values; do not treat
-them as the new suite's tracking contract.
+## Initialization, fine tuning, and resume
 
-The active comparison-suite group is `planet8b-loro-v3`. Baseline and LORO
-training runs use `baseline-temporal-v3` and `loro-<region_id>-v3`; the region
-ID is the canonical fold key. Smoke runs use the separate `smoke` group, a
-`smoke` job type/tag, and the corresponding `smoke-` name prefix. The partial
-`planet8b-loro-v1` production suite and interrupted `planet8b-loro-v2`
-baseline, together with their registries and artifacts, remain historical
-evidence and must not be resumed, relabeled, or overwritten.
+Distinguish three operations:
 
-## Run organization
+- Generic pretrained initialization starts a new run with the chosen band's
+  input adaptation and fresh optimizer/scheduler state.
+- Kelp-checkpoint initialization starts a new fine-tuning run from model weights
+  with fresh optimizer/scheduler state; record source checkpoint and any changes.
+- Interrupted-run resume restores model, optimizer, scheduler, progress, and
+  relevant averaging state for the same run and input identity.
 
-Every run should expose these dimensions in W&B and the local experiment
-registry:
+For new regions, identify the four cases in `product.md` separately. Keep fixed
+new/old held-out scopes. Choose combined-data initialization and sampling
+explicitly when that experiment is scoped; do not assume staged continuation.
 
-- run type: baseline training, LORO training, or prediction;
-- held-out region ID, or null for the baseline;
-- dataset/archive version;
-- fold-manifest path, artifact reference, and content hash;
-- model config and git commit;
-- seed and training budget;
-- TIFF and chip counts by split;
-- split date ranges and participating regions;
-- nodata threshold and background-selection policy;
-- W&B run ID, status, best checkpoint, and final metrics.
+Select checkpoints using validation only. Keep a best checkpoint and an exact
+recovery checkpoint as distinct artifacts. Record whether inference uses raw or
+averaged weights; preserve EMA semantics if retained. Test save/load and resume
+locally, including the difference from new fine-tuning initialization.
 
-Names must be predictable and unique. Use region IDs, not potentially duplicated
-region names, in LORO run names.
+## Portable prediction model
 
-The v3 smoke identity is `planet8b-loro-v3-smoke-tiered-ema-v1`. Baseline and
-`loro-bc-v3` use two full epochs so EMA crosses its update gate; the other 11
-LORO folds use one epoch capped at two optimizer updates, two validation
-batches, and two test batches. Smoke limits are runner-owned and never apply to
-the uniform 70-epoch production suite. The completed v1 smoke suite remains
-valid historical gate evidence.
+Tasks 033–034 save a model bundle containing weights, architecture settings,
+band names/order, normalization, and prediction settings including threshold.
+Keep recipe/model identity and averaging semantics explicit. Verify that copying
+the bundle to a fresh directory is enough to predict supplied imagery with the
+installed package, without the old training registry, original config-directory
+paths, or an online tracking service. Exact interrupted-run recovery may use
+its separate checkpoint with optimizer/scheduler/progress state.
 
-`src/run_context.py` owns the required JSON-compatible context. Generate it
-from the dataset and fold files with `scripts/build_planet8b_run_context.py`,
-then pass it to `trainer.py fit --run_context <path>`. The trainer rehashes all
-identity-bearing inputs and injects data paths and W&B fields before Lightning
-instantiates any training objects. Do not derive fold identity from the run
-name or maintain one YAML copy per fold.
+## Legacy gut check
 
-## W&B artifacts
+Task 025 captures a few preselected development chips using the downloaded
+SegFormer B3 checkpoint, saved inputs/labels, original-footprint probabilities,
+masks, and previews. It is a visual gut check, not a full training reproduction
+or a benchmark to tune against. Record device/precision and compare numerically
+only within a documented tolerance; no CUDA-equivalence claim is required.
 
-Attach or log references to:
+The checkpoint contains averaged inference weights under `state_dict` and
+separate ordinary training weights under `current_model_state`; reverify that
+loading contract during capture. Preserve its actual deterministic test
+preprocessing, including eight-band normalization and centered-pad inversion.
 
-- canonical dataset metadata and chip manifest version;
-- baseline or LORO fold manifest;
-- resolved training config;
-- best checkpoint and final run summary;
-- chip- and TIFF-level prediction results;
-- paired matching-TIFF comparison results.
+## Evaluation and comparison
 
-Large canonical chips do not need to be uploaded to W&B merely to make the run
-reproducible; their archive checksum and manifest identity are the contract.
+Use a recorded validation-selected checkpoint and a pre-test threshold. Keep
+chip diagnostics for traceability, but calculate primary metrics from one
+prediction per covered source pixel. Export georeferenced probabilities/masks
+and compact TIFF/region summaries as needed. Record coverage and ignored pixels.
 
-Training runs keep one validation-selected best checkpoint (`save_top_k=1`) and
-a local `last.ckpt` for exact interruption recovery. Only the best checkpoint is
-logged as the W&B model artifact at fit end; `last.ckpt` remains a local recovery
-artifact. Production LORO fits also evaluate the complete held-out test loader
-after every validation epoch and log epoch-level
-`test/current/*_epoch` diagnostics. These curves are observational only:
-`val/iou_epoch` remains the sole checkpoint-selection metric, and held-out test
-trajectories must not change later folds or training policy. The runner still
-performs a final full test from the validation-selected best checkpoint under
-the separate `test/best/*_epoch` namespace before marking a run complete.
-Metadata and best-checkpoint artifacts use the same path in online and offline
-mode; offline run directories remain syncable later. The metadata artifact
-contains the generated context, resolved Lightning config, fold manifest and
-summary, canonical dataset metadata, archive verification receipt, chip
-manifest, and model config. Canonical NPZs are not uploaded.
+Compare baseline and LORO on matching source TIFFs unseen by both models;
+full-region LORO remains a separate summary. Reuse source assignments and
+training policy across spectral comparisons unless the experiment explicitly
+controls a change. No held-out results select preprocessing or model settings.
 
-## Prediction evaluation
+## Local-to-GPU progression
 
-Prediction evaluation uses the training registry's validation-selected best
-checkpoint, averages foreground probabilities at each covered source pixel,
-then thresholds once at the fixed pre-test value `0.5`. It retains tiled/LZW
-float32 probability GeoTIFFs and tiled/LZW uint8 mask GeoTIFFs outside git at
-`/home/sky/experiments/planet8b-loro-v3/predictions_all_retained_v2/<run_key>`.
-The primary `all_retained_test_chips` scope includes selected test rows and
-their corresponding overlap-exclusion rows from the canonical post-nodata
-collection. Evaluation schema 3 records that scope plus corrected centered-pad
-alignment and prevents resume from the invalid schema-2 outputs. A separate
-`prediction` W&B run logs the compact CSV/JSON result
-package and one paired QA raster example; full raster collections remain in
-that external output root. Task 022's `predictions_all_retained_v1` packages are
-preserved but invalid for scientific use because they top-left-cropped centered
-padding. The earlier
-`/home/sky/experiments/planet8b-loro-v3/predictions` packages are preserved as
-historical `selected_nonoverlap` evidence and have the same undersized-chip
-alignment limitation.
-
-## Local experiment registry
-
-W&B is the live review surface, not the only record. Maintain a machine-readable
-local registry so interrupted, failed, offline, and completed runs remain
-resumable. The registry should include planned runs before launch and update
-status atomically.
-
-Do not infer completion only from a checkpoint filename or a W&B page. Verify
-the expected fold, manifest hash, checkpoint, and prediction outputs.
-
-## Comparison contract
-
-- Use the recorded best checkpoint for test prediction.
-- Keep chip-level diagnostics, but do not treat overlapping chip counts as
-  additive TIFF evidence.
-- Default reporting and cross-run joins use source TIFF ID.
-- Reconstruct one prediction per covered source pixel before TIFF metrics.
-- Pooled metrics sum unique-pixel TIFF confusion counts before calculating
-  accuracy, precision, recall, and IoU.
-- Paired baseline/LORO comparison uses matching TIFFs unseen by both runs.
-- Full held-out-region LORO performance is reported separately from the paired
-  baseline comparison.
-- The primary versioned comparison is
-  `/home/sky/experiments/planet8b-loro-v3/comparisons/matched_tiffs_all_retained_v2`;
-  `matched_tiffs_all_retained_v1` is superseded/invalid, and `matched_tiffs_v1`
-  remains historical non-overlapping-input evidence with the same small-chip
-  alignment limitation.
+Use CPU float32 inference and tiny training/validation/checkpoint checks on the
+Mac. Validate all production plans and dataset paths before relocation. A
+fresh-directory small-data walkthrough must exercise Box fetch through the
+working pipeline. Local completion does not establish CUDA compatibility,
+mixed-precision behavior, throughput, or production memory requirements; check
+those on the selected GPU host before full experiments.

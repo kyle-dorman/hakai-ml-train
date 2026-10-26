@@ -1,4 +1,4 @@
-# PlanetScope 8-band regional generalization task queue
+# Task contracts and history
 
 This folder contains one resumable implementation contract per task. Read
 `AGENTS.md`, `docs/index.md`, and `docs/todo.md` first; those files own the
@@ -31,11 +31,28 @@ Each pending task must contain:
 - observable acceptance criteria and non-goals;
 - an outcome template for the closing agent.
 
+Implementation task acceptance must include the relevant cross-task usability
+checks in `docs/todo.md`. Outcomes record how routine use stays simple and which
+obsolete code/options were removed. The deferred tiny walkthrough does not
+postpone focused correctness tests or the Task 025 legacy reference capture.
+
 Do not ask the user to decide later-task details early. When a task reaches a
 blocking choice, present the recorded recommendation and evidence from prior
 tasks, obtain the decision, write it into the task, and then continue.
 
-## Queue
+## Current rebuild
+
+[docs/todo.md](../docs/todo.md) owns the ordered rebuild roadmap. Only the next
+selected slot needs a full contract; do not pre-decide details that depend on
+the original-data audit. Breaking changes and removal of unrelated workflows
+are authorized by Task 024.
+
+| Task | Execution | Status | Outcome / next action |
+|---|---|---|---|
+| [024](024_scope_local_rebuild.md) | Local/docs | Complete | Scope, owned contracts, and small-task roadmap recorded |
+| [025](025_capture_legacy_reference.md) | Local inference | Pending | Capture a few legacy checkpoint inputs, labels, predictions, and previews |
+
+## Historical queue: Tasks 000–023
 
 | Task | Execution | Status | Depends on | Outcome |
 |---|---|---|---|---|
@@ -67,11 +84,11 @@ tasks, obtain the decision, write it into the task, and then continue.
 | [022](022_evaluate_all_retained_test_chips.md) | Remote/code | Complete | 018–020 | All-retained-chip overlap-stitched evaluation |
 | [023](023_fix_center_padded_prediction_alignment.md) | Remote/code | Complete | 022 | Corrected center-padded prediction suite and report |
 
-## User decision checkpoints
+## Historical user decision checkpoints
 
-The task files contain the evidence and recommendation to show when each
-decision is reached. This table is a routing summary, not a substitute for the
-task contract.
+These checkpoints belong to the completed PS8B study. They are historical
+evidence, not new approval gates for the rebuild. Consult each original task
+for its actual decision and outcome.
 
 | Task | Decision needed from user |
 |---|---|

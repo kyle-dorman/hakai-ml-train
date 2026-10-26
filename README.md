@@ -1,151 +1,64 @@
-# PlanetScope 8-band kelp segmentation
+# Planet kelp segmentation
 
-This repository currently supports a focused binary segmentation study on
-8-band PlanetScope imagery: build an expanded California and British Columbia
-dataset, train a temporally separated all-region baseline, train one
-leave-one-region-out model per region, and compare predictions on matching
-source GeoTIFFs.
+A local rebuild of this fork into a small toolkit for binary kelp segmentation
+on Planet 8/4/3-band imagery. The workflow covers data preparation and chipping,
+training, evaluation, unlabeled inference, leave-one-region-out comparisons,
+and adaptation to new regions.
 
-Other historical dataset and deployment surfaces remain in the codebase but are
-not part of the active project.
+The legacy implementation is still present. Breaking changes and substantial
+removal of unrelated code are intended. The starting commit is
+`ac933fd667c2ddb445b8a622d8404387a2d056e2`; historical Tasks 000–023 remain
+available as evidence. New package commands will be documented when implemented.
 
-## Current status
+## Start here
 
-The temporal source-raster split is complete:
+Read [docs/index.md](docs/index.md) for task-specific context and
+[docs/todo.md](docs/todo.md) for the ordered small-task roadmap. The next step
+is [Task 025](tasks/025_capture_legacy_reference.md): capture a few legacy model
+inputs, labels, and predictions as a visual reference before source removal.
 
-- 369 paired source TIFFs.
-- 12 region IDs: California `001` through `011`, plus BC.
-- 247 train, 68 validation, and 54 test TIFFs.
-- Acquisition dates stay intact and splits are chronological within each
-  region.
+The target is one simple installable Python package, short explicit recipes,
+strong uv defaults, and no `scripts/` directory. Test as much of the workflow as
+practical on the Mac with small examples before moving to a GPU host. Full
+training is not intended for the Mac.
 
-The copied all-region raw merge is complete and raster-validated at
-`/Volumes/x10pro/kelpseg/merged_all_regions_v1`. The canonical chip collection
-at `/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1` was built with 6,003
-chips from all 369 source TIFFs, then transactionally filtered at the approved
-50% source-aware nodata threshold. Its repaired active manifest contains 4,602 chips from 367
-source TIFFs across all 12 regions; the unfiltered manifest and complete
-removal evidence are preserved under `filter_history/nodata_50` and
-`repair_history/metadata_nodata_v2`. The
-non-destructive training selector retains all 3,210 positive chips and marks
-1,392 non-positive chips as excluded from training only. Task 009A repaired the
-one affected California and all 30 BC derived labels, re-chipped only those 31
-source fragments, and clean-extraction verified the v2 portable archive at
-`/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip`.
-Task 010 downloaded and fully verified only v2 at the remote canonical root
-`/home/sky/data/planet8b_all_regions_1024_512_v2`; Tasks 011–012 materialized
-the baseline and all 12 LORO views there. Task 014A recreated and fully
-verified the dataset, views, environment, W&B access, and A40 health on the
-replacement host after the original GPU failed. Task 014B established the
-dedicated SegFormer B3 config and constant effective batch 24, and Task 014
-completed the 13-entry tiered EMA smoke suite. Task 015 then completed and
-verified the 100-epoch production temporal baseline. Task 016 closed the partial
-v1 suite and prepared the clean v2 identity. Task 017 then completed the clean
-70-epoch v3 temporal baseline and all 12 LORO folds with a `3e-5` LR floor.
-Tasks 018–020 established the overlap-aware evaluator and initial comparison;
-Task 022 expanded it to all retained test chips. Task 023 corrected centered
-padding alignment for undersized chips and republished the 54-of-54 comparison
-under clean v2 artifact identities. See `docs/todo.md` and `tasks/README.md`.
+## Environment
 
-## Documentation
-
-- `AGENTS.md`: repository operating contract.
-- `docs/index.md`: read/skip router for project documentation.
-- `docs/todo.md`: current queue and next action.
-- `docs/product.md`: scientific goal, success criteria, and non-goals.
-- `docs/architecture.md`: active PS8B data, training, and evaluation workflow.
-- `docs/data_artifacts.md`: local/remote artifact and manifest policy.
-- `docs/experiments.md`: W&B and run-record contract.
-- `tasks/`: one resumable contract per implementation step.
-
-## Setup
-
-The project requires Python 3.12 and uses `uv`:
+Use Python 3.12 and the locked uv environment:
 
 ```bash
 uv python install 3.12
 uv sync --python 3.12 --frozen
 ```
 
-Run code through `uv`:
+Current code validation uses focused tests under `tests/` and:
 
 ```bash
-uv run python trainer.py --help
+uv run ruff format --check .
 uv run ruff check .
 ```
 
-For a disposable remote GPU instance, `scripts/bootstrap_skypilot.sh` installs
-the Codex CLI and locked environment, verifies CUDA, and handles W&B login. It
-does not download or extract datasets. Codex device authentication remains
-interactive; after bootstrap, run
-`codex login --device-auth` when `codex login status` reports that the host is
-not authenticated.
+Package build/install and replacement CLI checks arrive with the package task.
 
-Task 010 prepares the verified v2 dataset separately. On the selected remote
-host, download missing Drive artifacts, verify the approved archive checksum,
-and extract into the canonical remote root with:
+## Data and experiments
 
-```bash
-scripts/prepare_remote_planet8b_dataset.sh --download-missing
-```
+Originals, cleaned datasets, chips, generated split assignments, checkpoints,
+and results live outside Git. Keep preparation rules, configs, focused tests,
+and human-readable cleanup documentation in Git. UCLA Box through rclone is
+the target backup/transfer store; the existing local root is
+`/Volumes/x10pro/kelpseg`.
 
-The corresponding local source artifacts are the v2 ZIP and adjacent
-`.zip.sha256` sidecar under `/Volumes/x10pro/kelpseg/archives`. Do not transfer
-the v1 ZIP or use the old tar archive as the new experiment contract.
+Original collection membership and cleanup provenance still need an audit.
+Existing cleaned data and chips are useful evidence, not a substitute for
+reconstructing and documenting preparation. See
+[docs/data_artifacts.md](docs/data_artifacts.md).
 
-## Active workflow
+The first spectral comparison is interpreted as 8 bands, RGB+NIR, and RGB from
+the same acquisitions. Start with the working SegFormer recipe; a possible RGB
+DINOv3 variant follows separately. New-region work compares direct transfer,
+kelp-checkpoint fine tuning, generic-pretrained fine tuning, and combined
+old/new training on fixed held-out test data.
 
-```text
-paired 8-band GeoTIFF imagery and labels
-  -> copied raw images plus exact-grid derived labels and raster manifest
-  -> overlapping NPZ chips plus per-chip statistics manifest
-  -> universal nodata-percentage filter
-  -> portable canonical chip archive
-  -> temporal baseline and LORO hard-linked dataset views
-  -> PyTorch Lightning segmentation training
-  -> chip and source-TIFF prediction metrics
-  -> paired matching-TIFF baseline/LORO comparison
-```
-
-The current comparison-suite model surface is
-`configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`; fold paths and run
-identity are injected by the validated experiment runner.
-
-## Current tracked dataset metadata
-
-- `planet8b_temporal_image_splits.csv`: active baseline source-TIFF split.
-- `scripts/create_temporal_baseline_split.py`: deterministic split generator.
-- `planet8b_image_splits.csv`: historical split input; not the new baseline
-  contract.
-- `region_006_007_011_sample_points.geojson`: temporary naming evidence for the
-  three regions omitted from the historical CSV.
-
-Large data and generated artifacts live under `/Volumes/x10pro/kelpseg`, not in
-git. See `docs/data_artifacts.md` before creating new outputs.
-
-## Training entry point
-
-Training uses the Lightning CLI wrapper in `trainer.py`:
-
-```bash
-uv run python trainer.py fit --config <ps8b-config.yaml>
-uv run python trainer.py test --config <ps8b-config.yaml> \
-  --ckpt_path <checkpoint.ckpt>
-```
-
-Do not launch the new baseline or LORO suite directly from the historical config
-paths. Tasks 011–016 will materialize the datasets, establish W&B run context,
-and provide the reproducible training runner.
-
-## W&B
-
-The active destination for new PS8B work is:
-
-```text
-entity: kdorman90-ucla
-project: kelpseg
-```
-
-The active comparison-suite group is `planet8b-loro-v3`; smoke runs use the separate
-`smoke` group. W&B values in legacy configs are not the active tracking
-contract.
+W&B remains `kdorman90-ucla/kelpseg`; new work uses new experiment identities.
+See [docs/product.md](docs/product.md) for the research contract and
+[docs/experiments.md](docs/experiments.md) for run and checkpoint rules.

@@ -2,176 +2,114 @@
 
 ## Project
 
-This repository is currently focused on binary kelp segmentation in 8-band
-PlanetScope imagery. The active research question is geographic generalization:
-compare a new temporally separated all-region baseline with leave-one-region-out
-(LORO) models whose test set is one complete held-out region.
+Rebuild this fork as a small, researcher-friendly toolkit for binary kelp
+segmentation on Planet 8/4/3-band imagery. Scope: data preparation and chipping,
+training, labeled evaluation, unlabeled inference, leave-one-region-out (LORO)
+comparisons, and new-region transfer/fine tuning. A possible RGB DINOv3 variant
+is a later controlled experiment, not a reason to retain unrelated frameworks.
 
-The repository still contains older model families and non-PS8B configs. They
-are legacy surfaces, not the current project scope. Do not expand, document, or
-clean them up unless a numbered task explicitly requires it.
+Breaking APIs, config changes, and substantial code removal are authorized.
+The known starting commit is `ac933fd667c2ddb445b8a622d8404387a2d056e2`.
+Preserve a small legacy checkpoint reference before removing its implementation;
+exact historical training reproduction is not required.
 
-## Entry Path
+## Entry path and task size
 
-Read this file first. Then read `docs/index.md`, which routes the rest of the
-documentation without duplicating it.
+Read this file, then `docs/index.md`, `docs/todo.md`, and the selected numbered
+file under `tasks/`. Read only the owned docs routed for that task. For docs
+changes, also read `docs/documentation.md`.
 
-Before implementation, read:
+After compaction or in a new window, reread these entry documents and the active
+task before editing. `tasks/README.md` owns task structure and handoffs.
 
-1. `docs/todo.md` for current status and the next task.
-2. The selected numbered file under `tasks/`.
-3. Only the product, architecture, artifact, or experiment docs routed by
-   `docs/index.md` for that task.
+Prefer small bounded tasks and independently scoped sub-agents. Do not start
+multiple numbered tasks in one window. Close the selected task, record its
+outcome and exact next action, update the queue, and stop. Roadmap slots become
+full task contracts when selected; split them further when needed.
 
-For documentation changes, also read `docs/documentation.md`. After context
-compaction or in a new window, reread this file, `docs/index.md`,
-`docs/todo.md`, and the active task file before editing.
+## Implementation direction
 
-## Current Status
+- Use Python 3.12, uv, a locked environment, and an installable
+  `src/kelpseg/` package with `uv_build` as the target.
+- The final repository has no `scripts/` directory. Expose a small installed
+  command and short explicit recipes; do not move complexity into a framework.
+- Favor plain functions, familiar geospatial/ML libraries, and actionable error
+  messages for researchers with limited Python/ML experience.
+- Remove unrelated dataset/model families and unused dependencies within the
+  selected task. Preserve useful correctness tests as implementations change.
+- Preserve user changes and unrelated work in a dirty checkout.
+- Never describe a planned replacement command as already implemented.
+- Apply the cross-task usability acceptance in `docs/todo.md`: simple settings,
+  portable models, clear outputs/errors, and researcher instructions that grow
+  with implementation. The reusable tiny walkthrough starts after dataset/Box
+  establishment; focused correctness tests continue throughout.
 
-Tasks 000–009A established the 369-TIFF temporal baseline assignment, validated
-copied raw merge, restartable manifested chipper, canonical chip collection at
-`/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1`, and the transactional
-manifest-driven 50% nodata policy. Task 009A repaired source-aware nodata
-metadata, one California and all 30 BC derived labels, and only those 31 source
-fragments. The active collection contains 4,602 chips from 367 source TIFFs
-across all 12 regions. Its training-selection manifest retains all 3,210
-positive chips and explicitly excludes 1,392 non-positive chips without
-changing canonical membership. The clean-extraction-verified transfer artifact
-is the 44,859,496,084-byte v2 ZIP at
-`/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip`.
-Task 010 downloaded and fully verified only that repaired archive at the remote
-canonical root `/home/sky/data/planet8b_all_regions_1024_512_v2`; v1 remains
-historical evidence. Tasks 011–012 materialized the temporal baseline and all
-12 LORO views beneath that canonical root. Task 013 added validated W&B run
-context and artifact logging. Task 014A completed replacement-host setup, the
-verified v2 re-download, hard-link rematerialization, and all preflight gates.
-Task 014B then created the dedicated later-root SegFormer B3 suite config,
-selected micro-batch 3 with accumulation 8 at effective batch 24, and validated
-the tiered EMA-aware smoke profile. Task 014 completed all 13 entries under
-`planet8b-loro-v1-smoke-tiered-ema-v1`, including both deep EMA gates, every
-bounded fold test, and failure/interruption/pending-state checks. Task 015 is
-complete: W&B run `24f6a23a`, the validation-selected best checkpoint, local
-`last.ckpt`, and full baseline test execution were verified. Task 016 closed
-the stopped partial v1 production suite as historical evidence, added separate
-per-epoch-current and final-best test metrics, and validated the clean
-`planet8b-loro-v2` identity. Task 017 completed the clean
-`planet8b-loro-v3` suite: its 70-epoch temporal baseline and all 12 LORO folds
-use a `3e-5` minimum LR and validation-only checkpoint selection. Task 018
-completed the overlap-aware evaluator and baseline prediction package. Task 019
-completed all 13 verified prediction packages. Task 020 completed the audited
-matching-TIFF comparison, separate full-region LORO summaries, figures, and
-external report. Task 022 expanded prediction to every retained test chip, but
-its follow-up audit found a center-padding crop misalignment for undersized
-chips. Task 023 corrected the evaluator, reran all 13 packages under schema 3,
-verified exact scope/coverage identity, and published the corrected 54-of-54
-report. Earlier affected prediction/report artifacts are audit evidence only.
-The numbered queue is closed.
-The complete ordered queue is in `docs/todo.md`; detailed contracts are in
-`tasks/`.
+## Scientific and data boundaries
 
-Do not start multiple numbered tasks in one window. Close the selected task,
-update its outcome and `docs/todo.md`, and stop.
+- Keep region, acquisition date, source TIFF, band identity, and source window
+  through preparation, splitting, prediction, and reporting.
+- Never split chips from one source TIFF across train/validation/test. Keep
+  acquisition-date groups intact for the temporal baseline; LORO holds out an
+  entire region. Compare spectral variants on matching source assignments.
+- Never select thresholds, recipes, or checkpoints using held-out test results.
+- For overlap, reconstruct source probabilities before thresholding once. Score
+  each covered source pixel once; aggregate TIFF confusion counts for metrics.
+- Preserve explicit padding inversion, nodata, ignore index `-100`, and coverage
+  reporting. Unlabeled prediction cannot depend on labels for alignment.
+- Keep background-only chips in canonical data; express training exclusions
+  separately. Evaluation remains representative of the declared input scope.
+- Claims concern agreement with supplied labels on represented imagery.
 
-## Scientific And Evaluation Boundaries
+Read `docs/product.md` for experiments and `docs/architecture.md` for pipeline
+and metric boundaries.
 
-- Keep source-TIFF and region identity through every preprocessing stage.
-- Never split chips from one source TIFF across baseline train, validation, and
-  test sets.
-- The baseline is temporal within every region; LORO test data is the complete
-  held-out region.
-- Do not tune preprocessing, models, or thresholds on held-out test results.
-- Compare runs on matching original TIFFs by default. Retain chip-level metrics
-  for traceability.
-- For overlapping chips, reconstruct one prediction per covered source pixel
-  before calculating TIFF confusion counts. Sum TIFF confusion counts for
-  region/test-set metrics; do not sum overlapping chip counts or average chip
-  IoUs.
-- Report agreement with the supplied segmentation labels. Do not generalize the
-  result beyond the represented imagery, labels, regions, and acquisition dates.
+## Storage and reconstruction
 
-Read `docs/product.md` for the full current research contract.
+Never mutate original source imagery or labels. Inventory unknown original
+collections and reconstruct/document cleanup before creating a replacement
+cleaned release. Existing repaired data are historical evidence, not proof that
+original membership or every cleaning decision is settled.
 
-## Data And Artifact Rules
+Large data, generated split assignments/manifests, checkpoints, predictions, and
+reports belong outside Git. Keep generation rules, configs, tests, and human
+cleanup documentation in Git. UCLA Box via rclone is the target transfer and
+backup store; local roots and validation rules live in `docs/data_artifacts.md`.
+Make expensive work restartable, refuse silent overwrites and duplicate or
+missing identities, and publish complete manifests atomically.
 
-Keep large imagery, chips, checkpoints, predictions, and generated reports out
-of git. The local data root is `/Volumes/x10pro/kelpseg`; remote paths are
-recorded per task. Portable manifests are the source of truth for dataset,
-region, split, and source-TIFF membership.
+## Local validation and remote work
 
-Read `docs/data_artifacts.md` before adding, moving, filtering, archiving, or
-interpreting data artifacts.
+Prepare and test as much as practical on the Mac before relocation. Use small
+real examples and focused fixtures for preparation, band selection, loading,
+forward/backward updates, validation, checkpoint save/load/resume, prediction,
+evaluation, and transfer. Do not launch production training on the Mac. CUDA,
+production batch sizing, and throughput checks remain GPU-host work.
 
-## Implementation Rules
-
-- Use Python 3.12 and `uv`.
-- Prefer small, restartable scripts or package modules over notebook-only state.
-- Make long data operations support dry-run or report-only behavior when useful.
-- Never mutate raw source imagery.
-- Use deterministic manifests and explicit seeds.
-- Refuse silent overwrites, missing image/label pairs, duplicate IDs, and partial
-  manifest updates.
-- Use maintained geospatial and ML libraries rather than hand-written raster,
-  projection, or metric logic.
-- Use `-100` as the label ignore index.
-- Keep background-only chips in the canonical collection; training views may
-  exclude them, but evaluation views should remain representative.
-- Apply the selected nodata policy before dataset splitting so it is identical
-  for train, validation, and test.
-- Preserve user changes and unrelated work in a dirty worktree.
-
-Read `docs/architecture.md` before changing pipeline boundaries, manifest
-contracts, training orchestration, or evaluation aggregation.
-
-## W&B
-
-The current W&B destination is:
-
-```text
-entity: kdorman90-ucla
-project: kelpseg
-```
-
-The active comparison-suite group is `planet8b-loro-v3`; smoke runs use the separate
-`smoke` group. Do not copy W&B identity or grouping from legacy configs into
-new work. Read `docs/experiments.md` before changing W&B configuration or run
-metadata.
-
-## Setup And Validation
-
-Install the locked Python 3.12 environment with:
+Install with:
 
 ```bash
 uv python install 3.12
 uv sync --python 3.12 --frozen
 ```
 
-Use `uv run` for repo commands. Before completing code work, run the relevant
-targeted smoke check and:
+For code changes, run relevant focused tests and:
 
 ```bash
 uv run ruff format --check .
 uv run ruff check .
 ```
 
-Run pre-commit when the task changes code broadly:
+Run `uv run pre-commit run --all-files` for broad code changes. There are existing
+focused tests under `tests/`; lint is not behavioral proof. Record preexisting
+unrelated failures explicitly. For docs-only work, inspect Markdown/diffs,
+verify links, and run `git diff --check`.
 
-```bash
-uv run pre-commit run --all-files
-```
+## Experiments and handoffs
 
-For docs-only work, inspect the rendered Markdown or diff and run:
+Keep W&B at `kdorman90-ucla/kelpseg` unless changed explicitly. The completed
+`planet8b-loro-v3` suite is historical; new work must have distinct identities.
+Read `docs/experiments.md` before changing run/checkpoint metadata.
 
-```bash
-git diff --check
-```
-
-There is not yet a repository test suite. Tasks that add data-contract or metric
-logic should add focused tests rather than treating lint as behavioral proof.
-
-## Task Contract
-
-`tasks/README.md` owns task-file structure and handoff rules. A task outcome must
-record changed repo files, durable external artifacts, validation, unresolved
-issues, and the exact next action. Detailed run logs belong in the task file,
-not in `AGENTS.md` or `docs/todo.md`.
+Task outcomes record changed repo files, durable external artifacts,
+validation, unresolved issues, and the exact next action. Detailed evidence
+belongs in the task record, not this entry file or the current queue.

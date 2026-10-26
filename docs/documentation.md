@@ -33,8 +33,14 @@ or substantially rewriting durable docs.
 - Replace stale text; do not append caveats to a conflicting old instruction.
 - Prefer a short pointer to the owner doc over duplicated content.
 - Update routers and direct links in the same change when paths move.
-- Do not promote legacy non-PS8B surfaces back into active docs unless a task
-  explicitly changes the project boundary.
+- Use the current Planet 8/4/3-band binary kelp scope. Retire unrelated
+  legacy examples as their implementations are removed. Distinguish planned
+  replacement commands and policies from behavior already implemented.
+- Start the short researcher quickstart with Task 028; add copyable operating
+  recipes as each workflow becomes available. Keep development task histories
+  separate. Begin the reusable tiny walkthrough after Box and cleaned-data
+  establishment, in Task 031; later stages extend it. At handoff, record where
+  another researcher following the guide needs help and fix those gaps.
 
 ## Task outcomes
 
@@ -54,6 +60,6 @@ Do not paste long logs or full artifact inventories into `docs/todo.md`.
 - Do `AGENTS.md`, `README.md`, `docs/index.md`, and `docs/todo.md` agree?
 - Does the task queue point to the same current/next task?
 - Are W&B entity/project statements consistent with `docs/experiments.md`?
-- Are legacy non-PS8B examples absent from active documentation?
+- Are unrelated legacy examples absent and planned features labeled clearly?
 - Do all relative Markdown links resolve?
 - Does `git diff --check` pass?

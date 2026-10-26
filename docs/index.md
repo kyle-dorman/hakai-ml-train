@@ -1,112 +1,26 @@
 # Documentation index
 
-This page routes humans and agents to the smallest useful set of documents. It
-does not own project decisions or implementation detail.
+Start with `AGENTS.md`, then [todo.md](todo.md) and the selected task under
+[tasks](../tasks/README.md).
 
-Start with `AGENTS.md`, then read `docs/todo.md` and the selected numbered task.
-Do not read every task file or every source module before beginning narrow work.
+The current work rebuilds this fork for Planet 8/4/3-band binary kelp
+segmentation. The legacy implementation is still present. The target package,
+CLI, and rebuilt datasets are introduced by individual tasks; they are not
+already available. Tasks 000–023 describe the preceding completed PS8B study.
 
-## Current project
+## Read by task
 
-The active project is expanded-region PlanetScope 8-band binary kelp
-segmentation. It will compare a temporally separated standard baseline with
-leave-one-region-out models and evaluate them on matching source TIFFs.
+- [product.md](product.md): research scope, experiments, scientific boundaries.
+- [architecture.md](architecture.md): current-to-target pipeline, identity,
+  splitting, prediction and metric contracts.
+- [data_artifacts.md](data_artifacts.md): storage, original-data uncertainty,
+  cleanup provenance, Box, and Git policy.
+- [experiments.md](experiments.md): initialization, resume, W&B, checkpoints,
+  comparisons, and local/remote validation.
+- [documentation.md](documentation.md): read before changing durable docs.
+- [todo.md](todo.md): current task, next action, and ordered roadmap.
+- [backlog.md](backlog.md): optional unselected ideas.
+- [tasks/README.md](../tasks/README.md): task contracts and historical records.
 
-Tasks 000–009A completed the temporal raster split, canonical raw merge,
-manifested chipper, full unfiltered chip collection, manifest-driven nodata
-filter, transactional application of the selected universal 50% threshold, and
-the non-destructive training-only background selector, then packaged and
-clean-extraction verified the source-aware v2 portable canonical archive after
-repairing one California and all 30 BC label/source fragments. Task 010 then
-downloaded, checksum-verified, and fully validated that archive remotely. Task
-011 materialized the temporal baseline view, Task 012 materialized all 12 LORO
-views, and Task 013 added validated W&B run context and artifacts. Task 014A
-verified a replacement A40 host, redownloaded and fully validated the canonical
-archive, rematerialized every hard-link view, and passed all service, GPU,
-DataModule, and runner preflight gates. Task 014B created and validated a
-dedicated suite config from the intended later root PS8B baseline recipe and
-implemented the approved tiered EMA-aware smoke profile. Task 014 then
-completed all 13 smoke entries with verified best/last checkpoints, deep EMA
-gates, bounded shallow folds, and isolated registry state. Task 015 completed
-and verified the 100-epoch production temporal baseline, its W&B run, selected
-best checkpoint, local recovery checkpoint, and full test execution. Task 016
-closed the stopped partial v1 suite as historical evidence and validated the
-clean v2 identity. Task 017 then completed the clean 70-epoch
-`planet8b-loro-v3` temporal baseline plus all 12 LORO folds with a `3e-5` LR
-floor, validation-only checkpoint selection, and per-epoch held-out test
-diagnostics. Task 018 completed the overlap-aware evaluator and baseline
-prediction package, Task 019 completed all 13 verified prediction packages, and
-Task 020 completed the matching-TIFF comparison and separate full-region LORO
-reporting. Task 022 expanded evaluation to the all-retained post-nodata test
-scope, but its small-chip audit found a prediction-crop alignment bug. Task 023
-corrected that alignment, republished all 13 schema-3 prediction packages, and
-completed the corrected 54-of-54 comparison. The numbered queue is closed;
-`docs/todo.md` owns the next user-selected action.
-
-## Document roles
-
-- Read `docs/product.md` when work may change the research question, split
-  interpretation, claims, evaluation criteria, or project boundary. Skip it for
-  narrow mechanical changes.
-- Read `docs/architecture.md` when work changes pipeline stages, manifests,
-  source/chip identity, split materialization, training, prediction, or metric
-  aggregation.
-- Read `docs/data_artifacts.md` when work creates, moves, deletes, filters,
-  archives, transfers, or interprets data and generated artifacts.
-- Read `docs/experiments.md` when work changes W&B, run names, training
-  orchestration, checkpoints, prediction artifacts, or cross-run comparison.
-- Read `docs/documentation.md` before editing, adding, moving, or deleting
-  durable documentation.
-- Read `docs/todo.md` for the active queue, current task, and next action.
-- Read `docs/backlog.md` only for unselected future ideas. It is not an active
-  queue or a decision record.
-- Read `tasks/README.md` for task-file structure, then read only the selected
-  numbered task.
-
-## Active source and config surface
-
-The current workflow primarily touches:
-
-```text
-scripts/create_temporal_baseline_split.py
-scripts/merge_planet8b_regions.py
-scripts/validate_planet8b_raw_merge.py
-src/prepare/make_chip_dataset.py
-src/prepare/remove_bg_only_tiles.py
-src/prepare/remove_tiles_with_nodata_areas.py
-src/data.py
-src/models/smp.py
-trainer.py
-configs/kelp-ps8b/generalization/segformer_b3_v3.yaml
-configs/kelp-ps8b/generalization/experiment_matrix_v3.yaml
-scripts/run_planet8b_experiments.py
-```
-
-Other config families and deployment modules remain in the repository but are
-outside the active project unless a task explicitly brings them into scope.
-
-## Current happy path
-
-```text
-all paired PS8B source TIFFs
-  -> canonical raster manifest
-  -> canonical chips and chip statistics
-  -> universal nodata filtering
-  -> temporal baseline and LORO views
-  -> comparable training runs
-  -> chip/TIFF confusion counts
-  -> paired matching-TIFF analysis
-```
-
-## Validation
-
-Use task-specific behavioral checks. The current common static checks are:
-
-```bash
-uv run ruff format --check .
-uv run ruff check .
-git diff --check
-```
-
-There is no general test suite yet. Add focused tests with new data-contract,
-selection, or metric logic.
+Read only the documents needed for the selected task. Current-facing documents
+own decisions; detailed historical runs and outcomes remain in numbered tasks.

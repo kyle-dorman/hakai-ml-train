@@ -2,207 +2,78 @@
 
 ## Current phase
 
-Status: Tasks 011–012 implemented the shared fold materializer and atomically
-published the validated temporal baseline plus all 12 LORO views beneath
-`/home/sky/data/planet8b_all_regions_1024_512_v2/views`. Every fold manifest
-records all 4,602 canonical chips. The LORO parent contains 27,508 verified hard
-links; training uses eligible overlapping non-held-out temporal-TRAIN chips,
-validation uses non-held-out temporal-VAL chips on the non-overlapping grid,
-and test uses the complete retained non-overlapping grid from one held-out
-region.
+Local rebuild of the Planet binary kelp toolkit. Task 024 recorded the scope,
+working decisions, and small-task sequence. The existing source and datasets
+have not yet been replaced. Breaking changes and removal of unrelated code are
+authorized; originals remain immutable.
 
-Task 013 added validated, hash-backed W&B run context, resolved-config and
-source-metadata artifacts, and explicit best-only checkpoint logging. Final
-offline one-batch baseline and `ca_001` LORO smokes passed against the real
-folds.
+Current active task: none.
 
-Task 014A rebuilt the replacement A40 host boundary at commit
-`5461cfeb45aab216d43cd8d80451d8a420ae00f0`: the approved v2 archive was
-reassembled from checksum-verified Drive parts, fully verified and extracted,
-and all 30,073 baseline/LORO links passed independent inode and batch audits.
-Python/CUDA, W&B, sustained GPU health, and all smoke/production runner
-dry-runs passed without launching training.
+Next action: execute [Task 025](../tasks/025_capture_legacy_reference.md),
+capturing a few legacy checkpoint examples locally before source removal.
 
-Task 014B created the dedicated later-root SegFormer B3 suite config, preserved
-the approved SMP eight-band ImageNet adaptation, selected micro-batch 3 with
-accumulation 8 at effective batch 24, and implemented the tiered EMA smoke
-profile. All config checks and 26 real-fold dry-runs passed. The fresh smoke
-identity is `planet8b-loro-v1-smoke-tiered-ema-v1`.
+## Ordered roadmap
 
-Task 014 completed that fresh 13-entry smoke suite on the replacement A40. All
-13 latest registry states are completed with matching best-checkpoint hashes
-and local `last.ckpt` files. The baseline and BC deep gates reached optimizer
-steps 176 and 172; every shallow fold reached exactly two optimizer updates and
-tested exactly two batches from its selected best checkpoint. Failure,
-interruption, pending-state, and production-isolation checks passed. No
-production training was launched by Task 014.
+Only Task 025 has its implementation contract ready. Later rows are ordered
+scope slots, not permission to execute multiple tasks in one window. Create
+and refine each contract when selected; split further if needed.
 
-Task 015 completed the 100-epoch production temporal baseline in one attempt.
-W&B run `24f6a23a` is finished; epoch 98 selected the hash-verified best
-checkpoint at `val/iou_epoch = 0.70966`, the local `last.ckpt` is present, and
-the selected best checkpoint completed the full 185-chip test scope. Task 016
-started a v1 LORO suite, but the user chose to stop that partial suite and
-restart the baseline plus all 12 LORO folds under `planet8b-loro-v2`. V2 has a
-separate experiment root, registry identity, W&B group, and run keys. It logs
-held-out diagnostics under `test/current/*` every epoch and the
-validation-selected final checkpoint under `test/best/*`. Task 016 is complete:
-it preserved the stopped partial v1 evidence and validated all v2 dry-runs.
-Task 017 completed the clean `planet8b-loro-v3` production suite: the temporal
-baseline and all 12 LORO folds have completed. The suite preserves the stopped
-v1/v2 evidence, uses the approved 70-epoch budget and `3e-5` minimum learning
-rate, and has one validation-selected best checkpoint plus local `last.ckpt`
-for every run. Task 018 completed the overlap-aware evaluator and baseline
-evaluation. It averages foreground probabilities per covered source pixel,
-thresholds once at 0.5, and retains tiled/compressed float32 probability plus
-uint8 mask GeoTIFFs under `/home/sky/experiments/planet8b-loro-v3/predictions`.
-The measured full-suite estimate is 6.03 GiB (15.28 GiB uncompressed), within
-the 683 GiB available on the experiment volume. Task 019 completed every v3
-prediction package and its suite inventory. Task 020 completed the audited
-matching-TIFF comparison: 53 of 54 temporal-test TIFFs pair one-to-one, the one
-source absent from both prediction packages is explicit, full-region LORO
-results remain separate, and the versioned external report is logged to W&B.
-Task 022 expanded inference to every retained post-nodata test chip, but its
-follow-up audit found that centered padding for undersized chips was cropped
-from the top-left. Task 023 corrected and fail-closed that alignment, reran all
-13 packages under schema 3, verified exact v1→v2 membership and coverage, and
-published the corrected 54-of-54 report. Task 022 v1 and earlier affected
-prediction/report artifacts remain audit evidence but are invalid for
-scientific use.
+| Task | Deliverable | Local completion gate |
+|---|---|---|
+| [024](../tasks/024_scope_local_rebuild.md) | Scope and rebuild plan — complete | Owned docs agree; usability requirements and example sequencing recorded |
+| [025](../tasks/025_capture_legacy_reference.md) | Legacy checkpoint gut check | Five or six inputs/labels/predictions and visually checked panels outside Git |
+| 026 | Inventory originals and reconstruct cleanup provenance | Trace sample CA/BC pairs; separate facts, unknowns, and proposed cleaning rules |
+| 027 | Establish Box transfer and back up identified originals/reference | Plain folders/manifests and documented rclone copies; small verified round trip, then original backups |
+| 028 | Installable uv package, researcher guide, and first removal pass | Build/frozen install/imports; simple recipe/path/output conventions; focused automated checks; retire unrelated families |
+| 029 | Implement documented raw-to-clean preparation | Raster fixtures and real sample checks for labels, alignment, nodata, restartability |
+| 030 | Rebuild and publish cleaned release | Source inventory, cleanup recipe, QA, hashes, and verified Box copy |
+| 031 | Simplify chipping/band selection and start the tiny walkthrough | After Box and cleaned release: small real-data example, source identity, edge windows, nodata, and 8/RGB+NIR/RGB inputs |
+| 032 | Produce chip release and external split assignments | Deterministic temporal/LORO memberships without source leakage; Box verification |
+| 033 | Simple baseline recipes and portable saved models | Ordinary recipe values; local update/validation/save/load/resume for 8/4/3 bands; weights plus prediction settings |
+| 034 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
+| 035 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics, ignored/uncovered accounting, reusable image prediction |
+| 036 | LORO runner and matching-TIFF comparisons | All folds resolve; tiny suite and comparison checks pass locally |
+| 037 | New-region experiment recipes | Four comparison cases, fixed test scopes, explicit initialization and reset/resume behavior |
+| 038 | Researcher handoff and relocation rehearsal | Another researcher follows short recipes; fresh-directory Box fetch through full workflow; production plans resolve; no scripts directory |
 
-Current active task:
+## Usability acceptance across tasks
 
-```text
-None. The numbered queue is closed.
-```
+- Start a short quickstart/researcher guide in Task 028 and extend it whenever
+  an implemented workflow arrives. Include copyable recipes for training,
+  prediction, evaluation, and adding a region. Development task records remain
+  separate from everyday operating instructions.
+- Begin the reusable tiny walkthrough in Task 031, after Task 027's verified
+  Box setup and Task 030's cleaned release. Grow the same example through
+  splitting, training smoke, prediction, and evaluation as those stages arrive.
+  Task 038 rehearses the finished example. Task 025's legacy capture and focused
+  correctness fixtures are separate and retain their existing sequence.
+- Keep small synthetic fixtures and automated CPU checks independent of Box,
+  W&B login, GPUs, and large downloads. Establish automation with Task 028 and
+  extend it with each implementation; the real walkthrough uses a small external
+  dataset subset fetched once and runnable locally afterward.
+- Use ordinary recipe values, one place for machine-specific paths, and a
+  consistent run-folder layout for settings, checkpoints, metrics, and figures.
+  Switching datasets/machines or routine bands/LR/checkpoint settings requires
+  no Python edits. Avoid class-path configs and inheritance chains.
+- Before expensive work, show resolved inputs, band order, relevant counts,
+  and output location; fail on unknown settings and explain how to fix invalid
+  inputs. Retain useful technical details in logs.
+- Tasks 033–034 produce a model bundle with weights, architecture, band order,
+  normalization, and prediction settings. Verify fresh-directory prediction
+  without the old training registry or original config-directory paths.
+- Each implementation task records its simplicity check: routine changes use
+  documented settings, the implementation remains traceable through plain
+  functions, and obsolete options/imports/dependencies are removed as replaced.
+  Keep Box as plain folders/manifests with documented rclone operations; do not
+  build a custom storage service or synchronization framework.
 
-Next task:
+Task 038 is the local readiness gate, not a claim that CUDA behavior or
+production memory use can be validated on the Mac. Full training starts only
+on the selected GPU host after its hardware-specific checks.
 
-```text
-User-selected follow-up, scoped as a new numbered task before implementation.
-```
+## Historical work
 
-Task 002 created the 26 GB canonical raw merge at
-`/Volumes/x10pro/kelpseg/merged_all_regions_v1`: 339 CA and 30 BC pairs across
-12 region IDs. All 369 independent image copies passed checksum verification;
-all derived labels match their image grids and use KATE class `3` for image
-nodata or, in the original Task 002 output, missing label coverage. Task 009A
-later superseded the repaired-source label contract described below. Raster QA
-and the temporal-split join both passed for all 369 rows.
-
-Task 004 created the 45 GB unfiltered canonical chip collection at
-`/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1`: 6,003 chips and 369
-source fragments across all 12 regions. Manifest/filesystem validation, a
-74-chip stratified NPZ/raster audit, and a zero-work resume check passed.
-
-Task 005 replaced the any-nodata deletion script with a required-threshold,
-manifest-driven dry-run/apply CLI. Fixture rollback/recovery tests and real
-report-only runs at 0% and 50% passed; at Task 005 completion the canonical
-manifest and all 6,003 chips remained unchanged.
-
-Task 006 analyzed global, regional, source-TIFF, class-1, and visual effects of
-candidate nodata thresholds. The user approved `max_nodata_pct = 50`: the
-validated dry-run retains 4,637 chips and removes 1,366 without eliminating a
-region.
-
-Task 007 transactionally applied the approved threshold. At Task 007
-completion, the active manifest contained 4,637 chips from 367 source TIFFs
-across all 12 regions, with
-44,912,049,410 compressed NPZ bytes. The immutable 6,003-row pre-filter
-manifest, 1,366-row removal manifest, completion metadata, apply log, and
-global/region/source summary are preserved under `filter_history/nodata_50`.
-
-Task 008 replaced destructive background deletion with a manifest-only
-training selector. Its pre-repair `exclude_all` selection joined all 4,637
-active chips one-to-one, selected 3,210 positive chips, and explicitly excluded
-1,427 non-positive chips. Its global, region, and source-TIFF audit summary and
-selection manifest are under `background_selection/exclude_all`; canonical
-chips and the active manifest are unchanged.
-
-Task 009 created and clean-extraction verified
-`planet8b_all_regions_1024_512_v1.zip` under
-`/Volumes/x10pro/kelpseg/archives`. The 44,917,177,439-byte ZIP has SHA-256
-`6640757c19d803a000834b34abdb20c71a5359e215e8edf08b4958123c4ab098`
-and contains all 4,637 canonical NPZs plus the portable manifests and compact
-provenance needed by Tasks 010–012. Its internal inventory hashes every NPZ.
-This v1 archive is preserved as historical evidence but is superseded as a
-transfer candidate.
-
-Task 009A inventoried all 369 source TIFFs as 44 with declared nodata metadata
-and 325 with approved effective nodata `0`; the only nonzero declarations are
-the five known California `65535` sources. It repaired 5,203 California label
-false negatives and rebuilt all 30 BC merged labels from their raw `{0,1}`
-labels so class `3` now exactly matches image nodata. Only those 31 complete
-source fragments were re-chipped: 724 NPZs were regenerated and 482 remain in
-the active collection. Corrected statistics added 35 removals, yielding 4,602
-active chips and 1,401 total removals. The refreshed `exclude_all` selection
-contains all 4,602 active chips, selects all 3,210 positive chips, and excludes
-1,392 non-positive chips.
-
-The clean-extraction-verified v2 archive is
-`/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip`.
-It is 44,859,496,084 bytes with SHA-256
-`1244ecfe2cc4cee624bb5661087f0126ea239367bda60efd823b4fcb9b7399db`.
-Its 4,623-row inventory contains 4,602 NPZs; 4,120 unchanged chip hashes were
-reused from the trusted v1 inventory, while all 482 rewritten retained NPZs and
-21 manifest/metadata members were freshly hashed.
-
-## Open queue
-
-Local dataset preparation:
-
-- Tasks 001–002: complete; built and validated the all-region raw merge.
-- Task 003: complete; added the restartable manifested chipper and fixture.
-- Task 004: complete; built and validated the unfiltered canonical chips.
-- Task 005: complete; added the transactional manifest-driven nodata filter.
-- Task 006: complete; selected the universal 50% nodata threshold.
-- Task 007: complete; applied the approved threshold transactionally.
-- Task 008: complete; built and applied the non-destructive training selector.
-- Task 009: complete; packaged and verified the portable dataset archive.
-- Task 009A: complete; repaired source-aware nodata metadata, scoped labels and
-  source fragments, dependent selections, and the clean-verified v2 archive.
-
-Remote experiment preparation and execution:
-
-- Task 010: complete; the dedicated remote preparation script downloaded,
-  checksum-verified, cleanly extracted, and fully validated the repaired v2
-  archive at `/home/sky/data/planet8b_all_regions_1024_512_v2`.
-- Task 011: complete; implemented the reusable materializer and published the
-  validated temporal baseline view.
-- Task 012: complete; materialized and validated all 12 LORO dataset views.
-- Task 013: complete; added validated W&B context and artifact logging.
-- Task 014: complete; all 13 tiered EMA smoke entries and state simulations
-  passed.
-- Task 014A: complete; rebuilt and verified the environment, canonical dataset,
-  and all baseline/LORO hard-link views on the replacement A40 host.
-- Task 014B: complete; created the dedicated later-root suite config, selected
-  the fixed-effective-batch runtime pair, and added the tiered EMA smoke gate.
-- Task 015: complete; verified the production baseline registry, W&B run,
-  best/last checkpoints, and full test execution.
-- Task 016: complete; stopped and preserved partial v1, added per-epoch test
-  diagnostics, and validated the clean v2 identity and matrix.
-- Task 017: complete; the temporal baseline and all 12 LORO v3 runs completed
-  with validation-selected best checkpoints and local recovery checkpoints.
-- Task 018: complete; baseline output validates the overlap-aware evaluator.
-- Task 019: complete; 13 verified v3 prediction packages and suite inventory.
-- Task 020: complete; audited matching-TIFF and full-region LORO comparison.
-- Task 022: complete; all-retained-chip overlap-stitched prediction and comparison.
-- Task 023: complete; corrected center-padding alignment and republished predictions/report.
-
-See `tasks/README.md` for status and direct task links. Detailed acceptance and
-outcomes belong in the task files, not here.
-
-## Completed maintenance
-
-- Task 021 restructured active documentation around the PS8B project, corrected
-  the W&B destination to `kdorman90-ucla/kelpseg`, and routed project context out
-  of the former catch-all `AGENTS.md` and README.
-
-## Current validation loop
-
-```bash
-uv run ruff format --check .
-uv run ruff check .
-```
-
-Use task-specific behavioral checks in addition. Docs-only work also runs
-`git diff --check` and verifies Markdown links.
+Tasks 000–023 completed the preceding PS8B baseline/LORO study. Keep their task
+records and starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` as
+historical evidence. Old artifact locations and repairs are described in
+[data_artifacts.md](data_artifacts.md); do not treat a lost remote host as live.
