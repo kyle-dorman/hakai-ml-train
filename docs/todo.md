@@ -3,25 +3,27 @@
 ## Current phase
 
 Local rebuild of the Planet binary kelp toolkit. Task 024 recorded the scope,
-working decisions, and small-task sequence. The existing source and datasets
-have not yet been replaced. Breaking changes and removal of unrelated code are
-authorized; originals remain immutable.
+working decisions, and small-task sequence. Task 025 preserved a verified legacy
+checkpoint reference outside Git. The existing source and datasets have not yet
+been replaced. Breaking changes and removal of unrelated code are authorized;
+originals remain immutable.
 
 Current active task: none.
 
-Next action: execute [Task 025](../tasks/025_capture_legacy_reference.md),
-capturing a few legacy checkpoint examples locally before source removal.
+Next action: scope Task 026's original-data and cleanup-provenance inventory.
+Task 025 is complete; its artifacts and validation are recorded in
+[the task outcome](../tasks/025_capture_legacy_reference.md#outcome-2026-10-26).
 
 ## Ordered roadmap
 
-Only Task 025 has its implementation contract ready. Later rows are ordered
+Task 025's implementation contract is complete. Later rows are ordered
 scope slots, not permission to execute multiple tasks in one window. Create
 and refine each contract when selected; split further if needed.
 
 | Task | Deliverable | Local completion gate |
 |---|---|---|
 | [024](../tasks/024_scope_local_rebuild.md) | Scope and rebuild plan — complete | Owned docs agree; usability requirements and example sequencing recorded |
-| [025](../tasks/025_capture_legacy_reference.md) | Legacy checkpoint gut check | Five or six inputs/labels/predictions and visually checked panels outside Git |
+| [025](../tasks/025_capture_legacy_reference.md) | Legacy checkpoint gut check — complete | Six original pairs, probabilities, masks, visually checked panels, and verified provenance outside Git |
 | 026 | Inventory originals and reconstruct cleanup provenance | Trace sample CA/BC pairs; separate facts, unknowns, and proposed cleaning rules |
 | 027 | Establish Box transfer and back up identified originals/reference | Plain folders/manifests and documented rclone copies; small verified round trip, then original backups |
 | 028 | Installable uv package, researcher guide, and first removal pass | Build/frozen install/imports; simple recipe/path/output conventions; focused automated checks; retire unrelated families |

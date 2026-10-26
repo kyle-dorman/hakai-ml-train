@@ -44,9 +44,12 @@ The original collection's full membership still requires user-assisted audit.
 
 The downloaded reference checkpoint is
 `/Users/kyledorman/Downloads/kelp_ps8b_segformer_b3_epoch-62_val-iou-0.7047.ckpt`.
-Task 025 preserves a copy and representative results under
-`/Volumes/x10pro/kelpseg/references/legacy_ps8b_v1` before source removal.
-That reference package does not exist merely because its path is specified.
+Task 025 preserved a verified copy and six preselected development-chip results
+under `/Volumes/x10pro/kelpseg/references/legacy_ps8b_v1` before source removal.
+Its completion manifest, original pairs, probabilities, masks, visually checked
+previews, hashes, and standalone verifier are local; Box backup remains Task 027.
+See [Task 025](../tasks/025_capture_legacy_reference.md#outcome-2026-10-26) for
+capture semantics and validation. Treat this versioned reference as immutable.
 
 Earlier `merged_ds`, `pre-chipped-8b`, other collection folders, and historical
 archives may contain originals, duplicates, or derived products. Task 026 must

@@ -50,7 +50,7 @@ are authorized by Task 024.
 | Task | Execution | Status | Outcome / next action |
 |---|---|---|---|
 | [024](024_scope_local_rebuild.md) | Local/docs | Complete | Scope, owned contracts, and small-task roadmap recorded |
-| [025](025_capture_legacy_reference.md) | Local inference | Pending | Capture a few legacy checkpoint inputs, labels, predictions, and previews |
+| [025](025_capture_legacy_reference.md) | Local inference | Complete | Six verified legacy examples outside Git; next scope Task 026's original-data/cleanup inventory |
 
 ## Historical queue: Tasks 000–023
 
