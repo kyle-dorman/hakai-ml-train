@@ -13,9 +13,10 @@ available as evidence. New package commands will be documented when implemented.
 ## Start here
 
 Read [docs/index.md](docs/index.md) for task-specific context and
-[docs/todo.md](docs/todo.md) for the ordered small-task roadmap. The next step
-is [Task 025](tasks/025_capture_legacy_reference.md): capture a few legacy model
-inputs, labels, and predictions as a visual reference before source removal.
+[docs/todo.md](docs/todo.md) for the ordered small-task roadmap. Tasks 025–026
+completed the legacy reference and read-only provenance audit. Next, scope
+Task 027 to verify Box and back up the three unchanged raw source ZIPs, the
+legacy reference, and the audit.
 
 The target is one simple installable Python package, short explicit recipes,
 strong uv defaults, and no `scripts/` directory. Test as much of the workflow as
@@ -42,16 +43,20 @@ Package build/install and replacement CLI checks arrive with the package task.
 
 ## Data and experiments
 
-Originals, cleaned datasets, chips, generated split assignments, checkpoints,
-and results live outside Git. Keep preparation rules, configs, focused tests,
-and human-readable cleanup documentation in Git. UCLA Box through rclone is
+Raw archives, organized and cleaned intermediates, chips, generated split
+assignments, checkpoints, and results live outside Git. Keep preparation rules,
+configs, focused tests, and human-readable cleanup documentation in Git.
+UCLA Box through rclone is
 the target backup/transfer store; the existing local root is
 `/Volumes/x10pro/kelpseg`.
 
-Original collection membership and cleanup provenance still need an audit.
-Existing cleaned data and chips are useful evidence, not a substitute for
-reconstructing and documenting preparation. See
-[docs/data_artifacts.md](docs/data_artifacts.md).
+The planned three variants are **1 raw ZIPs**, **2 organized intermediate**,
+and **3 cleaned intermediate**. Both intermediates stay unsplit; organization
+preserves source bytes, while cleanup records explicit transformations. The
+scoped audit is complete; existing repaired datasets remain historical evidence.
+See [docs/data_artifacts.md](docs/data_artifacts.md) for variant/provenance rules
+and [docs/cleanup_provenance.md](docs/cleanup_provenance.md) for established facts
+and remaining evidence limits. The new intermediates are not implemented yet.
 
 The first spectral comparison is interpreted as 8 bands, RGB+NIR, and RGB from
 the same acquisitions. Start with the working SegFormer recipe; a possible RGB

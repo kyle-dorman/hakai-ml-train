@@ -13,8 +13,9 @@ Task contracts introduce commands as they are implemented; this design is not
 an assertion that they already work.
 
 ```text
-immutable original imagery/labels
-  -> documented, versioned cleaning and source manifest
+variant 1: raw, three immutable source ZIPs
+  -> variant 2: organized, unsplit intermediate; unchanged TIFFs and name/region crosswalks
+  -> variant 3: cleaned, unsplit intermediate; documented repairs and parent provenance
   -> one canonical chip collection and chip statistics
   -> external temporal/LORO assignments and training eligibility
   -> explicit band selection and training recipe
@@ -54,6 +55,17 @@ Raw imagery and labels are immutable. Inventory originals and explain existing
 repairs before implementing a new cleaning release. Historical CA/BC cleanup
 included grid alignment, source-aware image nodata, and label repairs; those
 rules require provenance, fixtures, and real examples rather than blind reuse.
+
+Keep organization/renaming separate from cleanup. The planned variant 2
+contains the current 369 pair identities (339 CA-family sources and 30 BC tiles),
+unchanged source image/label bytes, and no experimental split. Publish a stable
+region-code table and source/member/filename aliases with separate image/label
+hashes; retain original paths even when long product names are unavailable.
+Original grids need not match until the cleaning stage. The repaired historical
+merge supplies membership/provenance evidence, not original label payloads.
+See [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases)
+for stage boundaries and mapping requirements. These replacement stages remain
+planned until their task implementations exist.
 
 A channel count is insufficient to specify a product. Select bands by explicit
 validated names/indices; RGB and RGB+NIR are not the first three/four PS8B bands.
@@ -110,6 +122,6 @@ CUDA behavior and production resource sizing remain remote-host checks.
 Establish automated focused CPU checks with the package task. These use small
 self-contained fixtures without Box/W&B access, a GPU, or large downloads.
 Start the reusable real-data walkthrough only after Box setup and the cleaned
-release are established (Task 031, after Tasks 027 and 030). Extend it through
+variant 3 are established (Task 031, after Tasks 027 and 030B). Extend it through
 each later stage; the final handoff rehearses the complete workflow. Fetch its
 small external subset once, then allow routine checks without online services.

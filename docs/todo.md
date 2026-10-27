@@ -4,31 +4,41 @@
 
 Local rebuild of the Planet binary kelp toolkit. Task 024 recorded the scope,
 working decisions, and small-task sequence. Task 025 preserved a verified legacy
-checkpoint reference outside Git. The existing source and datasets have not yet
-been replaced. Breaking changes and removal of unrelated code are authorized;
-originals remain immutable.
+checkpoint reference outside Git. Task 026 completed the scoped original-data
+inventory and six cleanup-provenance traces. The existing source and datasets
+have not yet been replaced. Breaking changes and removal of unrelated code are
+authorized; originals remain immutable.
 
 Current active task: none.
 
-Next action: scope Task 026's original-data and cleanup-provenance inventory.
-Task 025 is complete; its artifacts and validation are recorded in
-[the task outcome](../tasks/025_capture_legacy_reference.md#outcome-2026-10-26).
+Next action: scope Task 027's Box verification and backup contract for the
+three unchanged raw ZIPs (variant 1), legacy reference, and audit. Task 026's
+artifacts, validation, and unresolved evidence limits are recorded in
+[its outcome](../tasks/026_inventory_originals_and_cleanup_provenance.md#outcome-2026-10-26)
+and [cleanup_provenance.md](cleanup_provenance.md).
+
+The agreed dataset variants are **1 raw**, **2 organized intermediate**, and
+**3 cleaned intermediate**. Both intermediates are unsplit; generated
+train/validation/test assignments remain Task 032. The full variant and
+provenance contract lives in [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases).
 
 ## Ordered roadmap
 
-Task 025's implementation contract is complete. Later rows are ordered
-scope slots, not permission to execute multiple tasks in one window. Create
-and refine each contract when selected; split further if needed.
+Tasks through 026 are complete. Later rows are ordered scope slots, not
+permission to execute multiple tasks in one window. Create and refine each
+contract when selected; split further if needed.
 
 | Task | Deliverable | Local completion gate |
 |---|---|---|
 | [024](../tasks/024_scope_local_rebuild.md) | Scope and rebuild plan — complete | Owned docs agree; usability requirements and example sequencing recorded |
 | [025](../tasks/025_capture_legacy_reference.md) | Legacy checkpoint gut check — complete | Six original pairs, probabilities, masks, visually checked panels, and verified provenance outside Git |
-| 026 | Inventory originals and reconstruct cleanup provenance | Trace sample CA/BC pairs; separate facts, unknowns, and proposed cleaning rules |
-| 027 | Establish Box transfer and back up identified originals/reference | Plain folders/manifests and documented rclone copies; small verified round trip, then original backups |
+| [026](../tasks/026_inventory_originals_and_cleanup_provenance.md) | Inventory originals and reconstruct cleanup provenance — complete | Read-only inventory, six CA/BC traces, previous decisions and evidence limits recorded |
+| 027 | Verify Box and back up raw variant 1, reference, and audit | Small verified round trip, then three unchanged source ZIPs with hashes; plain folders/manifests and documented rclone copies |
 | 028 | Installable uv package, researcher guide, and first removal pass | Build/frozen install/imports; simple recipe/path/output conventions; focused automated checks; retire unrelated families |
-| 029 | Implement documented raw-to-clean preparation | Raster fixtures and real sample checks for labels, alignment, nodata, restartability |
-| 030 | Rebuild and publish cleaned release | Source inventory, cleanup recipe, QA, hashes, and verified Box copy |
+| 029A | Implement raw variant 1 → organized intermediate 2 | Byte-preserving unsplit 369-pair organization; stable short IDs, regions and filename/source crosswalks; collision/hash/restart checks |
+| 029B | Implement organized intermediate 2 → cleaned intermediate 3 | Separate reproducible cleanup recipe; alignment/nodata/coverage fixtures and real checks; preserve variant-2 parents and identities |
+| 030A | Build and publish organized intermediate 2 | Full 369-pair membership, unchanged source bytes, provenance tables, QA, hashes, and verified Box copy |
+| 030B | Build and publish cleaned intermediate 3 | Separate unsplit release, recorded transformations and parent hashes, QA, and verified Box copy |
 | 031 | Simplify chipping/band selection and start the tiny walkthrough | After Box and cleaned release: small real-data example, source identity, edge windows, nodata, and 8/RGB+NIR/RGB inputs |
 | 032 | Produce chip release and external split assignments | Deterministic temporal/LORO memberships without source leakage; Box verification |
 | 033 | Simple baseline recipes and portable saved models | Ordinary recipe values; local update/validation/save/load/resume for 8/4/3 bands; weights plus prediction settings |
@@ -45,7 +55,7 @@ and refine each contract when selected; split further if needed.
   prediction, evaluation, and adding a region. Development task records remain
   separate from everyday operating instructions.
 - Begin the reusable tiny walkthrough in Task 031, after Task 027's verified
-  Box setup and Task 030's cleaned release. Grow the same example through
+  Box setup and Task 030B's cleaned intermediate. Grow the same example through
   splitting, training smoke, prediction, and evaluation as those stages arrive.
   Task 038 rehearses the finished example. Task 025's legacy capture and focused
   correctness fixtures are separate and retain their existing sequence.

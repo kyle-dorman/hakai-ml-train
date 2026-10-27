@@ -15,6 +15,8 @@ already available. Tasks 000–023 describe the preceding completed PS8B study.
   splitting, prediction and metric contracts.
 - [data_artifacts.md](data_artifacts.md): storage, original-data uncertainty,
   cleanup provenance, Box, and Git policy.
+- [cleanup_provenance.md](cleanup_provenance.md): observed collection lineage,
+  recorded cleanup decisions, and unresolved data semantics from Task 026.
 - [experiments.md](experiments.md): initialization, resume, W&B, checkpoints,
   comparisons, and local/remote validation.
 - [documentation.md](documentation.md): read before changing durable docs.

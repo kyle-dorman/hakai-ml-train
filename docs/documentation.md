@@ -15,6 +15,8 @@ or substantially rewriting durable docs.
   contracts.
 - `docs/data_artifacts.md`: storage roots, git policy, artifact families, and
   provenance.
+- `docs/cleanup_provenance.md`: audited collection lineage, historical cleanup
+  decisions, and remaining evidence limits; detailed traces stay external.
 - `docs/experiments.md`: W&B, local run registry, checkpoint, prediction, and
   comparison contracts.
 - `docs/todo.md`: current status, open queue, and next action.
