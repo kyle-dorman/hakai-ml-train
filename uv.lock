@@ -621,6 +621,7 @@ name = "kelpseg"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "numpy" },
     { name = "rasterio" },
     { name = "typer" },
 ]
@@ -653,6 +654,7 @@ legacy = [
 
 [package.metadata]
 requires-dist = [
+    { name = "numpy", specifier = ">=2,<3" },
     { name = "rasterio", specifier = ">=1.4,<2" },
     { name = "typer", specifier = ">=0.25.1,<0.26" },
 ]

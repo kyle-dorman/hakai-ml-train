@@ -1,0 +1,9 @@
+schema_version = 1
+image_band_counts = [8]
+image_dtypes = ["uint16"]
+label_values = [0, 1, 2, 3, 4]
+# Explicit policy for the audited CA/BC metadata-missing cohort only.
+missing_image_nodata = 0
+block_size = 512
+qa_masks = false
+compression = "deflate"

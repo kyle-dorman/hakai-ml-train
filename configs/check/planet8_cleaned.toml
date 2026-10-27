@@ -1,0 +1,6 @@
+schema_version = 1
+profile = "cleaned"
+image_band_counts = [8]
+image_dtypes = ["uint16"]
+label_values = [0, 1, 2, 3, 4]
+block_size = 512

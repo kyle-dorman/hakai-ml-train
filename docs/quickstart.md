@@ -1,9 +1,10 @@
 # Researcher quickstart
 
-The installed `kelpseg` command checks machine paths and organizes explicit
-raw image/label catalogs without changing payload bytes. Cleanup, training,
-prediction, and evaluation arrive in later tasks; see [the roadmap](todo.md). The retained legacy Planet
-code is development/reference material, outside the installed package.
+The installed `kelpseg` command checks machine paths, organizes raw catalogs,
+checks ordinary image directories, and cleans imagery with optional paired
+labels into separate derived outputs. Training, prediction, and evaluation
+arrive in later tasks; see [the roadmap](todo.md). Retained legacy Planet code
+is development/reference material, outside the installed package.
 
 ## Install
 
@@ -18,8 +19,9 @@ uv run kelpseg --version
 
 Normal checkout setup includes developer tools and dependencies needed by the
 retained Planet correctness tests. The installed package itself currently needs
-Typer and Rasterio (including their dependencies). Rasterio inspects copied
-TIFF headers; help/version and dry-run do not import the geospatial stack.
+Typer, NumPy, and Rasterio (including their dependencies). Help/version do not
+import the geospatial stack. Organization dry-run reads declarations only;
+check and clean dry-run inspect TIFF headers.
 
 ## Set paths once per machine
 
@@ -122,8 +124,9 @@ build_legacy_ca_bc_catalog(
 )
 ```
 
-Existing catalogs retain their original producer/code hashes after a source-code
-move. Use the existing catalog directly; do not regenerate or rewrite it just to
+Catalog construction is a one-pass operation into a fresh destination; it does
+not resume or reuse an existing catalog. Existing catalogs retain their original
+producer/code hashes after a source-code move. Use the existing catalog directly; do not regenerate or rewrite it just to
 change Python import paths. A new reconstruction with changed producer code
 needs a new catalog version and an explicit recipe change.
 
@@ -190,17 +193,15 @@ prefixes, backslashes, dot/dot-dot components or symlinks. The recipe's region
 path alone may use `..` to reach a tracked sibling table. Control names,
 temporary suffixes and colliding destination subtrees are reserved.
 
-Preview, then copy or explicitly resume the same declared release:
+Preview, then copy once into a fresh declared release:
 
 ```bash
 uv run kelpseg organize --recipe configs/organize/coast.toml --paths paths.local.toml --dry-run
 uv run kelpseg organize --recipe configs/organize/coast.toml --paths paths.local.toml
-uv run kelpseg organize --recipe configs/organize/coast.toml --paths paths.local.toml --resume
 ```
 
 Progress appears on stderr by default, with timestamps, preparation phases,
-current filenames, completed/total files and MiB, resume checks/reused files,
-verification and publication. A large copy or hash reports bytes about every
+current filenames, completed/total files and MiB, verification and publication. A large copy or hash reports bytes about every
 ten seconds. For a saved progress log, add `2> organize.log` to the command.
 The library uses ordinary Python logging; in a notebook, enable it once with
 `logging.basicConfig(level=logging.INFO, format="%(message)s")`.
@@ -214,19 +215,20 @@ Source rows record original locators, parent delivery hashes, separate image/
 label hashes and sizes, and internal header metadata. No delivery train/val
 path becomes a new experimental assignment.
 
-A sibling `.<release_id>.incomplete` holds staging, frozen state and per-file
-receipts; `.<release_id>.lock` prevents concurrent writers. Interrupted work
-requires `--resume`; every completed staged file is byte-verified. Only an
-unfinished payload temporary identified by the command's copying record may
-be recreated. Unknown files, partial control records, changed plans or corrupt
-outputs stop and retain evidence. Inspect such failures; do not delete receipts
-or overwrite files to bypass them. Correct the input or choose a new explicit
-release ID. Completed matching releases are verified and returned without
-rewriting. Final publication renames the verified directory atomically.
+Organization must finish in one run. It writes into a fresh sibling
+`.<release_id>.incomplete` directory, then renames that directory to the final
+release after all checks pass. Both paths must be absent before starting. There
+are no writer locks, saved receipts, recovery journals or resume mode.
+
+A failure stops the sequence and leaves that incomplete directory for inspection.
+The next attempt starts from the beginning: deliberately move/remove the failed
+attempt or choose a fresh release ID. Completed releases are not reused by the
+organizer; use `verify_organized_release` to inspect their recorded bytes without
+rewriting them. No failure automatically deletes or replaces existing work.
 
 The preparation code lives in `src/kelpseg/prepare/`: start with
 `organize_inputs.py` for table/recipe validation and `organize.py` for the
-copy/resume flow. `legacy_catalog.py` is only the historical CA/BC conversion.
+one-pass copy flow. `legacy_catalog.py` is only the historical CA/BC conversion.
 Reusable functions have no CLI context:
 
 ```python
@@ -236,7 +238,7 @@ from kelpseg.prepare.organize import (
 )
 
 plan = build_organization_plan(load_organize_recipe("configs/organize/coast.toml"), paths)
-release = organize_dataset(plan)  # resume=True only for matching interrupted work
+release = organize_dataset(plan)
 result = verify_organized_release(release, plan)
 ```
 
@@ -245,11 +247,206 @@ errors to stderr with a nonzero exit status, without a traceback. Common fixes:
 correct the named table/region/member, mount the intended source volume, restore
 unchanged inputs from verified backup, or select a new release identity.
 
+## Check ordinary image directories
+
+`check` and `clean` accept image directories directly. No path settings file,
+organizer catalog, CA/BC filename, or published release is required. Directory
+paths resolve from your working directory; choose the recipe explicitly.
+Files pair by their case-sensitive relative TIFF stem: `north/scene.TIF` pairs
+with `north/scene.tiff`. Case-folded collisions, duplicate stems, empty image
+scopes, symlinks, and missing or extra labels fail. Omit `--labels` for an
+image-only scope; a supplied label directory must pair every image.
+
+```bash
+uv run kelpseg check --images /data/coast/images --labels /data/coast/labels --recipe configs/check/planet8_source.toml
+uv run kelpseg check --images /data/coast/images --recipe configs/check/planet8_source.toml --full --report /data/reports/coast-full.json
+```
+
+The default quick check enumerates the complete scope and checks TIFF headers,
+bands, dtype, CRS, affine grid, nodata declarations and paired grids. It does
+not read pixels, validate classes, establish full readability, or hash files.
+`--full` reads every selected image and native-label pixel in bounded blocks,
+including full shared label mosaics. This can take substantial time for large
+BC labels. A full scan establishes pixel evidence, not checksum identity.
+Reports distinguish passed, failed, skipped, repairable and unknown evidence.
+Repairable source grid/nodata issues still return a nonzero status; `clean`
+can repair supported cases. Neither check level changes source files.
+
+No report is created unless `--report` names a fresh file outside the input
+directories. Reports publish atomically and refuse replacement. Keep generated
+reports outside Git. The concise terminal summary states the requested level;
+an exit status of 0 means that level and recipe passed.
+
+The supplied Planet source recipe declares 8-band `uint16` imagery, category
+values 0–4, and the audited missing-image-nodata fallback 0. That fallback is
+explicit dataset policy; new data must establish its own policy. A declared
+65535 takes precedence. The cleaned profile expects image nodata 0, label
+nodata 3, matching grids, and image all-band zero implying label 3. A channel
+count does not establish physical band names. Unknown region/date/band identity
+stays unknown unless supplied evidence establishes it.
+
+For another explicitly supported dataset, copy the recipe and edit ordinary
+values. No dataset-specific Python branch or class mapping is selected by name:
+
+```toml
+schema_version = 1
+profile = "source"
+image_band_counts = [4]
+image_dtypes = ["uint16"]
+label_values = [0, 1, 3]
+block_size = 512
+# missing_image_nodata = 0  # Set only with evidence for this input scope.
+# band_names = ["blue", "green", "red", "nir"]  # Requires matching header evidence.
+```
+
+Unknown keys fail. Leave `missing_image_nodata` absent to reject missing image
+metadata, and leave `band_names` absent when names are unestablished. For cleaned
+checks use `profile = "cleaned"`. Class vocabulary is explicit; checking values
+does not establish what unfamiliar categories mean.
+
+Full checking stops expensive scanning after unsupported headers, a read failure
+or a failed pixel check. The report lists skipped work and completed scan counts;
+failed reads are not retried. Quick checking still inventories the whole scope
+and reports its header findings without reading arrays.
+
+## Clean into a separate directory
+
+The cleaner accepts CA/BC sources and ordinary TIFF directories that meet the
+explicit recipe. It detects original image nodata first, nearest-aligns stored
+label categories onto the exact image grid, and computes annotation coverage
+independently of class zero or source masks. It preserves all image bands, dtype and valid values. Image
+nodata and, for paired inputs, outside-annotation pixels become zero in every
+band with metadata `nodata=0`; corresponding labels become 3 with metadata
+`nodata=3`. Label 0 remains water/background. Existing label 3 can remain over
+valid imagery. Labels are not remapped to binary here.
+
+Paired alignment supports one-band `uint8` labels and north-up, unrotated image
+and label grids in the same CRS. Different pixel sizes, offsets and extents are
+allowed. Other CRSs, rotated/south-up grids and label dtypes are rejected with a
+clear error; prepare separate compatible inputs before cleaning them. Image-only
+cleanup does not need a label grid.
+
+Matching image/label grids are read directly, with no reprojection. When grids
+differ, alignment reads only the native label crop needed for each image window
+and uses ordinary Rasterio nearest-neighbor reprojection on those stored values.
+Source nodata metadata, masks and overviews do not decide label categories or
+coverage. A crop over 16,777,216 source pixels is rejected; reduce the recipe's
+`block_size` instead of loading the entire annotation mosaic into memory.
+
+```bash
+uv run kelpseg clean --images /data/coast/images --labels /data/coast/labels --output /data/derived/coast-v1 --recipe configs/clean/planet8.toml --dry-run
+uv run kelpseg clean --images /data/coast/images --labels /data/coast/labels --output /data/derived/coast-v1 --recipe configs/clean/planet8.toml
+uv run kelpseg check --images /data/derived/coast-v1/images --labels /data/derived/coast-v1/labels --recipe configs/check/planet8_cleaned.toml --full
+```
+
+Image-only cleanup uses the same command without `--labels`; it normalizes
+source nodata, retains valid imagery and creates no labels:
+
+```bash
+uv run kelpseg clean --images /data/new-coast/images --output /data/derived/new-coast-v1 --recipe configs/clean/planet8.toml
+```
+
+Clean recipes contain the same expectation fields as source check recipes,
+without `profile`, plus `qa_masks = false` and `compression = "deflate"`.
+The declared vocabulary must include ignore 3 and exclude 255, which is
+reserved as an unused temporary warp fill; lossless Deflate is the supported
+output compression.
+Detailed QA masks are off by default. Enable `qa_masks = true` in an explicit
+recipe to retain coverage/reason evidence; this does not alter core output
+pixels. Compact counts, original/output grids, nodata decisions, hashes and
+provenance remain automatic. Outputs include `recipe.json`, `sources.json`
+(source paths/hashes, original/output grids and counts), `check.json`
+(independent full-check evidence), and `manifest.json` (the completion root
+with exact file hashes). Relative filenames are retained under `images/`
+and, when paired, `labels/`; directory names do not become invented scientific
+identities. Original companions are recorded as hashed inactive provenance,
+not copied beside changed TIFFs where stale masks or metadata could override
+the new content. Unknown companion-mask meanings remain unused.
+
+Dry-run resolves the scope and supported header repairs without writes; it is
+not a completed pixel audit or cleaned release. Actual cleanup reads all source
+pixels, hashes inputs and outputs, and runs the independent full cleaned check
+before atomic publication. Use a fresh separate output outside all input roots.
+Originals and organized inputs remain unchanged. Progress logs on stderr show
+phases, files, counts/bytes and verification results; notebook functions use
+normal Python logging.
+
+An optional `--parent /data/2_organized/coast/v1` verifies an existing organized
+release and carries its supplied identities/crosswalks into cleanup provenance.
+It is unnecessary for ordinary directories. Production releases keep exact
+variant-2 parent identities; full CA/BC materialization and Box publication
+remain Tasks 030A/030B.
+
+Cleanup must finish in one run. It writes directly into a fresh sibling
+`.<output-name>.incomplete` directory, then renames that directory to the final
+output after all checks pass. Both paths must be absent before starting.
+
+If a run fails or is interrupted, the incomplete directory stays available for
+inspection and the final output is not published. The next run starts from the
+beginning. Inspect and deliberately move or remove the incomplete directory,
+or choose a fresh output name. There is no `clean --resume`, automatic cleanup,
+per-source receipt, recovery journal or reuse of a completed cleaned output.
+Do not run two cleaners against the same output name.
+
+| Reported issue | Corrective action |
+|---|---|
+| Missing/ambiguous pair or name collision | Correct explicit relative filenames or supply a complete paired directory; omit labels only for a wholly image-only scope |
+| Unsupported bands/dtype/classes or missing CRS | Establish the input format/semantics and use an appropriate explicit recipe; cleanup cannot infer them |
+| Missing/inconsistent nodata | Restore valid declarations or document an evidence-backed missing-value fallback; inconsistent or unrepresentable declarations are rejected |
+| Repairable grid or label nodata | Use shared cleanup into a fresh output, then full-check with the cleaned profile |
+| Different CRS, rotated/south-up grids or non-uint8 labels | Prepare separate supported paired TIFFs; originals remain unchanged |
+| Label crop exceeds the pixel limit | Reduce `block_size` so each native source crop stays within the supported memory bound |
+| Retained all-band-zero collision | Review the original nodata policy/input; valid all-zero imagery cannot be silently reclassified by the requested output representation |
+| Existing report/output or incomplete cleanup | Select a fresh destination; for failed cleanup, inspect and deliberately move/remove the incomplete directory before rerunning from the beginning |
+
+The same functions work from Python:
+
+```python
+from pathlib import Path
+from kelpseg.prepare.check import check_inputs, load_check_recipe
+from kelpseg.prepare.clean_inputs import build_clean_plan, load_clean_recipe
+from kelpseg.prepare.clean import clean_dataset
+
+images, labels = Path("/data/coast/images"), Path("/data/coast/labels")
+result = check_inputs(images, labels, load_check_recipe("configs/check/planet8_source.toml"))
+print(result.passed, result.to_dict())
+plan = build_clean_plan(images, labels, Path("/data/derived/coast-v1"),
+                        load_clean_recipe("configs/clean/planet8.toml"))
+release = clean_dataset(plan)  # fresh output; the entire run must complete
+```
+
+For image-only use pass `None` for labels. These plain functions return typed values; CLI handlers supply presentation and
+exit codes. Source-aware nodata and nearest-alignment functions are shared with
+the retained correctness coverage. See [Task 029B](../tasks/029b_clean_organized_sources.md)
+for the migration map and bounded verification evidence.
+
+## Follow the preparation code
+
+Start at `clean_dataset` in `src/kelpseg/prepare/clean.py`. Follow one run:
+check the inputs, clean each source, independently check the outputs, and
+publish. `_clean_pair` opens one source; `_write_cleaned_windows` contains the
+pixel rules. `aligned_label` in `alignment.py` is a plain function returning
+label values and coverage for one window; it uses a raw crop and Rasterio
+`reproject`, with no custom XML or generator. `check.py` separates directory
+discovery, source/header checks and full pixel scanning. Comments explain the
+scientific choices. Routine dataset changes use recipe values rather than Python
+edits.
+
+Cleanup logs identify four phases (hash inputs, check source pixels, clean,
+then verify/publish), source dimensions/bands, original nodata,
+paired versus image-only decisions, QA mask settings, pixel changes and final
+verification. Long scans and hashes give periodic progress updates. Save the
+ordinary Python logs by appending `2> clean.log` to a command.
+
+Every preparation write needs a fresh output. Existing completed releases can
+still be checked with `verify_organized_release` or `verify_cleaned_release`
+without rebuilding a plan, repeating the command or rewriting them.
+
 ## Later workflows and outputs
 
 The selected future training style is
 `uv run kelpseg train --recipe <recipe-file>`. It is not available yet.
-Preparation, band/chip selection, training, prediction, scoring, LORO, and
+Band/chip selection, training, prediction, scoring, LORO, and
 adding a region will gain copyable recipes here when implemented. Most settings
 will live in those recipes, with a few explicit command options.
 

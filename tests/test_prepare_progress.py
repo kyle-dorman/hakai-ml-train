@@ -64,50 +64,6 @@ def test_library_progress_has_file_counts_and_never_prints_directly(
     assert capsys.readouterr() == ("", "")
 
 
-def test_resume_logs_completed_file_checks_and_reuse(
-    tmp_path: Path, monkeypatch, caplog
-):
-    fixture = make_fixture(tmp_path / "input")
-    plan = fixture.plan()
-    atomic_json = engine._atomic_json
-
-    def stop_after_receipt(path, value):
-        atomic_json(path, value)
-        if path.parent.name == "receipts":
-            raise KeyboardInterrupt("controlled interruption after verified file")
-
-    with monkeypatch.context() as patch:
-        patch.setattr(engine, "_atomic_json", stop_after_receipt)
-        with pytest.raises(KeyboardInterrupt):
-            engine.organize_dataset(plan)
-    caplog.clear()
-    with caplog.at_level(logging.INFO, logger="kelpseg.prepare"):
-        release = engine.organize_dataset(fixture.plan(), resume=True)
-    progress = caplog.text.lower()
-    assert "staged" in progress
-    assert "reus" in progress
-    assert plan.files[0].destination in progress
-    assert "published" in progress
-    engine.verify_organized_release(release, plan)
-
-
-def test_completed_repeat_logs_verification_without_rewriting(tmp_path: Path, caplog):
-    fixture = make_fixture(tmp_path / "input")
-    plan = fixture.plan()
-    release = engine.organize_dataset(plan)
-    before = inventory(release)
-    mtimes = {p: p.stat().st_mtime_ns for p in release.rglob("*") if p.is_file()}
-    caplog.clear()
-    with caplog.at_level(logging.INFO, logger="kelpseg.prepare"):
-        assert engine.organize_dataset(plan, resume=True) == release
-    progress = caplog.text.lower()
-    assert "already exists" in progress
-    assert "verif" in progress
-    assert "copying" not in progress
-    assert inventory(release) == before
-    assert all(path.stat().st_mtime_ns == value for path, value in mtimes.items())
-
-
 def test_cli_dry_run_logs_input_checks_without_copying(tmp_path: Path, monkeypatch):
     fixture = make_fixture(tmp_path / "input")
     before = inventory(fixture.root)
@@ -170,9 +126,17 @@ def test_long_copy_reports_bytes_and_still_verifies_output(
     with caplog.at_level(logging.INFO, logger="kelpseg.prepare"):
         receipt = engine._copy_payload(plan, item, temporary)
     assert temporary.read_bytes() == fixture.payloads[item.member_relative_path]
-    assert receipt["destination"] == item.destination
     assert receipt["bytes"] == item.bytes
     progress = caplog.text.lower()
     assert "still copying" in progress
-    assert "independently verifying copied bytes" in progress
+    assert "independently verifying copied bytes" not in progress
     assert item.destination in progress
+
+
+def test_organize_cli_has_no_resume_option():
+    result = CliRunner().invoke(app, ["organize", "--help"])
+    assert result.exit_code == 0
+    assert "--resume" not in result.stdout
+    rejected = CliRunner().invoke(app, ["organize", "--resume"])
+    assert rejected.exit_code != 0
+    assert "No such option" in rejected.stderr

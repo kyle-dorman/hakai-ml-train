@@ -34,12 +34,19 @@ full task contracts when selected; split them further when needed.
 - The final repository has no `scripts/` directory. Expose a small installed
   command and short explicit recipes; do not move complexity into a framework.
 - Favor plain functions, familiar geospatial/ML libraries, and actionable error
-  messages for researchers with limited Python/ML experience.
+  messages for researchers with limited Python/ML experience. The current
+  one-pass cleaner is an upper bound on file complexity, not a target to grow
+  toward. Prefer smaller files that each do one clear job.
+- Run steps in a plain sequence. If a step fails, stop; do not run the next step.
+  Restart, resume, recovery and reuse of partial work are out of scope unless
+  the user explicitly requests them. An agent-written task contract alone does
+  not authorize those features.
 - Group preparation code in `src/kelpseg/prepare/`. Keep researcher-maintained
   code explicit: plain functions, straightforward loops, one schema definition,
   and no clever shorthand or unnecessary layers.
 - Show preparation progress by default in the CLI using standard Python logging:
-  phases, current file, counts/bytes, resume decisions, and long-copy/hash updates.
+  phases, current file, counts/bytes, and long-copy/hash updates. Explain rerun
+  or resume decisions only for commands that support them.
 - Remove unrelated dataset/model families and unused dependencies within the
   selected task. Preserve useful correctness tests as implementations change.
 - Preserve user changes and unrelated work in a dirty checkout.
@@ -79,8 +86,11 @@ Large data, generated split assignments/manifests, checkpoints, predictions, and
 reports belong outside Git. Keep generation rules, configs, tests, and human
 cleanup documentation in Git. UCLA Box via rclone is the target transfer and
 backup store; local roots and validation rules live in `docs/data_artifacts.md`.
-Make expensive work restartable, refuse silent overwrites and duplicate or
-missing identities, and publish complete manifests atomically.
+Preparation is one pass: an interrupted run starts over into a fresh output.
+There is no preparation restart, resume or partial-work reuse. Do not infer
+recovery support from an expensive operation or add a general recovery system.
+Refuse silent overwrites and duplicate or missing identities, and publish complete manifests
+atomically.
 
 ## Local validation and remote work
 

@@ -13,9 +13,7 @@ import hashlib
 import io
 import json
 import logging
-import os
 import re
-import tempfile
 from pathlib import Path
 
 from kelpseg.paths import PathSettings
@@ -412,56 +410,26 @@ def _table_bytes(rows, fields):
 
 
 def _publish(destination: Path, documents: dict[str, bytes]) -> Path:
-    """Create a complete immutable catalog or verify its exact existing bytes."""
-    if destination.is_symlink():
-        raise OrganizeError(f"Catalog destination is a symlink: {destination}")
-    if destination.exists():
-        logger.info("Checking existing metadata catalog: %s", destination)
-        _require(
-            destination.is_dir(),
-            f"catalog destination is not a directory: {destination}",
-        )
-        _require(
-            {x.name for x in destination.iterdir()} == set(documents),
-            f"conflicting catalog inventory at {destination}",
-        )
-        _require(
-            all(
-                not (destination / name).is_symlink()
-                and (destination / name).read_bytes() == content
-                for name, content in documents.items()
-            ),
-            f"conflicting existing catalog at {destination}",
-        )
-        logger.info("Existing metadata catalog verified: %s", destination)
-        return destination
-    logger.info("Creating metadata catalog: %s", destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    lock = destination.with_name(f".{destination.name}.catalog.lock")
-    try:
-        descriptor = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    except FileExistsError as error:
-        raise OrganizeError(f"Catalog writer lock exists: {lock}") from error
-    os.close(descriptor)
-    try:
-        stage = Path(
-            tempfile.mkdtemp(
-                prefix=f".{destination.name}.catalog-", dir=destination.parent
+    """Write one fresh catalog and leave any failed attempt for inspection."""
+    stage = destination.with_name(f".{destination.name}.incomplete")
+    for output in (destination, stage):
+        if output.exists() or output.is_symlink():
+            raise OrganizeError(
+                f"Catalog output or incomplete attempt exists: {output}; choose a fresh destination."
             )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    stage.mkdir()
+    logger.info("Creating metadata catalog: %s", destination)
+    for name, content in documents.items():
+        logger.info("Writing metadata file: %s (%d bytes)", name, len(content))
+        with (stage / name).open("xb") as stream:
+            stream.write(content)
+    if destination.exists() or destination.is_symlink():
+        raise OrganizeError(
+            f"Catalog destination appeared during writing: {destination}"
         )
-        for name, content in documents.items():
-            logger.info("Writing metadata file: %s (%d bytes)", name, len(content))
-            with (stage / name).open("xb") as stream:
-                stream.write(content)
-                stream.flush()
-                os.fsync(stream.fileno())
-        _require(
-            not destination.exists(), f"catalog destination appeared: {destination}"
-        )
-        stage.rename(destination)
-        logger.info("Metadata catalog complete: %s", destination)
-    finally:
-        lock.unlink()
+    stage.rename(destination)
+    logger.info("Metadata catalog complete: %s", destination)
     return destination
 
 
@@ -474,6 +442,14 @@ def build_legacy_ca_bc_catalog(
     fail this historical conversion; re-establish that affected identity before
     proceeding rather than silently accepting a modified archive.
     """
+    # Do not rebuild evidence just to discover that an output already exists.
+    destination = Path(destination)
+    stage = destination.with_name(f".{destination.name}.incomplete")
+    for output in (destination, stage):
+        if output.exists() or output.is_symlink():
+            raise OrganizeError(
+                f"Catalog output or incomplete attempt exists: {output}; choose a fresh destination."
+            )
     logger.info("Building historical CA/BC input catalog: %s", destination)
     logger.info("Using metadata evidence under: %s", paths.data_root)
     try:
@@ -529,6 +505,7 @@ def _build_catalog(paths, regions_csv, destination):
     lineage = json.loads(contents["lineage"])
     # Reconcile the exact named historical tables with the completed audit.
     evidence_equivalences = {}
+    known = lineage["input_hashes_after"]
     for key in (
         "archive_members",
         "pairs",
@@ -538,7 +515,6 @@ def _build_catalog(paths, regions_csv, destination):
         "old_split",
         "current_membership",
     ):
-        known = lineage["input_hashes_after"]
         expected = [
             digest
             for path, digest in known.items()

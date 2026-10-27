@@ -99,6 +99,7 @@ def test_recipe_refuses_invalid_settings(tmp_path: Path, change: str):
         "dangling-asset",
         "primary-collision",
         "control-collision",
+        "file-directory-collision",
         "case-collision",
         "bad-hash",
         "missing-zip-member",
@@ -138,6 +139,8 @@ def test_malformed_catalogs_fail_before_output(tmp_path: Path, change: str):
         assets[0]["destination"] = f"images/{fixture.source_id}.tif"
     elif change == "control-collision":
         assets[0]["destination"] = "manifest.json"
+    elif change == "file-directory-collision":
+        assets[0]["destination"] = f"images/{fixture.source_id}.tif/aux.xml"
     elif change == "case-collision":
         assets[0]["destination"] = assets[1]["destination"].upper()
     elif change == "bad-hash":
@@ -359,4 +362,34 @@ def test_plan_rejects_known_output_conflicts_without_writing(tmp_path: Path, sta
     before = inventory(fixture.root)
     with pytest.raises(OrganizeError, match="Conflicting output"):
         fixture.plan()
+    assert inventory(fixture.root) == before
+
+
+@pytest.mark.parametrize("incomplete", [False, True])
+def test_existing_output_is_refused_even_with_a_matching_plan_identity(
+    tmp_path, monkeypatch, incomplete
+):
+    import json
+
+    fixture = make_fixture(tmp_path / "input")
+    plan = fixture.plan()
+    output = plan.destination
+    if incomplete:
+        output = output.with_name(f".{output.name}.incomplete")
+    output.mkdir(parents=True)
+    record = output / ("state.json" if incomplete else "manifest.json")
+    record.write_text(
+        json.dumps(
+            {"schema_version": 1, "status": "complete", "plan_hash": plan.plan_hash}
+        )
+    )
+    before = inventory(fixture.root)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("existing output should be refused before catalog reads")
+
+    monkeypatch.setattr(Path, "read_bytes", forbidden)
+    with pytest.raises(OrganizeError, match="fresh release"):
+        fixture.plan()
+    monkeypatch.undo()
     assert inventory(fixture.root) == before

@@ -3,7 +3,9 @@
 ## Current implementation and replacement target
 
 The installed `src/kelpseg/` package provides the Typer command and read-only
-machine-path checks plus generic byte-preserving organization. The checkout retains legacy Planet `src.*` modules, root
+machine-path checks, generic byte-preserving organization, quick/full directory
+checks, and shared cleanup with optional labels. The checkout retains legacy
+Planet `src.*` modules, root
 `trainer.py`, `scripts/`, relevant configs, and focused tests until their
 replacements land. Unrelated application/model/export families are removed.
 The legacy recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
@@ -26,9 +28,12 @@ variant 1: raw, immutable source deliveries
   -> optional label scoring, comparisons, and visual review
 ```
 
-Prefer small functions with explicit inputs/outputs. Keep expensive stages
-restartable; check existing input/output identities before resuming. Publish
-complete deterministic manifests atomically and refuse silent overwrites.
+Prefer small functions with explicit inputs/outputs and a limited supported
+scope. Preparation runs once from beginning to end; a failure stops the sequence
+and an interruption requires a fresh attempt. There is no preparation restart,
+resume or partial-output reuse. Publish complete manifests atomically and refuse
+silent overwrites. The current one-pass cleaner is the upper bound on file
+complexity; prefer smaller functions and files with one clear purpose.
 
 ## Researcher interface
 
@@ -37,23 +42,35 @@ app and separate thin command handlers, backed by ordinary workflow
 functions callable from notebooks/tests without CLI context. Import heavy
 workflow code only when its command runs. Preparation modules live together in
 `src/kelpseg/prepare/`: `organize_inputs.py` loads/validates explicit declarations,
-`organize.py` copies/verifies bytes, and `legacy_catalog.py` converts only the
-historical CA/BC metadata. Keep these as explicit functions and ordinary loops;
+`organize.py` copies/verifies bytes, `check.py` validates directory scopes,
+`clean_inputs.py` defines cleanup settings/plans, and `clean.py` writes/verifies
+separate derived outputs. `nodata.py` and `alignment.py` hold shared scientific
+functions; `legacy_catalog.py` converts only historical CA/BC metadata. Keep
+these as explicit functions and ordinary loops;
 the CLI uses standard Python logging for progress, without a custom logging
-or orchestration layer. Task 028 establishes the installed
-entry point and path checks; later tasks add their commands. The selected
+or orchestration layer. Later tasks add model workflow commands. The selected
 training command style is `uv run kelpseg train --recipe <recipe-file>`;
 it remains planned until the training task implements it. See
-[quickstart.md](quickstart.md) for working setup, path-check and organization recipes.
+[quickstart.md](quickstart.md) for working setup and preparation recipes.
 
-Runtime dependencies cover implemented workflows: Typer and Rasterio.
+The preparation surface is `organize`, `check`, and shared `clean`;
+there is no BC-specific command or intermediate. Task 029B implements
+direct-directory
+checking/cleanup for imagery with optional paired labels, without requiring an
+organizer catalog. Quick checks inspect structure/headers; full checks scan all
+selected pixels and state any unavailable checks. Both are read-only. Cleanup
+uses the same functions for CA, BC and other explicitly supported inputs.
+
+Runtime dependencies cover implemented workflows: Typer, NumPy and Rasterio.
 Checkout-only dependencies for retained code live in the default `legacy`
 group alongside `dev`; plain frozen setup includes both. New workflows promote
 their dependencies into runtime as implemented. Distribution checks install
 only frozen runtime dependencies, independently of legacy checkout tests.
 Reusable functions return typed values and raise ordinary exceptions; CLI
-handlers own output and exit status. Machine paths come from the explicit
-`--paths` file, with no discovery; relative roots resolve against that file.
+handlers own output and exit status. Organizer/path-file workflows use an
+explicit `--paths` file, with no discovery; relative roots resolve against that
+file. Direct-directory check/clean paths resolve from the working
+directory, with recipe references relative to the recipe file.
 
 Use short recipes with ordinary values for bands, learning rate, augmentations,
 dataset, and checkpoint. Keep machine-specific paths in one place; changing
@@ -90,8 +107,38 @@ hashes; retain original paths even when long product names are unavailable.
 Original grids need not match until the cleaning stage. The repaired historical
 merge supplies membership/provenance evidence, not original label payloads.
 See [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases)
-for stage boundaries and mapping requirements. Organization is implemented; full release construction/publication and cleaning
-remain later tasks.
+for stage boundaries and mapping requirements. Organization and cleanup are
+implemented; full production release construction/publication remains later work.
+
+Cleanup writes into a fresh sibling `.<output-name>.incomplete` directory and
+renames it to the requested output only after all checks pass. Failed runs leave
+that incomplete directory for inspection. The cleaner never resumes or reuses it;
+move or remove it deliberately before a full rerun, or choose a new output path.
+There are no cleanup receipts, active-file journals or producer-matching resumes.
+
+Cleaned imagery stores nodata as all-band zero and declares
+`nodata=0`; labels retain valid class-zero background and use stored/metadata
+ignore value 3. Detect original nodata before normalizing values. For paired
+data, align labels and exclude outside-label coverage by writing image zero
+plus label 3. Image-only cleanup never blanks valid imagery because labels are
+absent. This deliberately changes derived image bytes and supersedes historical
+BC outside-coverage background filling; raw/organized payloads stay unchanged.
+Detect retained all-zero value collisions instead of silently changing validity.
+Detailed coverage/reason rasters are optional and off by default; compact
+counts, transformation records, source/output hashes and asset dispositions
+remain required. Rewritten image and label sidecars must not reactivate stale
+metadata/masks/overviews. Existing scientific logic and correctness tests are
+reused, with explicit regression changes for the new policy. Task 029B records
+the migration map and bounded verification evidence.
+
+Paired labels on the exact image grid are read directly without resampling.
+When grids differ, alignment reads the native label crop without masking,
+nearest-reprojects the array onto the image window, and identifies coverage
+using an unused value 255. This preserves stored class zero regardless of source
+nodata metadata. Supported inputs have matching CRS, north-up unrotated grids
+and single-band `uint8` labels. Other grids/dtypes fail explicitly. Each source
+crop is limited to 16,777,216 pixels; a smaller processing window is required
+above that limit. Image-only cleanup has no label-alignment requirement.
 
 Preparation accepts declared deliveries, region mappings and recipes uniformly
 for every dataset. The current 369-pair scope is the first ordinary dataset,

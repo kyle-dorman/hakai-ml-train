@@ -1,8 +1,7 @@
-"""Preserved scientific payloads, independently verified restart and publication."""
+"""Preserved source bytes and provenance; one-pass failures never publish or resume."""
 
 from __future__ import annotations
 
-import fcntl
 import json
 from pathlib import Path
 
@@ -22,27 +21,6 @@ from organize_fixtures import (
 import kelpseg.prepare.organize as engine
 from kelpseg.prepare.organize import organize_dataset, verify_organized_release
 from kelpseg.prepare.organize_inputs import OrganizeError
-
-
-def interrupted(fixture, monkeypatch):
-    plan = fixture.plan()
-    atomic = engine._atomic_json
-
-    def stop_after_verified_receipt(path, value):
-        atomic(path, value)
-        if path.parent.name == "receipts":
-            raise KeyboardInterrupt("fixture interruption after one verified file")
-
-    with monkeypatch.context() as patch:
-        patch.setattr(engine, "_atomic_json", stop_after_verified_receipt)
-        with pytest.raises(KeyboardInterrupt):
-            organize_dataset(plan)
-    stage = plan.destination.with_name(f".{plan.destination.name}.incomplete")
-    assert stage.is_dir()
-    assert not plan.destination.exists()
-    assert not list(stage.rglob("manifest.json"))
-    assert len(list((stage / "receipts").glob("*.json"))) == 1
-    return plan, stage
 
 
 @pytest.mark.parametrize(
@@ -112,63 +90,10 @@ def test_independent_datasets_preserve_all_bytes_and_metadata(
     mtimes = {
         path: path.stat().st_mtime_ns for path in release.rglob("*") if path.is_file()
     }
-    assert organize_dataset(fixture.plan()) == release
-    assert organize_dataset(fixture.plan(), resume=True) == release
+    with pytest.raises(OrganizeError, match="already exists"):
+        organize_dataset(plan)
     assert inventory(release) == before
     assert all(path.stat().st_mtime_ns == value for path, value in mtimes.items())
-
-
-def test_interrupted_copy_requires_explicit_resume_and_rehashes_outputs(
-    tmp_path: Path, monkeypatch
-):
-    fixture = make_fixture(tmp_path / "input")
-    plan, stage = interrupted(fixture, monkeypatch)
-    with pytest.raises(OrganizeError, match="resume"):
-        organize_dataset(plan)
-    released = organize_dataset(fixture.plan(), resume=True)
-    assert released.is_dir()
-    assert not (stage / "payload").exists()
-    verify_organized_release(released)
-
-
-@pytest.mark.parametrize(
-    "change", ["corrupt-output", "unknown-file", "recipe", "catalog", "source"]
-)
-def test_resume_refuses_changed_or_unrecognized_state(
-    tmp_path: Path, monkeypatch, change
-):
-    fixture = make_fixture(tmp_path / "input")
-    plan, stage = interrupted(fixture, monkeypatch)
-    if change == "corrupt-output":
-        path = next(path for path in (stage / "payload").rglob("*") if path.is_file())
-        path.write_bytes(b"corrupt verified output")
-    elif change == "unknown-file":
-        (stage / "unrecognized.txt").write_text("Preserve this evidence")
-    elif change == "recipe":
-        fixture.recipe.write_text(
-            fixture.recipe.read_text().replace(
-                'dataset_id = "island"', 'dataset_id = "changed"'
-            )
-        )
-        # The original destination is part of the copied stage's identity.
-        changed = fixture.plan()
-        from dataclasses import replace
-
-        plan = replace(changed, destination=plan.destination)
-    elif change == "catalog":
-        rows = read_csv(fixture.catalog / "membership.csv")
-        rows[0]["legacy_source_id"] = "changed identity evidence"
-        write_csv(fixture.catalog / "membership.csv", MEMBERSHIP_FIELDS, rows)
-    else:
-        with (fixture.root / "delivery.zip").open("ab") as stream:
-            stream.write(b"source was changed")
-    before = inventory(stage)
-    with pytest.raises(OrganizeError):
-        if change == "catalog":
-            plan = fixture.plan()
-        organize_dataset(plan, resume=True)
-    assert not plan.destination.exists()
-    assert inventory(stage) == before
 
 
 def test_expected_member_hash_failure_never_publishes(tmp_path: Path):
@@ -205,9 +130,7 @@ def test_directory_source_changes_cannot_be_hidden_by_same_size(tmp_path: Path):
     assert not plan.destination.exists()
 
 
-@pytest.mark.parametrize(
-    "change", ["bytes", "extra", "empty-directory", "manifest", "recipe"]
-)
+@pytest.mark.parametrize("change", ["bytes", "extra", "empty-directory", "manifest"])
 def test_completed_release_is_immutable_and_verified(tmp_path: Path, change):
     fixture = make_fixture(tmp_path / "input")
     plan = fixture.plan()
@@ -221,92 +144,10 @@ def test_completed_release_is_immutable_and_verified(tmp_path: Path, change):
     elif change == "manifest":
         manifest = release / "manifest.json"
         manifest.write_text(manifest.read_text().replace('"complete"', '"incomplete"'))
-    else:
-        rows = read_csv(fixture.catalog / "membership.csv")
-        rows[0]["legacy_source_id"] = "different"
-        write_csv(fixture.catalog / "membership.csv", MEMBERSHIP_FIELDS, rows)
     before = inventory(release)
     with pytest.raises(OrganizeError):
-        if change == "recipe":
-            plan = fixture.plan()
-        organize_dataset(plan)
+        verify_organized_release(release, plan)
     assert inventory(release) == before
-
-
-def test_concurrent_writer_is_refused(tmp_path: Path):
-    fixture = make_fixture(tmp_path / "input")
-    plan = fixture.plan()
-    plan.destination.parent.mkdir(parents=True)
-    lock = plan.destination.with_name(f".{plan.destination.name}.lock")
-    with lock.open("w") as stream:
-        fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        try:
-            with pytest.raises(OrganizeError, match="writing"):
-                organize_dataset(plan)
-        finally:
-            fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
-    assert not plan.destination.exists()
-
-
-def test_crash_before_receipt_recovers_only_after_rechecking_source(
-    tmp_path: Path, monkeypatch
-):
-    fixture = make_fixture(tmp_path / "input")
-    plan = fixture.plan()
-    atomic = engine._atomic_json
-
-    def stop_before_receipt(path, value):
-        if path.parent.name == "receipts":
-            raise KeyboardInterrupt("crash between payload rename and receipt")
-        atomic(path, value)
-
-    with monkeypatch.context() as patch:
-        patch.setattr(engine, "_atomic_json", stop_before_receipt)
-        with pytest.raises(KeyboardInterrupt):
-            organize_dataset(plan)
-    stage = plan.destination.with_name(f".{plan.destination.name}.incomplete")
-    target = next(path for path in (stage / "payload").rglob("*") if path.is_file())
-    unchanged = target.stat().st_mtime_ns
-    release = organize_dataset(fixture.plan(), resume=True)
-    assert (
-        release / target.relative_to(stage / "payload")
-    ).stat().st_mtime_ns == unchanged
-    verify_organized_release(release, plan)
-
-
-def test_identified_interrupted_temporary_is_recreated_without_touching_originals(
-    tmp_path: Path, monkeypatch
-):
-    fixture = make_fixture(tmp_path / "input")
-    plan = fixture.plan()
-    copy = engine._copy_payload
-
-    def stop_mid_copy(plan, item, temporary):
-        temporary.write_bytes(b"identified interrupted temporary")
-        raise KeyboardInterrupt("crash while streaming")
-
-    with monkeypatch.context() as patch:
-        patch.setattr(engine, "_copy_payload", stop_mid_copy)
-        with pytest.raises(KeyboardInterrupt):
-            organize_dataset(plan)
-    stage = plan.destination.with_name(f".{plan.destination.name}.incomplete")
-    assert len(list(stage.rglob("*.organize-part"))) == 1
-    before = digest((fixture.root / "delivery.zip").read_bytes())
-    assert copy is engine._copy_payload
-    release = organize_dataset(fixture.plan(), resume=True)
-    verify_organized_release(release, plan)
-    assert digest((fixture.root / "delivery.zip").read_bytes()) == before
-
-
-def test_unknown_temporary_is_not_deleted_on_resume(tmp_path: Path, monkeypatch):
-    fixture = make_fixture(tmp_path / "input")
-    plan, stage = interrupted(fixture, monkeypatch)
-    unknown = stage / "payload/unidentified.organize-part"
-    unknown.write_bytes(b"do not delete")
-    before = inventory(stage)
-    with pytest.raises(OrganizeError):
-        organize_dataset(plan, resume=True)
-    assert inventory(stage) == before
 
 
 @pytest.mark.parametrize("compressed", [False, True])
@@ -353,9 +194,9 @@ def test_directory_source_mutation_after_read_prevents_publication(
     copy = engine._copy_payload
     changed = False
 
-    def mutate_after_read(plan, item, temporary):
+    def mutate_after_read(plan, item, temporary, **kwargs):
         nonlocal changed
-        receipt = copy(plan, item, temporary)
+        receipt = copy(plan, item, temporary, **kwargs)
         if not changed:
             source = (
                 plan.resolved_deliveries[item.delivery_id] / item.member_relative_path
@@ -394,3 +235,106 @@ def test_asset_ids_are_scoped_by_pair_owner(tmp_path: Path):
     assert masks[second_id]["sha256"] == digest(
         fixture.payloads["different/annotated.tiff"]
     )
+
+
+def test_interruption_leaves_only_incomplete_files_and_next_run_refuses_them(
+    tmp_path, monkeypatch
+):
+    fixture = make_fixture(tmp_path / "input")
+    plan = fixture.plan()
+    original = inventory(fixture.root)
+    copy_payload = engine._copy_payload
+
+    def fail_after_copy(*args, **kwargs):
+        copy_payload(*args, **kwargs)
+        raise RuntimeError("one-pass interruption")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(engine, "_copy_payload", fail_after_copy)
+        with pytest.raises(OrganizeError, match="interruption"):
+            organize_dataset(plan)
+    stage = plan.destination.with_name(f".{plan.destination.name}.incomplete")
+    assert stage.is_dir() and not plan.destination.exists()
+    assert not (stage / "payload").exists()
+    assert not (stage / "receipts").exists()
+    assert not (stage / "state.json").exists()
+    assert not (stage / "manifest.json").exists()
+    before = inventory(stage)
+    with pytest.raises(OrganizeError, match="incomplete|already exists"):
+        organize_dataset(plan)
+    assert inventory(stage) == before
+    for name, expected in original.items():
+        assert digest((fixture.root / name).read_bytes()) == expected
+
+
+def test_one_pass_stage_prevents_a_competing_writer(tmp_path, monkeypatch):
+    fixture = make_fixture(tmp_path / "input")
+    plan = fixture.plan()
+    copy_payload = engine._copy_payload
+    attempted = False
+
+    def try_second_writer(*args, **kwargs):
+        nonlocal attempted
+        attempted = True
+        with pytest.raises(OrganizeError, match="already exists"):
+            organize_dataset(plan)
+        return copy_payload(*args, **kwargs)
+
+    monkeypatch.setattr(engine, "_copy_payload", try_second_writer)
+    release = organize_dataset(plan)
+    assert attempted
+    verify_organized_release(release, plan)
+
+
+def test_repeated_member_is_read_from_delivery_once_within_the_run(
+    tmp_path, monkeypatch
+):
+    fixture = make_fixture(tmp_path / "input", multiple=True)
+    plan = fixture.plan()
+    copy_payload = engine._copy_payload
+    reads = []
+
+    def count_read(plan, item, target, **kwargs):
+        reads.append((item.delivery_id, item.member_relative_path))
+        return copy_payload(plan, item, target, **kwargs)
+
+    monkeypatch.setattr(engine, "_copy_payload", count_read)
+    release = organize_dataset(plan)
+    assert len(reads) == len(set(reads)) < len(plan.files)
+    verify_organized_release(release, plan)
+    for item in plan.files:
+        assert (release / item.destination).read_bytes() == fixture.payloads[
+            item.member_relative_path
+        ]
+
+
+def test_zip_handle_is_opened_once_for_all_selected_members(tmp_path, monkeypatch):
+    fixture = make_fixture(tmp_path / "input", multiple=True)
+    plan = fixture.plan()
+    original_open = engine.zipfile.ZipFile
+    paths = []
+
+    def open_once(path, *args, **kwargs):
+        paths.append(Path(path))
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(engine.zipfile, "ZipFile", open_once)
+    organize_dataset(plan)
+    assert paths == [fixture.root / "delivery.zip"]
+
+
+def test_identical_payload_headers_are_read_once_during_provenance(
+    tmp_path, monkeypatch
+):
+    fixture = make_fixture(tmp_path / "input", multiple=True)
+    plan = fixture.plan()
+    header = engine._header
+    read_bytes = []
+
+    def inspect_header(path):
+        read_bytes.append(digest(path.read_bytes()))
+        return header(path)
+
+    monkeypatch.setattr(engine, "_header", inspect_header)
+    organize_dataset(plan)
+    assert len(read_bytes) == len(set(read_bytes)) == 3

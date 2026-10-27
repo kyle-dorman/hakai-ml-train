@@ -302,25 +302,20 @@ def build_organization_plan(
         raise OrganizeError(f"Cannot plan organization: {error}") from error
 
 
-def _build_plan(recipe: OrganizeRecipe, paths: PathSettings) -> OrganizationPlan:
-    if not paths.data_root.is_dir():
-        raise OrganizeError(
-            f"Mount or create the intended data_root: {paths.data_root}"
-        )
-    catalog = _safe_path(paths.data_root, recipe.input_catalog, "input_catalog")
-    regions_path = (recipe.recipe_file.parent / recipe.regions).resolve()
+def _catalog_tables(catalog: Path, regions_path: Path) -> tuple[dict, dict]:
+    """Read each catalog table once and validate its declared keys."""
+    tables = {}
     table_bytes = {}
-
-    def load_table(name: str):
+    for name in ("deliveries", "membership", "aliases", "assets"):
         path = catalog / f"{name}.csv"
         if path.is_symlink():
             raise OrganizeError(f"Catalog table symlink is not allowed: {path}")
-        data = path.read_bytes()
-        table_bytes[f"{name}.csv"] = data
-        return read_table(path, name, contents=data)
-
-    tables = {key: load_table(key) for key in ("deliveries", "membership", "aliases")}
-    tables["assets"] = load_table("assets") if (catalog / "assets.csv").exists() else []
+        if name == "assets" and not path.exists():
+            tables[name] = []
+            continue
+        contents = path.read_bytes()
+        table_bytes[f"{name}.csv"] = contents
+        tables[name] = read_table(path, name, contents=contents)
     tables["regions"] = read_table(regions_path, "regions")
     for key, fields in (
         ("deliveries", ("delivery_id",)),
@@ -332,26 +327,20 @@ def _build_plan(recipe: OrganizeRecipe, paths: PathSettings) -> OrganizationPlan
         _unique(tables[key], fields, key)
     if not tables["membership"] or not tables["deliveries"] or not tables["regions"]:
         raise OrganizeError("Declare at least one pair, delivery, and region.")
-    destination = _safe_path(
-        paths.data_root,
-        f"data/2_organized/{recipe.dataset_id}/{recipe.release_id}",
-        "destination",
-    )
-    staging = destination.with_name(f".{destination.name}.incomplete")
-    regions = {r["region_code"] for r in tables["regions"]}
-    for region in regions:
-        _identifier(region, "region_code", r"[a-z0-9]+")
+    return tables, table_bytes
+
+
+def _delivery_inputs(deliveries, catalog, data_root, destination, staging):
+    """Validate ZIP indexes or directory catalogs without reading raster bytes."""
     resolved, stats, indexes, directory_hashes = {}, {}, {}, {}
-    for number, delivery in enumerate(tables["deliveries"], start=1):
+    for number, delivery in enumerate(deliveries, start=1):
         did = delivery["delivery_id"]
-        logger.info(
-            "Checking delivery %d/%d: %s", number, len(tables["deliveries"]), did
-        )
+        logger.info("Checking delivery %d/%d: %s", number, len(deliveries), did)
         _identifier(did, "delivery_id")
         _hash(delivery["sha256"], f"delivery {did}")
         if delivery["kind"] not in {"zip", "directory"}:
             raise OrganizeError(f"delivery {did}: kind must be zip or directory.")
-        source = _safe_path(paths.data_root, delivery["path"], f"delivery {did}")
+        source = _safe_path(data_root, delivery["path"], f"delivery {did}")
         for output in (destination, staging):
             if (
                 source == output
@@ -405,6 +394,89 @@ def _build_plan(recipe: OrganizeRecipe, paths: PathSettings) -> OrganizationPlan
                     )
                 indexes[did][member] = int(row["bytes"])
                 directory_hashes[did][member] = row["sha256"]
+    return resolved, stats, indexes, directory_hashes
+
+
+def _logical_inputs(recipe, catalog, tables, table_bytes):
+    """Authenticate source declarations and retain their portable provenance ID."""
+    normalized = {
+        key: sorted(rows, key=lambda r: json.dumps(r, sort_keys=True))
+        for key, rows in tables.items()
+    }
+    # Physical locations/stat evidence are resolution hints, never content identity.
+    normalized["deliveries"] = [
+        {
+            k: v
+            for k, v in row.items()
+            if k not in {"path", "file_catalog", "verified_bytes", "verified_mtime_ns"}
+        }
+        for row in sorted(tables["deliveries"], key=lambda r: r["delivery_id"])
+    ]
+    logical = {
+        "recipe": {
+            "schema_version": 1,
+            "dataset_id": recipe.dataset_id,
+            "release_id": recipe.release_id,
+            "input_catalog": recipe.input_catalog,
+            "regions": recipe.regions,
+        },
+        **normalized,
+    }
+    manifest = catalog / "catalog_manifest.json"
+    if manifest.exists():
+        if manifest.is_symlink():
+            raise OrganizeError(f"Catalog provenance cannot be a symlink: {manifest}")
+        provenance = json.loads(manifest.read_bytes())
+        if (
+            not isinstance(provenance, dict)
+            or provenance.get("schema_version") != 1
+            or not isinstance(provenance.get("tables"), dict)
+        ):
+            raise OrganizeError(f"Invalid catalog provenance manifest: {manifest}")
+        actual_tables = {
+            name: hashlib.sha256(data).hexdigest() for name, data in table_bytes.items()
+        }
+        if actual_tables != provenance["tables"]:
+            raise OrganizeError(
+                f"Catalog tables differ from their completion provenance: {manifest}"
+            )
+        # Raw CSV hashes authenticate snapshots; normalized declarations below
+        # define identity independently of row order and local resolution hints.
+        logical["catalog_provenance"] = {
+            key: value for key, value in provenance.items() if key != "tables"
+        }
+    digest = hashlib.sha256(
+        (json.dumps(logical, sort_keys=True, indent=2, allow_nan=False) + "\n").encode()
+    ).hexdigest()
+    return normalized, logical, digest
+
+
+def _build_plan(recipe: OrganizeRecipe, paths: PathSettings) -> OrganizationPlan:
+    if not paths.data_root.is_dir():
+        raise OrganizeError(
+            f"Mount or create the intended data_root: {paths.data_root}"
+        )
+    catalog = _safe_path(paths.data_root, recipe.input_catalog, "input_catalog")
+    regions_path = (recipe.recipe_file.parent / recipe.regions).resolve()
+    destination = _safe_path(
+        paths.data_root,
+        f"data/2_organized/{recipe.dataset_id}/{recipe.release_id}",
+        "destination",
+    )
+    staging = destination.with_name(f".{destination.name}.incomplete")
+    for output in (destination, staging):
+        if output.exists() or output.is_symlink():
+            raise OrganizeError(
+                f"Conflicting output or incomplete attempt: {output}; inspect it and choose a fresh release."
+            )
+    tables, table_bytes = _catalog_tables(catalog, regions_path)
+    regions = set()
+    for row in tables["regions"]:
+        _identifier(row["region_code"], "region_code", r"[a-z0-9]+")
+        regions.add(row["region_code"])
+    resolved, stats, indexes, directory_hashes = _delivery_inputs(
+        tables["deliveries"], catalog, paths.data_root, destination, staging
+    )
     # Neither catalog nor recipe-region input may overlap an output workspace.
     for source in (catalog, regions_path):
         if any(
@@ -420,8 +492,6 @@ def _build_plan(recipe: OrganizeRecipe, paths: PathSettings) -> OrganizationPlan
     ):
         safe_relative(member, "member")
         safe_relative(dest, "destination")
-        if dest.casefold().endswith((".organize-part", ".tmp")):
-            raise OrganizeError(f"Destination uses reserved temporary suffix: {dest}")
         if did not in indexes or member not in indexes[did]:
             raise OrganizeError(
                 f"{sid} {role}: missing declared delivery/member {did}:{member}"
@@ -511,91 +581,18 @@ def _build_plan(recipe: OrganizeRecipe, paths: PathSettings) -> OrganizationPlan
         raise OrganizeError(
             "Case-folded destination collision; choose distinct explicit names."
         )
+    destination_names = set(destinations)
     for dest in destinations:
-        if dest.split("/")[0] in CONTROL_NAMES or any(
-            other.startswith(dest + "/") for other in destinations
+        path = Path(dest)
+        # Look at this file's parents once, rather than comparing every pair
+        # of filenames to find a file that would also have to be a directory.
+        if path.parts[0] in CONTROL_NAMES or any(
+            parent.as_posix() in destination_names for parent in path.parents
         ):
             raise OrganizeError(
                 f"Destination collides with a control file or directory: {dest}"
             )
-    normalized = {
-        key: sorted(rows, key=lambda r: json.dumps(r, sort_keys=True))
-        for key, rows in tables.items()
-    }
-    # Physical locations/stat evidence are resolution hints, never content identity.
-    normalized["deliveries"] = [
-        {
-            k: v
-            for k, v in row.items()
-            if k not in {"path", "file_catalog", "verified_bytes", "verified_mtime_ns"}
-        }
-        for row in sorted(tables["deliveries"], key=lambda r: r["delivery_id"])
-    ]
-    logical = {
-        "recipe": {
-            "schema_version": 1,
-            "dataset_id": recipe.dataset_id,
-            "release_id": recipe.release_id,
-            "input_catalog": recipe.input_catalog,
-            "regions": recipe.regions,
-        },
-        **normalized,
-    }
-    manifest = catalog / "catalog_manifest.json"
-    if manifest.exists():
-        if manifest.is_symlink():
-            raise OrganizeError(f"Catalog provenance cannot be a symlink: {manifest}")
-        provenance = json.loads(manifest.read_bytes())
-        if (
-            not isinstance(provenance, dict)
-            or provenance.get("schema_version") != 1
-            or not isinstance(provenance.get("tables"), dict)
-        ):
-            raise OrganizeError(f"Invalid catalog provenance manifest: {manifest}")
-        actual_tables = {
-            name: hashlib.sha256(data).hexdigest() for name, data in table_bytes.items()
-        }
-        if actual_tables != provenance["tables"]:
-            raise OrganizeError(
-                f"Catalog tables differ from their completion provenance: {manifest}"
-            )
-        # Raw CSV hashes authenticate snapshots; normalized declarations below
-        # define identity independently of row order and local resolution hints.
-        logical["catalog_provenance"] = {
-            key: value for key, value in provenance.items() if key != "tables"
-        }
-    digest = hashlib.sha256(
-        (json.dumps(logical, sort_keys=True, indent=2, allow_nan=False) + "\n").encode()
-    ).hexdigest()
-    # Preview can reject known output conflicts without claiming payload verification.
-    for output, record_name in (
-        (destination, "manifest.json"),
-        (staging, "state.json"),
-    ):
-        if output.exists():
-            record_path = output / record_name
-            if (
-                not output.is_dir()
-                or record_path.is_symlink()
-                or not record_path.is_file()
-            ):
-                raise OrganizeError(
-                    f"Conflicting output without organizer identity: {output}"
-                )
-            try:
-                record = json.loads(record_path.read_bytes())
-            except (ValueError, UnicodeError) as error:
-                raise OrganizeError(
-                    f"Unreadable output identity {record_path}: {error}"
-                ) from error
-            if not isinstance(record, dict) or record.get("plan_hash") != digest:
-                raise OrganizeError(
-                    f"Conflicting output belongs to a different plan: {output}"
-                )
-            if output == destination and (
-                record.get("status") != "complete" or record.get("schema_version") != 1
-            ):
-                raise OrganizeError(f"Output lacks valid completion identity: {output}")
+    normalized, logical, digest = _logical_inputs(recipe, catalog, tables, table_bytes)
     return OrganizationPlan(
         recipe=recipe,
         paths=paths,

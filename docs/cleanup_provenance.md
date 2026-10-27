@@ -90,6 +90,36 @@ image pixels lie outside annotation coverage. The manifest field
 **derived label other than 3**, so its zero value does not contradict the 395.
 Keep image nodata and label class 3 distinct when reading the old QA tables.
 
+## Current rebuild cleanup policy
+
+The installed preparation surface is shared `organize`, two-tier `check`, and
+`clean`; there is no separate BC command/intermediate. The historical results above
+remain evidence for the old derived data. The new
+[Task 029B contract](../tasks/029b_clean_organized_sources.md) supersedes the
+historical BC background-fill rule: outside annotation coverage in paired data
+becomes all-band image zero plus label 3. Cleaned image metadata declares
+nodata 0; cleaned label metadata declares nodata 3, preserving valid label 0.
+Original nodata must be identified before normalization. Raw/organized sources
+remain unchanged; new image hashes and transformation counts are expected.
+
+Coverage/reason arrays can be used internally; persistent QA masks are optional
+and off by default. Keep counts, original/output grids, policies, hashes and
+companion dispositions so ignored pixels need no manual mask inspection.
+Image-only processing does not require labels or remove valid imagery for lack
+of annotations. Existing logic/tests are reused with explicit assertions for
+these new decisions, rather than claiming historical pixel equality everywhere.
+
+The current alignment reads raw native label crops and uses Rasterio nearest
+reprojection directly. It preserves class-zero water and computes footprint
+coverage without using source masks or nodata metadata. Its supported paired
+scope is same-CRS, north-up unrotated imagery and single-band `uint8` labels;
+other grids/dtypes fail explicitly. This replaces the earlier virtual-raster
+wrapper without changing the declared categories or exclusion policy.
+
+All preparation runs from beginning to end in one attempt. A failure leaves a clearly
+marked incomplete directory and never publishes the final release. A new run
+starts over; there is no automatic recovery or reuse of unfinished output.
+
 ## Remaining limits and later preparation
 
 - The three source ZIPs and current CA/BC folders account for the observed
@@ -113,8 +143,8 @@ for Task 027, alongside the legacy reference and this audit. Preserve archive
 members, including masks/sidecars, unchanged. Extra CA/BC folder copies remain
 optional historical preservation, not a prerequisite for backing up that raw
 baseline. The audit's earlier proposed roots in `findings.json` remain evidence
-of the inventory scope. No transfer occurs in this handoff. Tasks 029A/029B
-will implement organization and cleanup; Tasks 030A/030B will publish the two
+of the inventory scope. Tasks 029A/029B implement organization and shared
+checking/cleanup; Tasks 030A/030B will build and publish the two
 intermediates. Original and historical datasets remain unchanged; the reusable
 walkthrough starts after cleaned intermediate 3 is established.
 
@@ -133,4 +163,5 @@ The repaired current merge cannot supply original label bytes; its
 manifest identifies the upstream originals, whose 369 image/label paths are
 still present. The exact release/mapping contract is owned by
 [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases).
-Neither new intermediate has been produced; raw ZIP preservation remains first.
+Only bounded smoke intermediates have been produced; full production builds
+remain Tasks 030A/030B. Raw ZIP preservation is already verified by Task 027.

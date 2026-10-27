@@ -55,6 +55,8 @@ are authorized by Task 024.
 | [027](027_verify_box_and_back_up_raw_reference_audit.md) | Local/Box transfer | Complete | Three raw ZIPs, reference and audit verified on Box; restore checks passed |
 | [028](028_package_guide_and_first_removal.md) | Local package/code/docs | Complete | Installed Typer/path package, guide, 139 tests and isolated distributions; next scope Task 029A |
 | [029A](029a_organize_raw_sources.md) | Local implementation/fixtures | Complete | Generic organizer under prepare/, default progress logs; 369-pair plan, bounded smoke, 244 tests; next Task 029B |
+| [029B](029b_clean_organized_sources.md) | Local implementation/fixtures | Complete | All installed preparation one-pass, redundant work/recovery removed; 344 tests; [current outcome](029b_clean_organized_sources.md#preparation-wide-simplification-outcome-2026-10-27); next Task 030A |
+| 030A | Local production/Box | Pending | Full unchanged variant 2, source QA, exact Box copy/checksums and bounded restoration; execution waits for Task 029B handoff |
 
 ## Historical queue: Tasks 000–023
 

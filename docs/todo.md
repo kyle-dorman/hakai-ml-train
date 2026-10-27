@@ -9,15 +9,18 @@ inventory and six cleanup-provenance traces. Task 028 established the installed
 Typer package/path checks, researcher guide, automated CPU checks, and first
 unrelated-code removal. Task 029A implemented byte-preserving organization,
 reconciled the 369-pair metadata plan and verified a separate two-pair smoke.
-Preparation code is grouped in `kelpseg.prepare` with plain functions and
-default CLI progress logs.
+Task 029B added quick/full directory checking and shared cleanup, verified with
+ordinary-directory fixtures, installed distributions and the two-pair real smoke.
+Preparation code is grouped in `kelpseg.prepare` with clearly commented small
+functions and default phase/file/count progress logs.
 Later workflows retain legacy code until their replacements; originals remain immutable.
 
 Current active task: none.
 
-Next action: when requested, select Task 029B's cleanup implementation using
-[Task 029A's completed handoff](../tasks/029a_organize_raw_sources.md#outcome-2026-10-27).
-The full organized production release/publication remains Task 030A.
+Next action: when requested, select Task 030A, beginning with
+[Task 029B's current handoff](../tasks/029b_clean_organized_sources.md#preparation-wide-simplification-outcome-2026-10-27).
+It owns the full organized build, source QA and verified Box publication;
+execution has not started. Full cleaned publication remains Task 030B.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -27,6 +30,11 @@ and [cleanup_provenance.md](cleanup_provenance.md).
 [Task 028](../tasks/028_package_guide_and_first_removal.md#outcome-2026-10-27)
 was completed independently while Task 027 was transferring.
 
+[Task 029B](../tasks/029b_clean_organized_sources.md#preparation-wide-simplification-outcome-2026-10-27) is complete.
+Quick/full checks and shared cleanup support optional labels and ordinary
+directories, with optional verified organizer provenance. All preparation runs once into
+fresh outputs; interrupted work is not resumed. No BC stage exists.
+
 The agreed dataset variants are **1 raw**, **2 organized intermediate**, and
 **3 cleaned intermediate**. Both intermediates are unsplit; generated
 train/validation/test assignments remain Task 032. The full variant and
@@ -34,8 +42,8 @@ provenance contract lives in [data_artifacts.md](data_artifacts.md#planned-raw-i
 
 ## Ordered roadmap
 
-Tasks through 029A are complete. Remaining later rows are ordered scope
-slots, not permission to execute multiple tasks in one window. Create and refine each contract when
+Tasks through 029B are complete; Task 030A is next. Remaining later rows are ordered scope slots, not permission
+to execute multiple tasks in one window. Create and refine each contract when
 selected; split further if needed.
 
 | Task | Deliverable | Local completion gate |
@@ -46,8 +54,8 @@ selected; split further if needed.
 | [027](../tasks/027_verify_box_and_back_up_raw_reference_audit.md) | Organize Box project and back up raw variant 1, reference, and audit — complete | Box native checksums, small round trip, and package restores verified |
 | [028](../tasks/028_package_guide_and_first_removal.md) | Installable uv package, researcher guide, and first removal pass — complete | Installed Typer/path checks; wheel/sdist isolation; 139 CPU tests; guide and bounded removal |
 | [029A](../tasks/029a_organize_raw_sources.md) | Implement raw variant 1 → organized intermediate 2 — complete | One organizer for independent datasets; complete 369-pair metadata plan; bounded byte-preserving smoke, companion/alias and restart checks |
-| 029B | Implement organized intermediate 2 → cleaned intermediate 3 | Same preparation interface for every dataset, family-appropriate recipes, alignment/nodata/coverage checks and parent identities; guide's add-dataset/region recipe |
-| 030A | Build and publish organized intermediate 2 | Full 369-pair membership, unchanged source bytes, provenance tables, QA, hashes, and verified Box copy |
+| [029B](../tasks/029b_clean_organized_sources.md) | Two-tier check and shared cleanup → variant 3 — complete | Direct directories, optional labels/catalogs; reused logic/tests; image nodata 0, label ignore 3; optional QA masks |
+| 030A | Build and publish organized intermediate 2 — pending | Full 369-pair membership, unchanged bytes/companions, source QA, verified Box checksums and bounded restore |
 | 030B | Build and publish cleaned intermediate 3 | Separate unsplit release, recorded transformations and parent hashes, QA, and verified Box copy |
 | 031 | Simplify chipping/band selection and start the tiny walkthrough | After Box and cleaned release: small real-data example, source identity, edge windows, nodata, and 8/RGB+NIR/RGB inputs |
 | 032 | Produce chip releases and collection-aware external split assignments | Any declared dataset/region/combination; exact release references, temporal/LORO groups, renamed-duplicate checks and fixed test scopes; Box verification |

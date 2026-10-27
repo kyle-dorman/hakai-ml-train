@@ -198,7 +198,9 @@ def historical_metadata(tmp_path):
     return settings, regions, root / "preparation_inputs/ca_bc/v1"
 
 
-def test_complete_conversion_associations_and_idempotence(historical_metadata):
+def test_complete_conversion_associations_and_fresh_output_requirement(
+    historical_metadata,
+):
     paths, regions, destination = historical_metadata
     result = build_legacy_ca_bc_catalog(paths, regions, destination)
     assert result == destination
@@ -223,13 +225,11 @@ def test_complete_conversion_associations_and_idempotence(historical_metadata):
     assert len(long_owners) == 290
     assert not any(str(paths.data_root) in row["alias"] for row in aliases)
     before = {path.name: path.stat().st_mtime_ns for path in destination.iterdir()}
-    assert build_legacy_ca_bc_catalog(paths, regions, destination) == result
+    with pytest.raises(OrganizeError, match="fresh destination"):
+        build_legacy_ca_bc_catalog(paths, regions, destination)
     assert before == {
         path.name: path.stat().st_mtime_ns for path in destination.iterdir()
     }
-    (destination / "membership.csv").write_text("corrupt")
-    with pytest.raises(OrganizeError, match="conflicting"):
-        build_legacy_ca_bc_catalog(paths, regions, destination)
 
 
 def test_changed_archive_stops_before_catalog_write(historical_metadata):
@@ -318,3 +318,54 @@ def test_split_row_change_does_not_use_hygiene_exception(historical_metadata):
     with pytest.raises(OrganizeError, match="changed Task 026 evidence old_split"):
         build_legacy_ca_bc_catalog(paths, regions, destination)
     assert not destination.exists()
+
+
+@pytest.mark.parametrize("incomplete", [False, True])
+def test_existing_catalog_attempt_stops_before_evidence_reads(
+    historical_metadata, monkeypatch, incomplete
+):
+    paths, regions, destination = historical_metadata
+    output = (
+        destination.with_name(f".{destination.name}.incomplete")
+        if incomplete
+        else destination
+    )
+    output.mkdir(parents=True)
+    evidence = output / "preserve.txt"
+    evidence.write_text("Do not reuse or remove this prior attempt.")
+    before = evidence.read_bytes(), evidence.stat().st_mtime_ns
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("known output conflict should stop before reading evidence")
+
+    monkeypatch.setattr(Path, "read_bytes", forbidden)
+    with pytest.raises(OrganizeError, match="fresh destination"):
+        build_legacy_ca_bc_catalog(paths, regions, destination)
+    monkeypatch.undo()
+    assert (evidence.read_bytes(), evidence.stat().st_mtime_ns) == before
+
+
+def test_failed_catalog_write_leaves_incomplete_output_without_recovery(
+    tmp_path, monkeypatch
+):
+    from kelpseg.prepare.legacy_catalog import _publish
+
+    destination = tmp_path / "catalog"
+    stage = tmp_path / ".catalog.incomplete"
+    original_open = Path.open
+
+    def fail_second_file(path, *args, **kwargs):
+        if path == stage / "second.csv":
+            raise OSError("fixture write failure")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", fail_second_file)
+    with pytest.raises(OSError, match="fixture write failure"):
+        _publish(destination, {"first.csv": b"a,b\n", "second.csv": b"c,d\n"})
+    monkeypatch.undo()
+    assert not destination.exists()
+    assert (stage / "first.csv").read_bytes() == b"a,b\n"
+    with pytest.raises(OrganizeError, match="fresh destination"):
+        _publish(destination, {"first.csv": b"replacement"})
+    assert (stage / "first.csv").read_bytes() == b"a,b\n"
+    assert {path.name for path in tmp_path.iterdir()} == {".catalog.incomplete"}

@@ -115,7 +115,8 @@ For every dataset, including the current one:
    regions. Version the small mapping/settings in Git and publish a mapping
    snapshot with the external release. Keep original aliases/source paths.
 3. Run the same organization stage into its own dataset/release under variant
-   2, then the documented family-appropriate cleanup into variant 3. Use explicit
+   2, then shared cleanup with explicit supported-input settings into variant 3.
+   Use explicit
    input manifests and recipes, not Python edits or an unconditional old CA/BC
    class mapping. Each stage preserves parent identities and has its own QA.
 4. Publish a versioned collection manifest selecting any one dataset, any region
@@ -155,10 +156,21 @@ below define only the first dataset's input scope, not special pipeline rules.
    where applicable. Organization and renaming are the only transformations.
    The six BC full scenes remain in the raw sources, outside this intermediate's
    declared tile scope. Source delivery train/val paths are provenance only.
-3. **Cleaned intermediate:** derive aligned/repaired labels and documented nodata
-   or class handling from variant 2, with its own versioned recipe and hashes.
-   Keep this collection unsplit too. Experimental split assignments arrive
-   separately in their own task, after chipping.
+3. **Cleaned intermediate:** derive aligned/repaired labels and normalize actual
+   image nodata pixels plus metadata to 0. Labels keep valid class-zero
+   background and use nodata/ignore value and metadata 3. For paired data,
+   outside-label coverage becomes all-band image zero plus label 3; image-only
+   inputs retain their valid imagery. Record original/output hashes, grids,
+   nodata rules, changed-pixel counts and asset dispositions. Detailed coverage/
+   reason rasters are optional QA outputs, off by default. Keep this collection
+   unsplit too; experimental assignments arrive separately after chipping.
+
+There is no `bc_cleaned` stage. Shared checking/cleanup handles CA/BC through
+the same functions and explicit settings. The production route remains
+raw → organized → cleaned. Ordinary directories can also be checked/cleaned
+without a published organizer catalog; optional supplied metadata adds verified
+lineage without inventing missing region/date/band evidence. The installed
+commands and explicit settings are documented in [quickstart.md](quickstart.md).
 
 Rebuild the intermediate from verified raw ZIP members, or verified source
 folders, using the existing 369-row merge manifest to establish membership and
@@ -197,13 +209,12 @@ silently remove pair identities.
 
 Versioned preparation code and recipes stay in Git; generated release manifests
 and payloads stay outside Git. Expose separate organize and clean stages through
-the eventual small installed command, rather than keeping a permanent scripts
+the small installed command, rather than keeping a permanent scripts
 directory. Given the same verified raw inputs, mapping/configuration, and code,
 the stages must reproduce membership, byte identities of organized copies,
-cleaning decisions, and output provenance. No such replacement command or
-intermediate release is implemented merely by recording this design. Task 028
-introduces the package; Tasks 029A/029B implement organization and cleanup
-separately; Tasks 030A/030B publish variants 2 and 3.
+cleaning decisions, and output provenance. Tasks 028–029B implemented the
+package, organization, checking and cleanup; Tasks 030A/030B build and publish
+the full variants 2 and 3.
 [Task 027](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27) verified the Box backup of variant 1, the reference, and audit.
 
 ## Existing local evidence
@@ -278,7 +289,8 @@ assignments identify their generator/config/seed and source inventory. Cross-ban
 experiments share source assignments. Never rely on hard-linked directory
 layouts or local absolute paths to recover membership on another machine.
 
-Make expensive work restartable and verify identities before reusing outputs.
+Preparation runs in one pass and never reuses interrupted outputs. Each step
+stops on failure; the next attempt starts from the beginning into a fresh output.
 Refuse missing pairs, duplicates, silent overwrites, and partial manifest
 publication. Never mutate original source imagery or labels. A small verified
 transfer is required before large upload/download operations.
@@ -317,13 +329,22 @@ same tables directly.
 The full 369-pair metadata plan is reconciled. Task 029A permits only a separate
 two-pair smoke dataset; it does not create or publish the full `ca_bc/v1`
 organized release. Task 030A owns full member hashing/materialization, production
-QA and verified Box copy. Cleanup remains Task 029B/030B. Source grids may
-differ, companions retain original internal strings, and internal-TIFF header
+QA and verified Box copy. Shared cleanup is implemented; Task 030B owns the
+full cleaned build/publication. Source grids may differ, companions retain
+original internal strings, and internal-TIFF header
 records do not establish unknown physical band or mask semantics.
 
 Published release payloads are immutable and include completion hashes over
-all payload/control files. Sibling incomplete state and receipts remain outside
-final release contents; only matching explicit resumes may continue them.
-Portable plan identities cover normalized declarations, recipe values and
-delivery content/evidence identities; resolved machine paths, stat hints and
-logs do not define logical identity.
+all payload/control files. The organizer's portable plan identity covers
+normalized declarations, recipe values and delivery content/evidence identities;
+resolved machine paths, stat hints and logs do not define that identity. It is
+provenance, not a job-recovery protocol.
+
+Organization, catalog construction and cleanup write once into a fresh sibling
+`.<output-name>.incomplete`, check the full result, then rename it to the final
+output. Neither the final nor incomplete path may already exist. Preparation has
+no resume, writer lock, saved per-file receipt or recovery journal. A failed run
+leaves the incomplete directory; inspect and deliberately move/remove it before
+a full rerun, or choose a fresh output. Source/output hashes, source paths,
+original/output grids, counts and the final completion manifest remain required.
+Completed releases can be independently verified without rerunning preparation.

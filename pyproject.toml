@@ -5,6 +5,7 @@ description = "Researcher-friendly binary kelp segmentation on Planet imagery"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "numpy>=2,<3",
     "rasterio>=1.4,<2",
     "typer>=0.25.1,<0.26",
 ]

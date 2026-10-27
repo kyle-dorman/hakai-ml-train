@@ -4,8 +4,12 @@ Start with `AGENTS.md`, then [todo.md](todo.md) and the selected task under
 [tasks](../tasks/README.md).
 
 The current work rebuilds this fork for Planet 8/4/3-band binary kelp
-segmentation. The installed package provides CLI/path checks and byte-preserving raw organization; retained legacy
-Planet implementations support the ongoing replacement. Cleanup and model workflow commands arrive through later numbered tasks. Tasks 000–023 describe the preceding completed PS8B study.
+segmentation. The installed package provides CLI/path checks, byte-preserving
+organization, quick/full directory checks, and shared cleanup with optional
+labels. Preparation writes run once into a fresh output and stop on failure.
+Retained legacy Planet implementations support the ongoing replacement;
+model workflows arrive through later numbered tasks. Tasks 000–023 describe the
+preceding completed PS8B study.
 
 ## Read by task
 

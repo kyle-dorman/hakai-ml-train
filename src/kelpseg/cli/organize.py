@@ -1,10 +1,11 @@
 """Thin presentation for explicit organization plans and byte-preserving copies."""
 
-import logging
 from pathlib import Path
 from typing import Annotated
 
 import typer
+
+from kelpseg.cli._logging import start_preparation_logging, stop_preparation_logging
 
 
 def organize_command(
@@ -18,12 +19,6 @@ def organize_command(
             "--dry-run", help="Validate scope without writing or hashing payloads."
         ),
     ] = False,
-    resume: Annotated[
-        bool,
-        typer.Option(
-            "--resume", help="Resume only a matching verified incomplete release."
-        ),
-    ] = False,
 ) -> None:
     """Organize declared pairs and companions without changing source bytes."""
     from kelpseg.paths import PathSettingsError, check_paths, load_paths
@@ -34,22 +29,19 @@ def organize_command(
         load_organize_recipe,
     )
 
-    # Keep CLI progress on stderr; notebooks can configure normal logging themselves.
-    progress = logging.getLogger("kelpseg.prepare")
-    previous_level = progress.level
-    previous_propagation = progress.propagate
-    handler = logging.StreamHandler()
-    handler.setFormatter(
-        logging.Formatter("%(asctime)s %(message)s", datefmt="%H:%M:%S")
-    )
-    progress.addHandler(handler)
-    progress.setLevel(logging.INFO)
-    progress.propagate = False
+    handler, previous_logging = start_preparation_logging()
     try:
-        if dry_run and resume:
-            raise OrganizeError("Use --dry-run or --resume separately.")
         settings = check_paths(load_paths(paths))
-        plan = build_organization_plan(load_organize_recipe(recipe), settings)
+        recipe_settings = load_organize_recipe(recipe)
+        plan = build_organization_plan(recipe_settings, settings)
+
+        # Show the complete plan before copying any payloads.
+        regions = set()
+        payload_bytes = 0
+        for member in plan.membership:
+            regions.add(member["region_code"])
+        for file in plan.files:
+            payload_bytes += file.bytes
         typer.echo(f"Recipe: {plan.recipe.recipe_file}")
         typer.echo(f"Input catalog: {plan.catalog}")
         for delivery in plan.deliveries:
@@ -60,9 +52,10 @@ def organize_command(
             f"Dataset/release: {plan.recipe.dataset_id}/{plan.recipe.release_id}"
         )
         typer.echo(
-            f"Pairs: {len(plan.membership)}; deliveries: {len(plan.deliveries)}; regions: {len({r['region_code'] for r in plan.membership})}; companions: {len(plan.assets)}"
+            f"Pairs: {len(plan.membership)}; deliveries: {len(plan.deliveries)}; "
+            f"regions: {len(regions)}; companions: {len(plan.assets)}"
         )
-        typer.echo(f"Selected payload bytes: {sum(f.bytes for f in plan.files)}")
+        typer.echo(f"Selected payload bytes: {payload_bytes}")
         typer.echo(
             "Band order: preserved unchanged; physical names remain unknown unless established by each TIFF header."
         )
@@ -76,13 +69,10 @@ def organize_command(
                 "Dry run valid. No files written; this is not a verified release."
             )
         else:
-            output = organize_dataset(plan, resume=resume)
+            output = organize_dataset(plan)
             typer.echo(f"Complete verified release: {output}")
     except (OrganizeError, PathSettingsError) as error:
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(code=1) from None
     finally:
-        progress.removeHandler(handler)
-        progress.setLevel(previous_level)
-        progress.propagate = previous_propagation
-        handler.close()
+        stop_preparation_logging(handler, previous_logging)

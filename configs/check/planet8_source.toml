@@ -1,0 +1,9 @@
+schema_version = 1
+profile = "source"
+image_band_counts = [8]
+image_dtypes = ["uint16"]
+label_values = [0, 1, 2, 3, 4]
+# Explicit policy for the audited CA/BC cohort; declarations take precedence.
+missing_image_nodata = 0
+block_size = 512
+# Omitted band_names means physical identity is reported as unknown when untagged.

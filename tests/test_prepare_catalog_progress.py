@@ -7,6 +7,7 @@ import pytest
 from organize_fixtures import inventory, make_fixture
 
 from kelpseg.prepare.legacy_catalog import build_legacy_ca_bc_catalog
+from kelpseg.prepare.organize_inputs import OrganizeError
 
 
 @pytest.mark.parametrize("kind", ["zip", "directory"])
@@ -33,7 +34,7 @@ def test_plan_logs_inputs_counts_and_destination_without_writing(
 pytest_plugins = ("test_legacy_catalog",)
 
 
-def test_catalog_logs_evidence_mapping_publication_and_existing_verification(
+def test_catalog_logs_evidence_mapping_and_one_pass_publication(
     historical_metadata, caplog: pytest.LogCaptureFixture
 ):
     paths, regions, destination = historical_metadata
@@ -45,7 +46,10 @@ def test_catalog_logs_evidence_mapping_publication_and_existing_verification(
     assert "Checking trusted archive identity and stability: ca_data.zip" in caplog.text
     assert f"Metadata catalog complete: {destination}" in caplog.text
     caplog.clear()
-    with caplog.at_level(logging.INFO, logger="kelpseg.prepare"):
+    with (
+        caplog.at_level(logging.INFO, logger="kelpseg.prepare"),
+        pytest.raises(OrganizeError, match="fresh destination"),
+    ):
         build_legacy_ca_bc_catalog(paths, regions, destination)
-    assert f"Existing metadata catalog verified: {destination}" in caplog.text
+    assert "Reading evidence" not in caplog.text
     assert "Writing metadata file" not in caplog.text

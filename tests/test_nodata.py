@@ -7,7 +7,7 @@ import pytest
 import rasterio
 from rasterio.transform import from_origin
 
-from src.prepare.nodata import declared_nodata_values, nodata_mask
+from kelpseg.prepare.nodata import declared_nodata_values, nodata_mask
 
 
 def _raster(path: Path, *, nodata: int | None) -> None:

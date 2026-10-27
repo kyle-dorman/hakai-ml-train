@@ -1,17 +1,22 @@
-"""Copy declared payloads without changing bytes; verify before atomic publication."""
+"""Organize declared source bytes once, then verify and publish the fresh output.
+
+A failed job leaves its incomplete directory for inspection. Nothing resumes,
+reuses an older output, or deletes a previous attempt. The read-only verifier
+can check completed releases independently of the writing command.
+"""
 
 from __future__ import annotations
 
 import csv
-import fcntl
 import hashlib
 import json
 import logging
 import os
+import shutil
 import time
 import zipfile
 import zlib
-from contextlib import contextmanager
+from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -26,7 +31,6 @@ if TYPE_CHECKING:
     from kelpseg.prepare.organize_inputs import OrganizationPlan, PlannedFile
 
 logger = logging.getLogger(__name__)
-
 __all__ = [
     "ReleaseVerification",
     "build_organization_plan",
@@ -81,26 +85,11 @@ def _read_json(path: Path) -> dict:
     return value
 
 
-def _atomic_json(path: Path, value: object) -> None:
-    """Own exactly one deterministic temporary file, refusing unknown leftovers."""
-    temporary = path.with_name(path.name + ".tmp")
-    with temporary.open("xb") as stream:
-        stream.write(_json_bytes(value))
-        stream.flush()
-        os.fsync(stream.fileno())
-    os.replace(temporary, path)
-
-
-def _write_control(path: Path, contents: bytes) -> None:
-    # A prior interrupted control write is recoverable only if byte-identical.
-    if path.exists():
-        if path.read_bytes() != contents:
-            raise OrganizeError(f"Conflicting existing control file: {path}")
-        return
+def _write_control(path: Path, contents: bytes) -> dict:
+    """Write one fresh record and keep its byte identity for the final manifest."""
     with path.open("xb") as stream:
         stream.write(contents)
-        stream.flush()
-        os.fsync(stream.fileno())
+    return {"sha256": hashlib.sha256(contents).hexdigest(), "bytes": len(contents)}
 
 
 def _csv_bytes(rows: list[dict], fields: list[str]) -> bytes:
@@ -233,108 +222,21 @@ def verify_organized_release(
         ) from error
 
 
-def _read_provenance_table(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8") as stream:
-        reader = csv.DictReader(stream)
-        fields = reader.fieldnames
-        if not fields or len(fields) != len(set(fields)):
-            raise OrganizeError(f"Invalid provenance table columns: {path}")
-        rows = list(reader)
-    if any(None in row or any(value is None for value in row.values()) for row in rows):
-        raise OrganizeError(f"Malformed provenance table: {path}")
-    return rows
-
-
 def _verify_provenance(root: Path, plan: OrganizationPlan, files: dict) -> None:
-    sources = _read_provenance_table(root / "sources.csv")
-    expected_ids = {f"{r['region_code']}_{r['source_key']}" for r in plan.membership}
-    if (
-        len(sources) != len(plan.membership)
-        or {r.get("source_id") for r in sources} != expected_ids
-    ):
-        raise OrganizeError(
-            "Source provenance identities/count differ from declared pairs"
-        )
-    sources_by_id = {row["source_id"]: row for row in sources}
-    deliveries = {row["delivery_id"]: row for row in plan.deliveries}
-    primaries = {
-        (item.source_id, item.role): item for item in plan.files if not item.asset_id
-    }
-    for index, member in enumerate(plan.membership, 1):
-        source_id = f"{member['region_code']}_{member['source_key']}"
-        logger.info(
-            "[Headers %d/%d] Checking %s", index, len(plan.membership), source_id
-        )
-        expected = dict(member, dataset_id=plan.recipe.dataset_id, source_id=source_id)
-        for role in ("image", "label"):
-            item = primaries[source_id, role]
-            metadata = files[item.destination]
-            expected.update(
-                {
-                    f"{role}_path": item.destination,
-                    f"{role}_sha256": metadata["sha256"],
-                    f"{role}_bytes": str(metadata["bytes"]),
-                    f"{role}_delivery_sha256": deliveries[item.delivery_id]["sha256"],
-                    f"{role}_header_json": json.dumps(
-                        _header(root / item.destination),
-                        sort_keys=True,
-                        allow_nan=False,
-                    ),
-                }
-            )
-        if sources_by_id[source_id] != expected:
-            raise OrganizeError(
-                f"Source provenance differs from declared inputs/verified bytes: {source_id}"
-            )
+    """Compare the stored tables with the one shared provenance definition."""
     for item in plan.files:
-        if (
-            item.expected_sha256
-            and files[item.destination]["sha256"] != item.expected_sha256
+        metadata = files[item.destination]
+        if metadata["bytes"] != item.bytes or (
+            item.expected_sha256 and metadata["sha256"] != item.expected_sha256
         ):
-            raise OrganizeError(f"Expected source hash differs for {item.destination}")
-        if files[item.destination]["bytes"] != item.bytes:
-            raise OrganizeError(f"Expected source size differs for {item.destination}")
-    if plan.assets:
-        assets = _read_provenance_table(root / "assets.csv")
-        expected_keys = {(row["source_id"], row["asset_id"]) for row in plan.assets}
-        actual_keys = {(row.get("source_id"), row.get("asset_id")) for row in assets}
-        if len(assets) != len(plan.assets) or actual_keys != expected_keys:
             raise OrganizeError(
-                "Asset provenance identities/count differ from declared assets"
+                f"Expected source hash/size differs for {item.destination}"
             )
-        assets_by_key = {(row["source_id"], row["asset_id"]): row for row in assets}
-        for asset in plan.assets:
-            metadata = files[asset["destination"]]
-            expected = dict(
-                asset,
-                sha256=metadata["sha256"],
-                bytes=str(metadata["bytes"]),
-                delivery_sha256=deliveries[asset["delivery_id"]]["sha256"],
-            )
-            if assets_by_key[asset["source_id"], asset["asset_id"]] != expected:
-                raise OrganizeError(
-                    f"Asset provenance differs from declared inputs/verified bytes: {asset['destination']}"
-                )
-    for name, contents in (
-        ("regions.csv", _table_bytes(plan.regions)),
-        ("filename_aliases.csv", _csv_bytes(list(plan.aliases), SCHEMAS["aliases"])),
-    ):
-        if (root / name).read_bytes() != contents:
+    for name, expected in _provenance_documents(root, plan, files).items():
+        if (root / name).read_bytes() != expected:
             raise OrganizeError(
                 f"Provenance snapshot differs from declared inputs: {name}"
             )
-    expected_recipe = {
-        key: getattr(plan.recipe, key)
-        for key in (
-            "schema_version",
-            "dataset_id",
-            "release_id",
-            "input_catalog",
-            "regions",
-        )
-    }
-    if _read_json(root / "recipe.json") != expected_recipe:
-        raise OrganizeError("Recipe snapshot differs from declared inputs")
 
 
 def _control_names(plan: OrganizationPlan) -> set[str]:
@@ -348,23 +250,6 @@ def _control_names(plan: OrganizationPlan) -> set[str]:
     if plan.assets:
         names.add("assets.csv")
     return names
-
-
-@contextmanager
-def _writer_lock(path: Path):
-    if path.is_symlink():
-        raise OrganizeError(f"Unsafe writer lock symlink: {path}")
-    with path.open("a+b") as stream:
-        try:
-            fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as error:
-            raise OrganizeError(
-                f"Another organizer is writing this release: {path}"
-            ) from error
-        try:
-            yield
-        finally:
-            fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
 def _assert_no_symlinks(path: Path) -> None:
@@ -403,20 +288,24 @@ def _check_directory_members(snapshot: dict[Path, list[int]]) -> None:
             raise OrganizeError(f"Directory source changed during organization: {path}")
 
 
-def _verify_delivery_identities(plan: OrganizationPlan, prior: dict | None) -> None:
+def _verify_delivery_identities(plan: OrganizationPlan) -> None:
     _check_source_stability(plan)
+    checked = {}
     for delivery in plan.deliveries:
         if delivery["kind"] != "zip":
             continue
         source = plan.resolved_deliveries[delivery["delivery_id"]]
+        if source in checked:
+            if checked[source] != delivery["sha256"]:
+                raise OrganizeError(f"Conflicting archive identities for {source}")
+            continue
+        checked[source] = delivery["sha256"]
         current = _stats(source)
         trusted = (
             delivery.get("evidence")
             and delivery.get("verified_bytes") == str(current[2])
             and delivery.get("verified_mtime_ns") == str(current[3])
         )
-        if prior is not None:
-            trusted = trusted and prior.get(delivery["delivery_id"]) == current
         if trusted:
             logger.info(
                 "Reusing verified archive identity: %s; selected member bytes will still be checked",
@@ -472,50 +361,47 @@ def _header(path: Path) -> dict:
         ) from error
 
 
-def _receipt_name(item: PlannedFile) -> str:
-    return hashlib.sha256(item.destination.encode()).hexdigest() + ".json"
+def _copy_payload(
+    plan: OrganizationPlan, item: PlannedFile, target: Path, archive=None
+) -> dict:
+    """Stream a selected member once, hashing the same bytes that are written.
 
-
-def _copy_payload(plan: OrganizationPlan, item: PlannedFile, temporary: Path) -> dict:
-    delivery = next(r for r in plan.deliveries if r["delivery_id"] == item.delivery_id)
+    The final verifier independently reads the completed output once. ZIP handles
+    are opened once per archive by organize_dataset; direct helper calls may open
+    their own handle. Neither path builds a restart record or temporary-copy state.
+    """
     source = plan.resolved_deliveries[item.delivery_id]
+    delivery = next(
+        row for row in plan.deliveries if row["delivery_id"] == item.delivery_id
+    )
     before = _stats(source)
     digest = hashlib.sha256()
     size = 0
-
-    def transfer(stream):
-        nonlocal size
+    with ExitStack() as files:
+        if delivery["kind"] == "zip":
+            if archive is None:
+                archive = files.enter_context(zipfile.ZipFile(source))
+            stream = files.enter_context(archive.open(item.member_relative_path))
+        else:
+            selected = source / item.member_relative_path
+            _assert_no_symlinks(selected)
+            member_before = _stats(selected)
+            stream = files.enter_context(selected.open("rb"))
         last_progress = time.monotonic()
-        with temporary.open("xb") as output:
+        with target.open("xb") as output:
             while block := stream.read(1024 * 1024):
                 digest.update(block)
                 size += len(block)
                 output.write(block)
-                now = time.monotonic()
-                if now - last_progress >= 10:
+                if time.monotonic() - last_progress >= 10:
                     logger.info(
                         "Still copying %s: %.1f / %.1f MiB",
                         item.destination,
                         size / 1024**2,
                         item.bytes / 1024**2,
                     )
-                    last_progress = now
-            output.flush()
-            os.fsync(output.fileno())
-
-    if delivery["kind"] == "zip":
-        with (
-            zipfile.ZipFile(source) as archive,
-            archive.open(item.member_relative_path) as stream,
-        ):
-            transfer(stream)
-    else:
-        selected = source / item.member_relative_path
-        _assert_no_symlinks(selected)
-        member_before = _stats(selected)
-        with selected.open("rb") as stream:
-            transfer(stream)
-        if _stats(selected) != member_before:
+                    last_progress = time.monotonic()
+        if delivery["kind"] == "directory" and _stats(selected) != member_before:
             raise OrganizeError(f"Source file changed while copying: {selected}")
     if _stats(source) != before:
         raise OrganizeError(f"Source delivery changed while copying: {source}")
@@ -524,29 +410,13 @@ def _copy_payload(plan: OrganizationPlan, item: PlannedFile, temporary: Path) ->
         raise OrganizeError(
             f"Source bytes differ from declaration: {item.member_relative_path}"
         )
-    logger.info("Independently verifying copied bytes: %s", item.destination)
-    if _hash(temporary) != (value, size):
-        raise OrganizeError(f"Independent output byte verification failed: {temporary}")
-    return {"destination": item.destination, "sha256": value, "bytes": size}
+    return {"sha256": value, "bytes": size}
 
 
-def _verify_receipt(root: Path, item: PlannedFile, receipt: dict) -> None:
-    if (
-        set(receipt) != {"destination", "sha256", "bytes"}
-        or receipt["destination"] != item.destination
-    ):
-        raise OrganizeError(f"Invalid file receipt for {item.destination}")
-    if _hash(root / item.destination) != (receipt["sha256"], receipt["bytes"]):
-        raise OrganizeError(f"Completed staged output is corrupt: {item.destination}")
-    if receipt["bytes"] != item.bytes or (
-        item.expected_sha256 and receipt["sha256"] != item.expected_sha256
-    ):
-        raise OrganizeError(
-            f"Staged output differs from expected source: {item.destination}"
-        )
-
-
-def _write_provenance(root: Path, plan: OrganizationPlan, receipts: dict) -> None:
+def _provenance_documents(root: Path, plan: OrganizationPlan, files: dict) -> dict:
+    """Build source/asset/crosswalk records once for writing or explicit audits."""
+    documents = {}
+    headers = {}
     deliveries = {row["delivery_id"]: row for row in plan.deliveries}
     by_pair = {
         (item.source_id, item.role): item for item in plan.files if not item.asset_id
@@ -555,7 +425,7 @@ def _write_provenance(root: Path, plan: OrganizationPlan, receipts: dict) -> Non
     for index, member in enumerate(plan.membership, 1):
         source_id = f"{member['region_code']}_{member['source_key']}"
         logger.info(
-            "[Headers %d/%d] Reading internal TIFF metadata: %s",
+            "[Headers %d/%d] Recording internal TIFF metadata: %s",
             index,
             len(plan.membership),
             source_id,
@@ -564,15 +434,17 @@ def _write_provenance(root: Path, plan: OrganizationPlan, receipts: dict) -> Non
         row.update(dataset_id=plan.recipe.dataset_id, source_id=source_id)
         for role in ("image", "label"):
             item = by_pair[source_id, role]
-            receipt = receipts[item.destination]
+            metadata = files[item.destination]
+            if metadata["sha256"] not in headers:
+                headers[metadata["sha256"]] = _header(root / item.destination)
             row.update(
                 {
                     f"{role}_path": item.destination,
-                    f"{role}_sha256": receipt["sha256"],
-                    f"{role}_bytes": receipt["bytes"],
+                    f"{role}_sha256": metadata["sha256"],
+                    f"{role}_bytes": metadata["bytes"],
                     f"{role}_delivery_sha256": deliveries[item.delivery_id]["sha256"],
                     f"{role}_header_json": json.dumps(
-                        _header(root / item.destination),
+                        headers[metadata["sha256"]],
                         sort_keys=True,
                         allow_nan=False,
                     ),
@@ -580,11 +452,10 @@ def _write_provenance(root: Path, plan: OrganizationPlan, receipts: dict) -> Non
             )
         sources.append(row)
     fields = sorted({key for row in sources for key in row})
-    _write_control(root / "sources.csv", _csv_bytes(sources, fields))
-    _write_control(root / "regions.csv", _table_bytes(plan.regions))
-    _write_control(
-        root / "filename_aliases.csv",
-        _csv_bytes(list(plan.aliases), SCHEMAS["aliases"]),
+    documents["sources.csv"] = _csv_bytes(sources, fields)
+    documents["regions.csv"] = _table_bytes(plan.regions)
+    documents["filename_aliases.csv"] = _csv_bytes(
+        list(plan.aliases), SCHEMAS["aliases"]
     )
     if plan.assets:
         files_by_asset = {
@@ -598,16 +469,15 @@ def _write_provenance(root: Path, plan: OrganizationPlan, receipts: dict) -> Non
             assets.append(
                 dict(
                     asset,
-                    sha256=receipts[item.destination]["sha256"],
-                    bytes=receipts[item.destination]["bytes"],
+                    sha256=files[item.destination]["sha256"],
+                    bytes=files[item.destination]["bytes"],
                     delivery_sha256=deliveries[item.delivery_id]["sha256"],
                 )
             )
-        _write_control(
-            root / "assets.csv",
-            _csv_bytes(assets, sorted({key for row in assets for key in row})),
+        documents["assets.csv"] = _csv_bytes(
+            assets, sorted({key for row in assets for key in row})
         )
-    _write_control(root / "inputs.json", _json_bytes(plan.logical))
+    documents["inputs.json"] = _json_bytes(plan.logical)
     recipe = {
         key: getattr(plan.recipe, key)
         for key in (
@@ -618,251 +488,109 @@ def _write_provenance(root: Path, plan: OrganizationPlan, receipts: dict) -> Non
             "regions",
         )
     }
-    _write_control(root / "recipe.json", _json_bytes(recipe))
+    documents["recipe.json"] = _json_bytes(recipe)
+    return documents
 
 
-def _resume_workspace(work: Path, plan: OrganizationPlan) -> tuple[Path, dict]:
-    inventory = _inventory(work)
-    state = _read_json(work / "state.json")
-    if state.get("plan_hash") != plan.plan_hash or state.get("logical") != plan.logical:
-        raise OrganizeError(
-            f"Incomplete output belongs to a changed recipe/catalog: {work}"
-        )
-    payload = work / "payload"
-    allowed = {"state.json", "copying.json"}
-    allowed |= {f"receipts/{_receipt_name(item)}" for item in plan.files}
-    allowed |= {f"payload/{item.destination}" for item in plan.files}
-    allowed |= {f"payload/{name}" for name in _control_names(plan) | {"manifest.json"}}
-    copying = None
-    if "copying.json" in inventory:
-        copying = _read_json(work / "copying.json")
-        selected = next(
-            (
-                item
-                for item in plan.files
-                if item.destination == copying.get("destination")
-            ),
-            None,
-        )
-        if selected is None or copying != {
-            "destination": selected.destination,
-            "plan_hash": plan.plan_hash,
-        }:
-            raise OrganizeError(f"Invalid interrupted-copy record: {work}")
-        temporary = selected.destination + ".organize-part"
-        allowed.add(f"payload/{temporary}")
-    unknown = inventory - allowed
-    if unknown:
-        raise OrganizeError(f"Unexpected staged files: {', '.join(sorted(unknown))}")
-    _reject_unexpected_directories(work, allowed)
-    receipts = {}
-    for index, item in enumerate(plan.files, 1):
-        receipt_path = work / "receipts" / _receipt_name(item)
-        target = payload / item.destination
-        if receipt_path.exists():
-            logger.info(
-                "[Resume %d/%d] Checking staged file: %s",
-                index,
-                len(plan.files),
-                item.destination,
-            )
-            receipt = _read_json(receipt_path)
-            _verify_receipt(payload, item, receipt)
-            receipts[item.destination] = receipt
-        elif target.exists() and (
-            copying is None or copying["destination"] != item.destination
-        ):
-            raise OrganizeError(
-                f"Staged output has no verified receipt: {target}; retain it for inspection"
-            )
-    if copying is not None:
-        # Only this exact organizer-owned unfinished temporary can be recreated.
-        target = payload / (copying["destination"] + ".organize-part")
-        if target.exists():
-            if target.is_symlink() or not target.is_file():
-                raise OrganizeError(f"Unsafe interrupted temporary: {target}")
-            logger.info("Recreating identified interrupted temporary: %s", target)
-            target.unlink()
-    if copying is not None:
-        (work / "copying.json").unlink()
-    return payload, receipts
-
-
-def organize_dataset(plan: OrganizationPlan, *, resume: bool = False) -> Path:
-    """Materialize a complete plan, or explicitly resume its verified staging.
-
-    Completed releases are verified and returned without rewriting. Incomplete
-    work uses a sibling workspace; unknown/corrupt files are retained on error.
-    A process crash releases the OS lock automatically. Only an identified
-    unfinished ``.organize-part`` file may be recreated during explicit resume.
-    """
+def organize_dataset(plan: OrganizationPlan) -> Path:
+    """Copy a fresh declared release in one pass; stop without publishing on failure."""
     destination = plan.destination
-    total_bytes = sum(item.bytes for item in plan.files)
-    logger.info(
-        "Organizing %s/%s: %d files, %.1f MiB",
-        plan.recipe.dataset_id,
-        plan.recipe.release_id,
-        len(plan.files),
-        total_bytes / 1024**2,
-    )
-    work = destination.with_name(f".{destination.name}.incomplete")
-    lock = destination.with_name(f".{destination.name}.lock")
+    stage = destination.with_name(f".{destination.name}.incomplete")
     try:
-        _check_source_stability(plan)
-        member_stats = _directory_member_stats(plan)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        with _writer_lock(lock):
-            if destination.exists() or destination.is_symlink():
-                logger.info(
-                    "Completed release already exists; verifying without rewriting: %s",
-                    destination,
+        for output in (destination, stage):
+            _assert_no_symlinks(output)
+            if output.exists():
+                raise OrganizeError(
+                    f"Output or incomplete attempt already exists: {output}; inspect it and choose a fresh release, or explicitly move/remove the incomplete attempt before rerunning from the beginning."
                 )
-                verify_organized_release(destination, plan)
-                return destination
-            state = None
-            if work.exists() or work.is_symlink():
-                if not resume:
-                    raise OrganizeError(
-                        f"Incomplete work exists: {work}; inspect it and use --resume"
-                    )
-                logger.info("Resuming incomplete release: %s", work)
-                state = _read_json(work / "state.json")
-                if state.get("plan_hash") != plan.plan_hash:
-                    raise OrganizeError(
-                        f"Incomplete output belongs to a changed recipe/catalog: {work}"
-                    )
-            _verify_delivery_identities(
-                plan, state.get("source_stats") if state else None
-            )
-            if state is None:
-                if resume:
-                    raise OrganizeError(
-                        f"No incomplete work to resume: {work}; omit --resume for a new release"
-                    )
-                logger.info("Creating incomplete workspace: %s", work)
-                work.mkdir()
-                (work / "payload").mkdir()
-                (work / "receipts").mkdir()
-                state = {
-                    "plan_hash": plan.plan_hash,
-                    "logical": plan.logical,
-                    "source_stats": {
-                        key: list(value) for key, value in plan.source_stats.items()
-                    },
-                }
-                _atomic_json(work / "state.json", state)
-            payload, receipts = _resume_workspace(work, plan)
-            completed_bytes = sum(receipt["bytes"] for receipt in receipts.values())
-            logger.info(
-                "Ready to copy: %d/%d files already verified",
-                len(receipts),
-                len(plan.files),
-            )
-            for index, item in enumerate(plan.files, 1):
-                if item.destination in receipts:
-                    logger.info(
-                        "[%d/%d] Reusing verified staged file: %s",
-                        index,
-                        len(plan.files),
-                        item.destination,
-                    )
-                    # Directory identity is the frozen per-file catalog; a
-                    # completed output does not prove its current source bytes.
-                    delivery = next(
-                        r
-                        for r in plan.deliveries
-                        if r["delivery_id"] == item.delivery_id
-                    )
-                    if delivery["kind"] == "directory":
-                        selected_source = (
-                            plan.resolved_deliveries[item.delivery_id]
-                            / item.member_relative_path
-                        )
-                        _assert_no_symlinks(selected_source)
-                        before_source = _stats(selected_source)
-                        if (
-                            _hash(selected_source) != (item.expected_sha256, item.bytes)
-                            or _stats(selected_source) != before_source
-                        ):
-                            raise OrganizeError(
-                                f"Directory source changed: {item.member_relative_path}"
-                            )
-                    continue
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        # The new directory claims this attempt. Existing/failed attempts are
+        # never opened, reused or removed, and another writer cannot claim it.
+        stage.mkdir()
+        logger.info("Phase 1: verifying source identities before copying")
+        _verify_delivery_identities(plan)
+        member_stats = _directory_member_stats(plan)
+        files = {}
+        copied_members = {}
+        total_bytes = sum(item.bytes for item in plan.files)
+        completed_bytes = 0
+        logger.info(
+            "Phase 2: copying %d selected files (%.1f MiB)",
+            len(plan.files),
+            total_bytes / 1024**2,
+        )
+        with ExitStack() as sources:
+            archives = {}
+            for delivery in plan.deliveries:
+                path = plan.resolved_deliveries[delivery["delivery_id"]]
+                if delivery["kind"] == "zip" and path not in archives:
+                    archives[path] = sources.enter_context(zipfile.ZipFile(path))
+            for number, item in enumerate(plan.files, 1):
                 logger.info(
-                    "[%d/%d] Copying %s: %s (%.1f MiB)",
-                    index,
+                    "[%d/%d] Copying %s (%.1f MiB)",
+                    number,
                     len(plan.files),
-                    "companion" if item.asset_id else item.role,
                     item.destination,
                     item.bytes / 1024**2,
                 )
-                target = payload / item.destination
+                target = stage / item.destination
                 target.parent.mkdir(parents=True, exist_ok=True)
-                _atomic_json(
-                    work / "copying.json",
-                    {"destination": item.destination, "plan_hash": plan.plan_hash},
-                )
-                temporary = target.with_name(target.name + ".organize-part")
-                receipt = _copy_payload(plan, item, temporary)
-                if target.exists():
-                    # Identified interruption after rename but before receipt:
-                    # recopy the source, then verify the existing target in full.
-                    if _hash(target) != (receipt["sha256"], receipt["bytes"]):
+                if target.exists() or target.is_symlink():
+                    raise OrganizeError(f"Unexpected existing staged output: {target}")
+                member = (item.delivery_id, item.member_relative_path)
+                if member in copied_members:
+                    # Several identities may intentionally use the same member.
+                    # Copy its verified bytes independently; never make hardlinks.
+                    first_path, metadata = copied_members[member]
+                    logger.info(
+                        "Copying repeated member from this run's first copy: %s",
+                        item.member_relative_path,
+                    )
+                    if metadata["bytes"] != item.bytes or (
+                        item.expected_sha256
+                        and metadata["sha256"] != item.expected_sha256
+                    ):
                         raise OrganizeError(
-                            f"Unreceipted staged output is corrupt: {target}"
+                            f"Conflicting member declarations: {item.member_relative_path}"
                         )
-                    temporary.unlink()
+                    shutil.copyfile(first_path, target)
                 else:
-                    os.rename(temporary, target)
-                _atomic_json(work / "receipts" / _receipt_name(item), receipt)
-                (work / "copying.json").unlink()
-                receipts[item.destination] = receipt
-                completed_bytes += receipt["bytes"]
+                    archive = archives.get(plan.resolved_deliveries[item.delivery_id])
+                    metadata = _copy_payload(plan, item, target, archive=archive)
+                    copied_members[member] = (target, metadata)
+                files[item.destination] = metadata
+                completed_bytes += metadata["bytes"]
                 logger.info(
-                    "Copied and verified %d/%d files (%.1f / %.1f MiB)",
-                    len(receipts),
+                    "Copied %d/%d files (%.1f / %.1f MiB)",
+                    number,
                     len(plan.files),
                     completed_bytes / 1024**2,
                     total_bytes / 1024**2,
                 )
-            _check_source_stability(plan)
-            _check_directory_members(member_stats)
-            logger.info("Writing provenance tables and reading original TIFF headers")
-            _write_provenance(payload, plan, receipts)
-            expected_names = _control_names(plan) | {
-                item.destination for item in plan.files
-            }
-            inventory = _inventory(payload)
-            if inventory - {"manifest.json"} != expected_names:
-                raise OrganizeError("Staged inventory differs from declared release")
-            hashes = {}
-            logger.info("Checking final inventory and hashing release files")
-            for index, name in enumerate(sorted(expected_names), 1):
-                logger.info("[Final hash %d/%d] %s", index, len(expected_names), name)
-                digest, size = _hash(payload / name)
-                hashes[name] = {"sha256": digest, "bytes": size}
-                if name in receipts and hashes[name] != {
-                    key: receipts[name][key] for key in ("sha256", "bytes")
-                }:
-                    raise OrganizeError(f"Payload changed before publication: {name}")
-            manifest = {
-                "schema_version": 1,
-                "status": "complete",
-                "plan_hash": plan.plan_hash,
-                "files": hashes,
-            }
-            _write_control(payload / "manifest.json", _json_bytes(manifest))
-            verify_organized_release(payload, plan)
-            _check_source_stability(plan)
-            _check_directory_members(member_stats)
-            if destination.exists() or destination.is_symlink():
-                raise OrganizeError(
-                    f"Output appeared during publication: {destination}"
-                )
-            logger.info("Publishing verified directory: %s", destination)
-            os.rename(payload, destination)
-            logger.info("Published complete release: %s", destination)
-            return destination
+        _check_source_stability(plan)
+        _check_directory_members(member_stats)
+        logger.info("Phase 3: writing provenance and inspecting copied TIFF headers")
+        for name, contents in _provenance_documents(stage, plan, files).items():
+            files[name] = _write_control(stage / name, contents)
+        expected = _control_names(plan) | {item.destination for item in plan.files}
+        if set(files) != expected:
+            raise OrganizeError("Staged inventory differs from declared release")
+        manifest = {
+            "schema_version": 1,
+            "status": "complete",
+            "plan_hash": plan.plan_hash,
+            "files": files,
+        }
+        _write_control(stage / "manifest.json", _json_bytes(manifest))
+        logger.info("Phase 4: independently verifying output bytes before publication")
+        verify_organized_release(stage)
+        _check_source_stability(plan)
+        _check_directory_members(member_stats)
+        if destination.exists() or destination.is_symlink():
+            raise OrganizeError(f"Output appeared during publication: {destination}")
+        os.rename(stage, destination)
+        logger.info("Published complete release: %s", destination)
+        return destination
     except (
         OSError,
         ValueError,
@@ -874,5 +602,5 @@ def organize_dataset(plan: OrganizationPlan, *, resume: bool = False) -> Path:
         if isinstance(error, OrganizeError):
             raise
         raise OrganizeError(
-            f"Organization stopped; incomplete evidence retained at {work}: {error}"
+            f"Organization stopped; incomplete attempt retained at {stage}: {error}"
         ) from error
