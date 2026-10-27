@@ -13,7 +13,7 @@ Task contracts introduce commands as they are implemented; this design is not
 an assertion that they already work.
 
 ```text
-variant 1: raw, three immutable source ZIPs
+variant 1: raw, immutable source deliveries
   -> variant 2: organized, unsplit intermediate; unchanged TIFFs and name/region crosswalks
   -> variant 3: cleaned, unsplit intermediate; documented repairs and parent provenance
   -> one canonical chip collection and chip statistics
@@ -67,6 +67,16 @@ See [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-r
 for stage boundaries and mapping requirements. These replacement stages remain
 planned until their task implementations exist.
 
+Preparation accepts declared deliveries, region mappings and recipes uniformly
+for every dataset. The current 369-pair scope is the first ordinary dataset,
+not an implicit base that subsequent data must extend. All datasets get their
+own organized/cleaned release IDs and parent links; all published releases remain
+unchanged. Region, delivery and dataset IDs are separate concepts. A collection
+is a versioned manifest selecting one dataset, a region subset, or any combination
+of exact cleaned releases/source identities, without another physical TIFF merge.
+Only an experiment recipe assigns a dataset/collection the role of baseline.
+See [the add-region flow](data_artifacts.md#adding-regions-and-combined-datasets).
+
 A channel count is insufficient to specify a product. Select bands by explicit
 validated names/indices; RGB and RGB+NIR are not the first three/four PS8B bands.
 Record normalization and initialization appropriate to each band recipe.
@@ -83,6 +93,12 @@ defaults. Use ignore index `-100` for unscored labels and padding.
 Store generated split assignments with the external dataset release. Keep split
 algorithms/configs in Git. Load one canonical collection through manifests;
 remove the requirement for hard-linked train/validation/test directory trees.
+
+New-region and combined-data experiments select an explicit collection version.
+Generate versioned assignments for that scope and preserve declared fixed test
+identities. Check aliases/content overlap across deliveries as well as source
+IDs so renamed copies cannot leak between train, validation and test. Resolve
+conflicting annotation versions before selecting a collection's scoring labels.
 
 Chips inherit source-level assignments, and acquisition-date groups remain
 intact in the temporal baseline. Match source assignments across spectral

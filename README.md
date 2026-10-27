@@ -14,9 +14,10 @@ available as evidence. New package commands will be documented when implemented.
 
 Read [docs/index.md](docs/index.md) for task-specific context and
 [docs/todo.md](docs/todo.md) for the ordered small-task roadmap. Tasks 025–026
-completed the legacy reference and read-only provenance audit. Next, scope
-Task 027 to verify Box and back up the three unchanged raw source ZIPs, the
-legacy reference, and the audit.
+completed the legacy reference and read-only provenance audit.
+[Task 027](tasks/027_verify_box_and_back_up_raw_reference_audit.md) is ready to
+verify Box and back up the three unchanged raw source ZIPs, the legacy reference,
+and the audit when execution is requested. No uploads have started.
 
 The target is one simple installable Python package, short explicit recipes,
 strong uv defaults, and no `scripts/` directory. Test as much of the workflow as
@@ -50,7 +51,7 @@ UCLA Box through rclone is
 the target backup/transfer store; the existing local root is
 `/Volumes/x10pro/kelpseg`.
 
-The planned three variants are **1 raw ZIPs**, **2 organized intermediate**,
+The planned three variants are **1 raw sources**, **2 organized intermediate**,
 and **3 cleaned intermediate**. Both intermediates stay unsplit; organization
 preserves source bytes, while cleanup records explicit transformations. The
 scoped audit is complete; existing repaired datasets remain historical evidence.

@@ -11,9 +11,11 @@ authorized; originals remain immutable.
 
 Current active task: none.
 
-Next action: scope Task 027's Box verification and backup contract for the
-three unchanged raw ZIPs (variant 1), legacy reference, and audit. Task 026's
-artifacts, validation, and unresolved evidence limits are recorded in
+Next action: execute [Task 027](../tasks/027_verify_box_and_back_up_raw_reference_audit.md)
+when requested: establish the Box project folder, verify access, and back up the
+three unchanged raw ZIPs (variant 1), legacy reference, and audit. The contract
+is ready; execution has not started.
+Task 026's artifacts, validation, and unresolved evidence limits are recorded in
 [its outcome](../tasks/026_inventory_originals_and_cleanup_provenance.md#outcome-2026-10-26)
 and [cleanup_provenance.md](cleanup_provenance.md).
 
@@ -24,28 +26,28 @@ provenance contract lives in [data_artifacts.md](data_artifacts.md#planned-raw-i
 
 ## Ordered roadmap
 
-Tasks through 026 are complete. Later rows are ordered scope slots, not
-permission to execute multiple tasks in one window. Create and refine each
-contract when selected; split further if needed.
+Tasks through 026 are complete; Task 027 has a ready contract. Later rows are
+ordered scope slots, not permission to execute multiple tasks in one window.
+Create and refine each contract when selected; split further if needed.
 
 | Task | Deliverable | Local completion gate |
 |---|---|---|
 | [024](../tasks/024_scope_local_rebuild.md) | Scope and rebuild plan — complete | Owned docs agree; usability requirements and example sequencing recorded |
 | [025](../tasks/025_capture_legacy_reference.md) | Legacy checkpoint gut check — complete | Six original pairs, probabilities, masks, visually checked panels, and verified provenance outside Git |
 | [026](../tasks/026_inventory_originals_and_cleanup_provenance.md) | Inventory originals and reconstruct cleanup provenance — complete | Read-only inventory, six CA/BC traces, previous decisions and evidence limits recorded |
-| 027 | Verify Box and back up raw variant 1, reference, and audit | Small verified round trip, then three unchanged source ZIPs with hashes; plain folders/manifests and documented rclone copies |
+| [027](../tasks/027_verify_box_and_back_up_raw_reference_audit.md) | Organize Box project and back up raw variant 1, reference, and audit — contract ready | Account limits, native checksum checks with readback fallback, small round trip and package restores; no uploads started |
 | 028 | Installable uv package, researcher guide, and first removal pass | Build/frozen install/imports; simple recipe/path/output conventions; focused automated checks; retire unrelated families |
-| 029A | Implement raw variant 1 → organized intermediate 2 | Byte-preserving unsplit 369-pair organization; stable short IDs, regions and filename/source crosswalks; collision/hash/restart checks |
-| 029B | Implement organized intermediate 2 → cleaned intermediate 3 | Separate reproducible cleanup recipe; alignment/nodata/coverage fixtures and real checks; preserve variant-2 parents and identities |
+| 029A | Implement raw variant 1 → organized intermediate 2 | One configurable organizer for every dataset; current 369-pair scope plus independent dataset fixture; byte preservation, region/alias/collision/hash/restart checks without Python edits |
+| 029B | Implement organized intermediate 2 → cleaned intermediate 3 | Same preparation interface for every dataset, family-appropriate recipes, alignment/nodata/coverage checks and parent identities; guide's add-dataset/region recipe |
 | 030A | Build and publish organized intermediate 2 | Full 369-pair membership, unchanged source bytes, provenance tables, QA, hashes, and verified Box copy |
 | 030B | Build and publish cleaned intermediate 3 | Separate unsplit release, recorded transformations and parent hashes, QA, and verified Box copy |
 | 031 | Simplify chipping/band selection and start the tiny walkthrough | After Box and cleaned release: small real-data example, source identity, edge windows, nodata, and 8/RGB+NIR/RGB inputs |
-| 032 | Produce chip release and external split assignments | Deterministic temporal/LORO memberships without source leakage; Box verification |
+| 032 | Produce chip releases and collection-aware external split assignments | Any declared dataset/region/combination; exact release references, temporal/LORO groups, renamed-duplicate checks and fixed test scopes; Box verification |
 | 033 | Simple baseline recipes and portable saved models | Ordinary recipe values; local update/validation/save/load/resume for 8/4/3 bands; weights plus prediction settings |
 | 034 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
 | 035 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics, ignored/uncovered accounting, reusable image prediction |
 | 036 | LORO runner and matching-TIFF comparisons | All folds resolve; tiny suite and comparison checks pass locally |
-| 037 | New-region experiment recipes | Four comparison cases, fixed test scopes, explicit initialization and reset/resume behavior |
+| 037 | New-region experiment recipes | Use prepared regional and combined collection versions; four cases, fixed test scopes, explicit initialization and reset/resume behavior |
 | 038 | Researcher handoff and relocation rehearsal | Another researcher follows short recipes; fresh-directory Box fetch through full workflow; production plans resolve; no scripts directory |
 
 ## Usability acceptance across tasks

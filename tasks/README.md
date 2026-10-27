@@ -51,7 +51,8 @@ are authorized by Task 024.
 |---|---|---|---|
 | [024](024_scope_local_rebuild.md) | Local/docs | Complete | Scope, owned contracts, and small-task roadmap recorded |
 | [025](025_capture_legacy_reference.md) | Local inference | Complete | Six verified legacy examples outside Git; capture and validation recorded |
-| [026](026_inventory_originals_and_cleanup_provenance.md) | Local read-only audit | Complete | Inventory/traces and three-variant design recorded; next scope Task 027 raw-ZIP backup |
+| [026](026_inventory_originals_and_cleanup_provenance.md) | Local read-only audit | Complete | Inventory/traces and three-variant design recorded |
+| [027](027_verify_box_and_back_up_raw_reference_audit.md) | Local/Box transfer | Pending — contract ready | Project folders and three raw ZIPs/reference/audit; native checksums with readback fallback; no uploads started |
 
 ## Historical queue: Tasks 000–023
 

@@ -26,6 +26,14 @@ architecture sweeps are outside the core rebuild.
 
 ## New regions
 
+All datasets, including the current CA/BC scope, follow the same raw → organized
+→ cleaned stages under their own dataset/release identities. Preserve every
+published release; select any dataset or combination with an explicit collection
+manifest. "Baseline" and "new region" describe roles in a particular experiment,
+not privileged dataset storage or ingestion paths. The ingestion and
+provenance flow is owned by
+[data_artifacts.md](data_artifacts.md#adding-regions-and-combined-datasets).
+
 Support four separately identified cases:
 
 1. Evaluate an existing kelp checkpoint on new-region imagery without adaptation.
