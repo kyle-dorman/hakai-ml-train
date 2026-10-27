@@ -1,0 +1,5 @@
+schema_version = 1
+dataset_id = "ca_bc"
+release_id = "v1"
+input_catalog = "preparation_inputs/ca_bc/v1"
+regions = "../regions.csv"

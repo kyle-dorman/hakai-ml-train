@@ -5,6 +5,7 @@ description = "Researcher-friendly binary kelp segmentation on Planet imagery"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "rasterio>=1.4,<2",
     "typer>=0.25.1,<0.26",
 ]
 
@@ -31,7 +32,6 @@ legacy = [
     "numpy>=2,<3",
     "opencv-python-headless>=4.13.0.92",
     "PyYAML>=6,<7",
-    "rasterio>=1.4,<2",
     "segmentation-models-pytorch>=0.5.0",
     "shapely>=2,<3",
     "torch>=2.11.0",

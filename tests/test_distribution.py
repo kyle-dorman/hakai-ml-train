@@ -11,6 +11,8 @@ import tomllib
 import zipfile
 from pathlib import Path
 
+from organize_fixtures import make_fixture
+
 
 def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
     repo = Path(__file__).resolve().parents[1]
@@ -77,6 +79,9 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             names = archive.namelist()
             assert "kelpseg/cli/__init__.py" in names
             assert "kelpseg/paths.py" in names
+            for module in ("organize", "organize_inputs", "legacy_catalog"):
+                assert f"kelpseg/prepare/{module}.py" in names
+                assert f"kelpseg/{module}.py" not in names
             assert all(
                 name.startswith(("kelpseg/", f"kelpseg-{version}.dist-info/"))
                 for name in names
@@ -108,8 +113,8 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             "print(json.dumps({'file': kelpseg.__file__, "
             "'version': importlib.metadata.version('kelpseg'), "
             "'legacy': {name: importlib.util.find_spec(name) is not None "
-            "for name in ('src', 'scripts', 'torch', 'torchgeo', 'rasterio', "
-            "'wandb', 'numpy')}}))",
+            "for name in ('src', 'scripts', 'torch', 'torchgeo', "
+            "'wandb')}}))",
             cwd=unrelated,
         )
         identity = json.loads(probe)
@@ -129,3 +134,42 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
         output = run(command, "check-paths", "--paths", settings, cwd=tmp_path)
         assert str((unrelated / "data with spaces").resolve()) in output
         assert str((unrelated / "runs").resolve()) in output
+
+        sample = make_fixture(
+            unrelated / "organizer sample", dataset_id="external_only"
+        )
+        arguments = ("organize", "--recipe", sample.recipe, "--paths", sample.settings)
+        dry_run = run(command, *arguments, "--dry-run", cwd=tmp_path)
+        assert "external_only" in dry_run
+        assert not (sample.root / "data").exists()
+        output = run(command, *arguments, cwd=tmp_path)
+        release = sample.root / "data/2_organized/external_only/v1"
+        assert str(release) in output
+        assert (release / "manifest.json").is_file()
+        for role, member in (
+            ("images", "strange/original-image.TIF"),
+            ("labels", "different/annotated.tiff"),
+        ):
+            assert (
+                release / role / f"{sample.source_id}.tif"
+            ).read_bytes() == sample.payloads[member]
+        run(command, *arguments, "--resume", cwd=tmp_path)
+        library = run(
+            python,
+            "-I",
+            "-c",
+            "import json, sys; "
+            "from kelpseg.paths import load_paths; "
+            "from kelpseg.prepare.organize_inputs import load_organize_recipe; "
+            "from kelpseg.prepare.organize import build_organization_plan, organize_dataset, verify_organized_release; "
+            "plan = build_organization_plan(load_organize_recipe(sys.argv[1]), load_paths(sys.argv[2])); "
+            "result = verify_organized_release(organize_dataset(plan), plan); "
+            "assert not any(name in sys.modules for name in ('src', 'scripts', 'torch', 'wandb')); "
+            "print(json.dumps({'plan_hash': result.plan_hash, 'files': result.file_count}))",
+            sample.recipe,
+            sample.settings,
+            cwd=tmp_path,
+        )
+        result = json.loads(library)
+        assert len(result["plan_hash"]) == 64
+        assert result["files"] > 5

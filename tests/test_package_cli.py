@@ -16,6 +16,7 @@ def test_help_keeps_explicit_subcommand_and_no_future_commands() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "check-paths" in result.stdout
+    assert "organize" in result.stdout
     assert "train" not in result.stdout
     assert "--version" in result.stdout
     result = runner.invoke(app, ["check-paths", "--help"])
@@ -116,7 +117,7 @@ def test_required_paths_never_discovers_a_file(
     assert "Missing option" in result.stderr
 
 
-@pytest.mark.parametrize("argument", ["--help", "--version", "check-paths"])
+@pytest.mark.parametrize("argument", ["--help", "--version", "check-paths", "organize"])
 def test_module_entry_is_lightweight_in_real_process(
     tmp_path: Path, argument: str
 ) -> None:
@@ -141,6 +142,8 @@ runpy.run_module('kelpseg', run_name='__main__')
     environment = dict(os.environ)
     environment.pop("PYTHONPATH", None)
     arguments = [argument]
+    if argument == "organize":
+        arguments += ["--help"]
     if argument == "check-paths":
         roots = tmp_path / "roots"
         roots.mkdir()
@@ -160,5 +163,7 @@ runpy.run_module('kelpseg', run_name='__main__')
         assert "check-paths" in result.stdout
     elif argument == "--version":
         assert result.stdout.strip() == f"kelpseg {version('kelpseg')}"
+    elif argument == "organize":
+        assert "--recipe" in result.stdout
     else:
         assert "Both roots are existing directories." in result.stdout

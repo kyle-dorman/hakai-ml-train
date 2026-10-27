@@ -35,6 +35,11 @@ full task contracts when selected; split them further when needed.
   command and short explicit recipes; do not move complexity into a framework.
 - Favor plain functions, familiar geospatial/ML libraries, and actionable error
   messages for researchers with limited Python/ML experience.
+- Group preparation code in `src/kelpseg/prepare/`. Keep researcher-maintained
+  code explicit: plain functions, straightforward loops, one schema definition,
+  and no clever shorthand or unnecessary layers.
+- Show preparation progress by default in the CLI using standard Python logging:
+  phases, current file, counts/bytes, resume decisions, and long-copy/hash updates.
 - Remove unrelated dataset/model families and unused dependencies within the
   selected task. Preserve useful correctness tests as implementations change.
 - Preserve user changes and unrelated work in a dirty checkout.

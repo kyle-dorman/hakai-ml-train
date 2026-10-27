@@ -6,8 +6,8 @@ training, evaluation, unlabeled inference, leave-one-region-out comparisons,
 and adaptation to new regions.
 
 The installed `kelpseg` package currently provides help/version and read-only
-machine-path checks. Replacement preparation, training, and prediction commands
-are not available yet. Retained legacy Planet code/tests support the ongoing
+machine-path checks, plus generic byte-preserving raw organization from explicit
+catalogs. Cleanup, training, and prediction commands arrive in later tasks. Retained legacy Planet code/tests support the ongoing
 rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
 starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
 
@@ -75,7 +75,8 @@ preserves source bytes, while cleanup records explicit transformations. The
 scoped audit is complete; existing repaired datasets remain historical evidence.
 See [docs/data_artifacts.md](docs/data_artifacts.md) for variant/provenance rules
 and [docs/cleanup_provenance.md](docs/cleanup_provenance.md) for established facts
-and remaining evidence limits. The new intermediates are not implemented yet.
+and remaining evidence limits. The organizer is implemented and bounded-smoke verified; full organized-release
+materialization/publication and cleaning remain later tasks.
 
 The first spectral comparison is interpreted as 8 bands, RGB+NIR, and RGB from
 the same acquisitions. Start with the working SegFormer recipe; a possible RGB

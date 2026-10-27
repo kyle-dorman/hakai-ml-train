@@ -3,7 +3,7 @@
 ## Current implementation and replacement target
 
 The installed `src/kelpseg/` package provides the Typer command and read-only
-machine-path checks. The checkout retains legacy Planet `src.*` modules, root
+machine-path checks plus generic byte-preserving organization. The checkout retains legacy Planet `src.*` modules, root
 `trainer.py`, `scripts/`, relevant configs, and focused tests until their
 replacements land. Unrelated application/model/export families are removed.
 The legacy recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
@@ -35,13 +35,18 @@ complete deterministic manifests atomically and refuse silent overwrites.
 The CLI uses Typer with `uv run kelpseg <command>` recipes. Keep a small root
 app and separate thin command handlers, backed by ordinary workflow
 functions callable from notebooks/tests without CLI context. Import heavy
-workflow code only when its command runs. Task 028 establishes the installed
+workflow code only when its command runs. Preparation modules live together in
+`src/kelpseg/prepare/`: `organize_inputs.py` loads/validates explicit declarations,
+`organize.py` copies/verifies bytes, and `legacy_catalog.py` converts only the
+historical CA/BC metadata. Keep these as explicit functions and ordinary loops;
+the CLI uses standard Python logging for progress, without a custom logging
+or orchestration layer. Task 028 establishes the installed
 entry point and path checks; later tasks add their commands. The selected
 training command style is `uv run kelpseg train --recipe <recipe-file>`;
 it remains planned until the training task implements it. See
-[quickstart.md](quickstart.md) for working setup/path-check recipes.
+[quickstart.md](quickstart.md) for working setup, path-check and organization recipes.
 
-Runtime dependencies cover implemented installed workflows (initially Typer).
+Runtime dependencies cover implemented workflows: Typer and Rasterio.
 Checkout-only dependencies for retained code live in the default `legacy`
 group alongside `dev`; plain frozen setup includes both. New workflows promote
 their dependencies into runtime as implemented. Distribution checks install
@@ -77,7 +82,7 @@ repairs before implementing a new cleaning release. Historical CA/BC cleanup
 included grid alignment, source-aware image nodata, and label repairs; those
 rules require provenance, fixtures, and real examples rather than blind reuse.
 
-Keep organization/renaming separate from cleanup. The planned variant 2
+Keep organization/renaming separate from cleanup. The implemented organizer for variant 2
 contains the current 369 pair identities (339 CA-family sources and 30 BC tiles),
 unchanged source image/label bytes, and no experimental split. Publish a stable
 region-code table and source/member/filename aliases with separate image/label
@@ -85,8 +90,8 @@ hashes; retain original paths even when long product names are unavailable.
 Original grids need not match until the cleaning stage. The repaired historical
 merge supplies membership/provenance evidence, not original label payloads.
 See [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases)
-for stage boundaries and mapping requirements. These replacement stages remain
-planned until their task implementations exist.
+for stage boundaries and mapping requirements. Organization is implemented; full release construction/publication and cleaning
+remain later tasks.
 
 Preparation accepts declared deliveries, region mappings and recipes uniformly
 for every dataset. The current 369-pair scope is the first ordinary dataset,

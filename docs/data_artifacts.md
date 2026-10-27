@@ -169,11 +169,11 @@ All 369 referenced source image and source label paths were present on
 renamed or modified in place. Original image/label grids may differ at this
 stage, including full regional BC label mosaics; alignment belongs to cleanup.
 
-Variant 2 should publish `images/`, `labels/`, `regions.csv`, `sources.csv`, and
+The organizer publishes `images/`, `labels/`, `regions.csv`, `sources.csv`, and
 `filename_aliases.csv`. Variant 3 retains those identities/crosswalks and records
 variant-2 parent hashes, cleanup parameters/changes, and new output hashes.
 The region table retains existing
-CA codes 001–011 and their legacy region IDs/names; proposed next code 012 is
+CA codes 001–011 and their legacy region IDs/names; code 012 is
 the BC tile group, retaining legacy ID `bc`. Region code is the key: 005 and
 006 both have historical name `channelIslands` and must stay distinct.
 Filename construction must preserve enough date/scene/tile information to avoid
@@ -302,3 +302,28 @@ Task 023's corrected schema-3 `predictions_all_retained_v2` and
 Earlier all-retained-v1 and non-overlap prediction/report packages have the
 undersized center-padding crop bug and are invalid for scientific use on the
 affected imagery. Preserve that distinction if recovering old artifacts.
+
+## Organization input catalogs and current execution boundary
+
+The implemented organizer reads explicit portable tables and recipe settings;
+[quickstart.md](quickstart.md#organize-raw-sources) owns their complete schema
+and operating recipes. Generated declarations live under
+`preparation_inputs/<dataset>/<version>/` outside Git. The one-time
+`kelpseg.prepare.legacy_catalog.build_legacy_ca_bc_catalog` converter reconstructs the
+current input catalog from the named Task 026 metadata and Task 027 trusted
+archive catalog. It does not read source payloads. Other datasets supply the
+same tables directly.
+
+The full 369-pair metadata plan is reconciled. Task 029A permits only a separate
+two-pair smoke dataset; it does not create or publish the full `ca_bc/v1`
+organized release. Task 030A owns full member hashing/materialization, production
+QA and verified Box copy. Cleanup remains Task 029B/030B. Source grids may
+differ, companions retain original internal strings, and internal-TIFF header
+records do not establish unknown physical band or mask semantics.
+
+Published release payloads are immutable and include completion hashes over
+all payload/control files. Sibling incomplete state and receipts remain outside
+final release contents; only matching explicit resumes may continue them.
+Portable plan identities cover normalized declarations, recipe values and
+delivery content/evidence identities; resolved machine paths, stat hints and
+logs do not define logical identity.

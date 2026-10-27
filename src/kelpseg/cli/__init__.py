@@ -5,6 +5,7 @@ from typing import Annotated
 
 import typer
 
+from kelpseg.cli.organize import organize_command
 from kelpseg.cli.paths import check_paths_command
 
 app = typer.Typer(
@@ -29,3 +30,5 @@ def root(
 
 
 app.command("check-paths")(check_paths_command)
+
+app.command("organize")(organize_command)
