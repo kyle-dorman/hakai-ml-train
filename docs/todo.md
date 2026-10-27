@@ -10,17 +10,15 @@ Typer package/path checks, researcher guide, automated CPU checks, and first
 unrelated-code removal. Data workflows still use retained legacy code until
 their replacement tasks; originals remain immutable.
 
-Current active task: Task 027 (Box transfer in its own thread).
+Current active task: none.
 
-Next action: complete [Task 027](../tasks/027_verify_box_and_back_up_raw_reference_audit.md): verify Box access and back up the three unchanged raw ZIPs, legacy reference, and audit.
+Next action: select and scope Task 029A’s generic raw → organized contract when requested. Task 027 verified the Box backup; see its [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
 [its outcome](../tasks/026_inventory_originals_and_cleanup_provenance.md#outcome-2026-10-26)
 and [cleanup_provenance.md](cleanup_provenance.md).
 
 [Task 028](../tasks/028_package_guide_and_first_removal.md#outcome-2026-10-27)
-is complete. Next implementation action: select and scope Task 029A's generic
-raw → organized contract. Task 027 continues independently; preserve its
-environment and transfer inputs.
+was completed independently while Task 027 was transferring.
 
 The agreed dataset variants are **1 raw**, **2 organized intermediate**, and
 **3 cleaned intermediate**. Both intermediates are unsplit; generated
@@ -29,8 +27,7 @@ provenance contract lives in [data_artifacts.md](data_artifacts.md#planned-raw-i
 
 ## Ordered roadmap
 
-Tasks through 026 and Task 028 are complete; Task 027 remains in progress in
-its transfer thread. Remaining later rows are ordered scope slots, not
+Tasks through 028 are complete. Remaining later rows are ordered scope slots, not
 permission to execute multiple tasks in one window. Create and refine each
 contract when selected; split further if needed.
 
@@ -39,7 +36,7 @@ contract when selected; split further if needed.
 | [024](../tasks/024_scope_local_rebuild.md) | Scope and rebuild plan — complete | Owned docs agree; usability requirements and example sequencing recorded |
 | [025](../tasks/025_capture_legacy_reference.md) | Legacy checkpoint gut check — complete | Six original pairs, probabilities, masks, visually checked panels, and verified provenance outside Git |
 | [026](../tasks/026_inventory_originals_and_cleanup_provenance.md) | Inventory originals and reconstruct cleanup provenance — complete | Read-only inventory, six CA/BC traces, previous decisions and evidence limits recorded |
-| [027](../tasks/027_verify_box_and_back_up_raw_reference_audit.md) | Organize Box project and back up raw variant 1, reference, and audit — in progress | Account limits, native checksum checks with readback fallback, small round trip and package restores |
+| [027](../tasks/027_verify_box_and_back_up_raw_reference_audit.md) | Organize Box project and back up raw variant 1, reference, and audit — complete | Box native checksums, small round trip, and package restores verified |
 | [028](../tasks/028_package_guide_and_first_removal.md) | Installable uv package, researcher guide, and first removal pass — complete | Installed Typer/path checks; wheel/sdist isolation; 139 CPU tests; guide and bounded removal |
 | 029A | Implement raw variant 1 → organized intermediate 2 | One configurable organizer for every dataset; current 369-pair scope plus independent dataset fixture; byte preservation, region/alias/collision/hash/restart checks without Python edits |
 | 029B | Implement organized intermediate 2 → cleaned intermediate 3 | Same preparation interface for every dataset, family-appropriate recipes, alignment/nodata/coverage checks and parent identities; guide's add-dataset/region recipe |

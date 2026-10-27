@@ -52,7 +52,7 @@ are authorized by Task 024.
 | [024](024_scope_local_rebuild.md) | Local/docs | Complete | Scope, owned contracts, and small-task roadmap recorded |
 | [025](025_capture_legacy_reference.md) | Local inference | Complete | Six verified legacy examples outside Git; capture and validation recorded |
 | [026](026_inventory_originals_and_cleanup_provenance.md) | Local read-only audit | Complete | Inventory/traces and three-variant design recorded |
-| [027](027_verify_box_and_back_up_raw_reference_audit.md) | Local/Box transfer | In progress | Project folders and three raw ZIPs/reference/audit; native checksums with readback fallback |
+| [027](027_verify_box_and_back_up_raw_reference_audit.md) | Local/Box transfer | Complete | Three raw ZIPs, reference and audit verified on Box; restore checks passed |
 | [028](028_package_guide_and_first_removal.md) | Local package/code/docs | Complete | Installed Typer/path package, guide, 139 tests and isolated distributions; next scope Task 029A |
 
 ## Historical queue: Tasks 000–023

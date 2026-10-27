@@ -16,6 +16,7 @@ yet. Tasks 000–023 describe the preceding completed PS8B study.
 - [product.md](product.md): research scope, experiments, scientific boundaries.
 - [architecture.md](architecture.md): current-to-target pipeline, identity,
   splitting, prediction and metric contracts.
+- [box_backup.md](box_backup.md): verified Box paths and recovery recipes.
 - [data_artifacts.md](data_artifacts.md): storage, original-data uncertainty,
   cleanup provenance, Box, and Git policy.
 - [cleanup_provenance.md](cleanup_provenance.md): observed collection lineage,

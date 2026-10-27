@@ -15,10 +15,7 @@ and generated reports stay outside Git. The currently tracked split CSVs move
 out during the replacement split task, after their historical copies are saved.
 Do not remove the split-generation rules.
 
-`rclone` is installed and a remote named `kelp-box` is configured. That is not
-proof of a working connection or a verified backup. Task 027 verifies access,
-chooses the project folder, checks actual account/file-size constraints, tests
-a small upload/download, and backs up identified originals and the reference.
+`rclone` is installed and a remote named `kelp-box` is configured. Task 027 verified the project folder, account limits, small round trip, and backup. See [Box backup and recovery](box_backup.md) for actual paths and recipes.
 Do not assume the old 45 GB ZIP is a suitable Box transfer unit. Prefer explicit
 upload/download copies with verification over deletion-propagating sync.
 Credentials remain outside Git, logs, dataset manifests, and task records.
@@ -39,16 +36,11 @@ Use a separate filename/hash crosswalk to reconcile differently named copies;
 hash images and labels independently and retain every delivery association.
 The 339 CA filenames are not yet a proven unique-content count. Backup of
 unchanged deliveries does not require deleting duplicates or resolving every
-alias first. Task 027 must verify copies and preserve this variant-1 boundary.
+alias first. Task 027 verified copies while preserving this variant-1 boundary.
 
 ## Box project organization and upload verification
 
-Use one project folder, proposed name `kelpseg`, under the intended UCLA Box
-parent. An existing project folder/link can supply that parent/root; otherwise
-Task 027 can create it when execution is requested. First check whether
-`kelp-box:` already points inside that project so we do not nest another copy.
-Record the resolved Box folder ID/link and rclone root once, then use relative
-release paths. The following is a plan, not a verified or created remote tree:
+Use the verified project root `kelp-box:kelpseg` and its [recorded folder identity](box_backup.md). The following layout reserves locations for future work; only the Task 027 payload and transfer paths have been populated:
 
 ```text
 kelpseg/
@@ -95,7 +87,7 @@ file's method as `provider_sha1_verified` or `readback_sha256_verified`, with
 native-checksum failures retained as evidence. This distinguishes provider
 verification from end-to-end download verification without forcing both.
 
-Keep the initial small real round trip. Task 027 also restores the relatively
+Keep the initial small real round trip. Task 027 also restored the relatively
 small reference/audit packages and runs their own SHA-256 verifiers; it does not
 redownload all raw ZIPs by default. Later large releases use their scoped task's
 bounded restoration check with the same checksum/fallback policy. No extraction
@@ -212,9 +204,7 @@ cleaning decisions, and output provenance. No such replacement command or
 intermediate release is implemented merely by recording this design. Task 028
 introduces the package; Tasks 029A/029B implement organization and cleanup
 separately; Tasks 030A/030B publish variants 2 and 3.
-[Task 027](../tasks/027_verify_box_and_back_up_raw_reference_audit.md) has a ready
-contract to verify Box and preserve variant 1, the reference, and audit; no
-remote execution or upload has started.
+[Task 027](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27) verified the Box backup of variant 1, the reference, and audit.
 
 ## Existing local evidence
 
@@ -235,7 +225,7 @@ The downloaded reference checkpoint is
 Task 025 preserved a verified copy and six preselected development-chip results
 under `/Volumes/x10pro/kelpseg/references/legacy_ps8b_v1` before source removal.
 Its completion manifest, original pairs, probabilities, masks, visually checked
-previews, hashes, and standalone verifier are local; Box backup remains Task 027.
+previews, hashes, and standalone verifier are also backed up on Box.
 See [Task 025](../tasks/025_capture_legacy_reference.md#outcome-2026-10-26) for
 capture semantics and validation. Treat this versioned reference as immutable.
 

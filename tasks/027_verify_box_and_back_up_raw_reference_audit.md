@@ -1,6 +1,6 @@
 # Task 027: Verify Box and back up raw ZIPs, reference, and audit
 
-Status: Pending — contract ready; execution and uploads not started.
+Status: Complete — verified backup and restore checks passed.
 
 Depends on: Tasks 025 and 026.
 
@@ -246,7 +246,7 @@ Only then publish local `manifest.json` atomically and mark Task 027 Complete.
 If transfer/verification fails, retain partial receipts and record the exact
 remaining action; never label the complete scope backed up prematurely.
 
-## Planned direct-command recipe (not executed)
+## Planned direct-command recipe (execution recorded below)
 
 The following uses the proposed paths. During execution, replace them only with
 the resolved recorded plan; verify installed help before relying on flags.
@@ -300,9 +300,7 @@ actual upload/capacity constraints prevent the approved unchanged-file scope.
 Present concrete evidence and a reviewable proposed alternative first; do not
 ask for repeated permission to perform already authorized execution steps.
 
-This request authorizes updating the contract/policy and proposing organization
-only. No Box connection, folder creation, round trip, upload, account change, or
-large hashing job is started now. Leave status Pending until execution is requested.
+Execution was requested on 2026-10-27, including the authorized Box project creation and backup. See the outcome or progress record for actual results.
 
 ## Plan/spec before execution
 
@@ -379,3 +377,22 @@ failures/retries and remaining work.
 Mark Complete only for the full declared verified backup. Exact next action:
 scope Task 028's installable package/researcher-guide/removal contract, retaining
 variants 2/3 and their preparation rules for the later bounded tasks. Stop.
+
+
+## Outcome 2026-10-27
+
+Task 027 completed. The UCLA Box account `kdorman90@ucla.edu` (ID `40477689073`) owns project root `kelp-box:kelpseg`, folder ID `431635691068`, [Box folder](https://app.box.com/folder/431635691068). The authenticated account reported a maximum upload size of 161,061,273,600 bytes and sufficient reported free quota; its unusually large quota value is recorded as reported, not interpreted as unlimited. The largest object is 15,966,180,991 bytes. The local volume had ample space for the fresh restores.
+
+The three original ZIPs are at `data/1_raw/ca_bc_sources_v1/` under that root. Their SHA-256 identities are:
+
+| File | SHA-256 |
+|---|---|
+| `ca_data.zip` | `c51c40bc3fb8a4ec402dc11a4e928114f291fbe24278472c5d9a49dbace26c3b` |
+| `extra_data.zip` | `594b4fb6c4ea8d75f85f0a66b9736fbfa8235a6e8494e685d33653b341fabd25` |
+| `Planet8bSR_BC_Labelled.zip` | `de1bc465f512ce3bb6ae063773cfed7567acc55a47d5997c2bffa6f5fc07955f` |
+
+The complete packages are at `references/legacy_ps8b_v1/` and `audits/task026_originals_v1/`; their manifest SHA-256 values remain `3ab76901075e84a35dee2d37b0d30f0c9366a0a9f0d435213b671277bf88def8` and `71859fa0d2b091348603f05b9fc3b6684154d13041d6d692eb157b3410d4ed20`, respectively. The three prefixes contain exactly 101 files and 22,969,213,574 bytes. All 101 matched Box-reported SHA-1, size and path; no SHA-256 fallback traffic was needed. The deterministic fixture passed its upload/download path, size and SHA-256 comparison. Both complete fresh restores passed their isolated package verifiers (51 reference payload hashes and 43 audit payload hashes). Source stability was checked by size and nanosecond mtime against the frozen catalog after transfer and restores; no routine second full ZIP hash pass was claimed.
+
+The archive copy encountered a network/DNS interruption and a failed multipart cancellation; rclone's second attempt succeeded. The archive-copy log ran from 13:14:51 to 13:44:40 PDT; observed upload traffic was roughly 20–27 MB/s, suggesting around 14–19 minutes for 22.15 GB of ZIPs without interruption. Fallback traffic was zero. The small round-trip, catalog, actual listings, per-file checks, restore results, logs, and recipes are retained locally at `/Volumes/x10pro/kelpseg/backups/task027_raw_reference_audit_v1/` and remotely under `transfers/task027_raw_reference_audit_v1/`. Receipt files were read back and SHA-256 checked. The final remote `completion.json` was uploaded last and read back; its SHA-256 is `cf15159bf1e262f1dc662f88e85e851f64c9fbc3e1c481a18711ae31394fac1d`. The local completion manifest was then published atomically. The folder ID could only be known after project creation, so an initial plan preceded that creation and the resolved ID was recorded in the frozen plan before fixture/payload upload; a supplementary plan recorded final catalog identity before bulk transfer.
+
+Changed repository files: this task, `tasks/README.md`, `docs/todo.md`, `docs/index.md`, `docs/data_artifacts.md`, and new `docs/box_backup.md`. Payloads and receipts remain outside Git. Remaining evidence limits: original historical delivery completeness and cleanup semantics remain as recorded by Task 026; no organized or cleaned intermediate was produced. Task 028 was completed independently during this transfer. Exact next action: select and scope Task 029A's generic raw-to-organized contract when requested; do not start it in this task.
