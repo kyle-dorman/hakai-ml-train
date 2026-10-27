@@ -1,0 +1,4 @@
+# Copy to paths.local.toml and edit for this machine. No data is downloaded.
+[paths]
+data_root = "~/kelpseg"
+runs_root = "~/kelpseg/runs"

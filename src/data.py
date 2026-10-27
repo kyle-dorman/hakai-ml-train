@@ -5,12 +5,11 @@ from pathlib import Path
 from typing import Any
 
 import albumentations as A
-import datasets as hf_datasets
 import lightning.pytorch as pl
 import numpy as np
 import torch
-from albumentations import ToTensorV2, to_dict
-from torch.utils.data import DataLoader, Dataset
+from albumentations import to_dict
+from torch.utils.data import DataLoader
 from torchvision.datasets import VisionDataset
 
 
@@ -39,34 +38,6 @@ class NpzSegmentationDataset(VisionDataset):
                 return augmented["image"], augmented["mask"]
 
         return data["image"], data["label"]
-
-
-class WebDataset(Dataset):
-    """Load preprocessed image chips from a HuggingFace dataset.
-
-    Expects the dataset to have "image.tif" and "label.tif" columns containing
-    PIL images or numpy arrays.
-    """
-
-    def __init__(self, root: str, split: str = "train", transforms=None):
-        super().__init__()
-        self.transforms = transforms
-        self._dataset = hf_datasets.load_dataset(root, split=split)
-
-    def __len__(self):
-        return len(self._dataset)
-
-    def __getitem__(self, idx):
-        sample = self._dataset[idx]
-        image = np.array(sample["image.tif"])
-        mask = np.array(sample["label.tif"])
-
-        if self.transforms is not None:
-            with torch.no_grad():
-                augmented = self.transforms(image=image, mask=mask)
-                return augmented["image"], augmented["mask"]
-
-        return image, mask
 
 
 # noinspection PyAbstractClass
@@ -190,66 +161,3 @@ class DataModule(pl.LightningDataModule):
                 )
             self._logged_transforms = True
         return batch
-
-
-class WebDataModule(DataModule):
-    def setup(self, stage: str | None = None):
-        if stage == "fit" or stage is None:
-            self.ds_train = WebDataset(
-                self.train_data_dir,
-                split="train",
-                transforms=self.train_trans,
-            )
-        if stage in ["fit", "validate"] or stage is None:
-            self.ds_val = WebDataset(
-                self.val_data_dir,
-                split="validation",
-                transforms=self.test_trans,
-            )
-        if stage == "test":
-            self.ds_test = WebDataset(
-                self.test_data_dir,
-                split="test",
-                transforms=self.test_trans,
-            )
-
-
-class MAEDataModule(DataModule):
-    def __init__(self, *args, **kwargs):
-        kwargs.pop("train_transforms", None)
-        kwargs.pop("test_transforms", None)
-        super().__init__(*args, **kwargs)
-        self.train_trans = A.Compose(
-            [
-                A.D4(),
-                # A.RandomResizedCrop(size=(224, 224), scale=(0.6, 1.0), p=1.0),
-                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-                A.ToTensorV2(),
-            ]
-        )
-        self.test_trans = self.train_trans
-
-
-class KOMBaselineRGBIDataModule(DataModule):
-    @staticmethod
-    def _rgbi_kelp_transform(img: torch.Tensor, *args, **kwargs) -> torch.Tensor:
-        # to float
-        x = img.to(torch.float)
-        # min-max scale
-        x_unique = x.flatten().unique()
-        min_ = x_unique[0]
-        if len(x_unique) > 1:
-            min_, _ = torch.kthvalue(x_unique, 2)
-        max_ = x.flatten().max()
-        return torch.clamp((x - min_) / (max_ - min_ + 1e-8), 0, 1)
-
-    def __init__(self, *args, **kwargs):
-        kwargs.pop("test_transforms", None)
-        super().__init__(*args, **kwargs)
-        self.test_trans = A.Compose(
-            [
-                ToTensorV2(),
-                A.Lambda(name="normalize", image=self._rgbi_kelp_transform),
-            ],
-            p=1,
-        )

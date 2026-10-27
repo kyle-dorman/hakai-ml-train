@@ -8,6 +8,8 @@ or substantially rewriting durable docs.
 
 - `AGENTS.md`: concise repository operating contract and entry path.
 - `README.md`: human-facing current-project orientation and setup.
+- `docs/quickstart.md`: copyable researcher recipes for implemented workflows,
+  local settings, expected output, and common error fixes.
 - `docs/index.md`: read/skip router; it does not duplicate owned content.
 - `docs/product.md`: research purpose, claim boundary, success criteria, and
   non-goals.

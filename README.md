@@ -5,19 +5,20 @@ on Planet 8/4/3-band imagery. The workflow covers data preparation and chipping,
 training, evaluation, unlabeled inference, leave-one-region-out comparisons,
 and adaptation to new regions.
 
-The legacy implementation is still present. Breaking changes and substantial
-removal of unrelated code are intended. The starting commit is
-`ac933fd667c2ddb445b8a622d8404387a2d056e2`; historical Tasks 000–023 remain
-available as evidence. New package commands will be documented when implemented.
+The installed `kelpseg` package currently provides help/version and read-only
+machine-path checks. Replacement preparation, training, and prediction commands
+are not available yet. Retained legacy Planet code/tests support the ongoing
+rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
+starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
 
 ## Start here
 
-Read [docs/index.md](docs/index.md) for task-specific context and
-[docs/todo.md](docs/todo.md) for the ordered small-task roadmap. Tasks 025–026
-completed the legacy reference and read-only provenance audit.
-[Task 027](tasks/027_verify_box_and_back_up_raw_reference_audit.md) is ready to
-verify Box and back up the three unchanged raw source ZIPs, the legacy reference,
-and the audit when execution is requested. No uploads have started.
+Use the [researcher quickstart](docs/quickstart.md) for installation, local
+settings, command output, and fixes for common errors. Development context is
+routed through [docs/index.md](docs/index.md) and [the roadmap](docs/todo.md).
+The legacy reference and provenance audit are complete;
+[Task 027](tasks/027_verify_box_and_back_up_raw_reference_audit.md) owns the
+raw/reference/audit backup and its verification status.
 
 The target is one simple installable Python package, short explicit recipes,
 strong uv defaults, and no `scripts/` directory. Test as much of the workflow as
@@ -31,16 +32,33 @@ Use Python 3.12 and the locked uv environment:
 ```bash
 uv python install 3.12
 uv sync --python 3.12 --frozen
+uv run kelpseg --help
+uv run kelpseg --version
 ```
 
-Current code validation uses focused tests under `tests/` and:
+Create your local path settings as described in the quickstart, then run:
 
 ```bash
-uv run ruff format --check .
-uv run ruff check .
+uv run kelpseg check-paths --paths paths.local.toml
 ```
 
-Package build/install and replacement CLI checks arrive with the package task.
+The Typer command calls reusable Python functions. Most later workflow settings
+will live in recipe files. The selected future training style is
+`uv run kelpseg train --recipe <recipe-file>`; training is not implemented yet.
+
+Development checks use synthetic CPU fixtures, including fresh wheel/sdist
+installation outside the checkout:
+
+```bash
+uv run pytest
+uv run ruff format --check .
+uv run ruff check .
+uv run pre-commit run --all-files
+```
+
+Use `uv build` to create the wheel and source distribution. The default
+checkout environment includes `dev` and temporary `legacy` dependency groups;
+only the new package's runtime dependencies are required to install its wheel.
 
 ## Data and experiments
 

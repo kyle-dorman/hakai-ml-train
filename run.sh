@@ -17,4 +17,3 @@ caffeinate -i uv run python -m src.prepare.make_chip_dataset \
   --num_workers 0 \
   --resume \
   2>&1 | tee -a "$CHIP_ROOT/chipping.log"
-

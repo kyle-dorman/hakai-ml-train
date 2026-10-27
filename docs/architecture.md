@@ -2,13 +2,15 @@
 
 ## Current implementation and replacement target
 
-The checkout still contains the legacy `src.*` modules, root `trainer.py`,
-`scripts/`, numerous unrelated configs, and focused tests. The current legacy
-recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
+The installed `src/kelpseg/` package provides the Typer command and read-only
+machine-path checks. The checkout retains legacy Planet `src.*` modules, root
+`trainer.py`, `scripts/`, relevant configs, and focused tests until their
+replacements land. Unrelated application/model/export families are removed.
+The legacy recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
 
-The intended replacement is one installable `src/kelpseg/` package, using uv and
-`uv_build`, with a short CLI and explicit recipes. It has no `scripts/`
-directory, plugin framework, generic model zoo, or manual per-fold config copies.
+The package uses uv and `uv_build`. The completed replacement will have no
+`scripts/` directory, plugin framework, generic model zoo, or manual per-fold
+config copies.
 Task contracts introduce commands as they are implemented; this design is not
 an assertion that they already work.
 
@@ -30,10 +32,29 @@ complete deterministic manifests atomically and refuse silent overwrites.
 
 ## Researcher interface
 
+The CLI uses Typer with `uv run kelpseg <command>` recipes. Keep a small root
+app and separate thin command handlers, backed by ordinary workflow
+functions callable from notebooks/tests without CLI context. Import heavy
+workflow code only when its command runs. Task 028 establishes the installed
+entry point and path checks; later tasks add their commands. The selected
+training command style is `uv run kelpseg train --recipe <recipe-file>`;
+it remains planned until the training task implements it. See
+[quickstart.md](quickstart.md) for working setup/path-check recipes.
+
+Runtime dependencies cover implemented installed workflows (initially Typer).
+Checkout-only dependencies for retained code live in the default `legacy`
+group alongside `dev`; plain frozen setup includes both. New workflows promote
+their dependencies into runtime as implemented. Distribution checks install
+only frozen runtime dependencies, independently of legacy checkout tests.
+Reusable functions return typed values and raise ordinary exceptions; CLI
+handlers own output and exit status. Machine paths come from the explicit
+`--paths` file, with no discovery; relative roots resolve against that file.
+
 Use short recipes with ordinary values for bands, learning rate, augmentations,
 dataset, and checkpoint. Keep machine-specific paths in one place; changing
 datasets or machines must not require source edits. Avoid Python class paths
-and config inheritance chains in the researcher interface.
+and config inheritance chains in the researcher interface. Keep most settings
+in recipes, with a few deliberate CLI options for recipe/path/output inputs.
 
 Use one documented run-folder convention for resolved settings, checkpoints,
 metrics, and figures. Before expensive work, show resolved input/output paths,

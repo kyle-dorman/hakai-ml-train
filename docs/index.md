@@ -4,12 +4,15 @@ Start with `AGENTS.md`, then [todo.md](todo.md) and the selected task under
 [tasks](../tasks/README.md).
 
 The current work rebuilds this fork for Planet 8/4/3-band binary kelp
-segmentation. The legacy implementation is still present. The target package,
-CLI, and rebuilt datasets are introduced by individual tasks; they are not
-already available. Tasks 000–023 describe the preceding completed PS8B study.
+segmentation. The installed package provides CLI/path checks; retained legacy
+Planet implementations support the ongoing replacement. New datasets and
+workflow commands arrive through their numbered tasks and are not available
+yet. Tasks 000–023 describe the preceding completed PS8B study.
 
 ## Read by task
 
+- [quickstart.md](quickstart.md): researcher setup, available commands, paths,
+  output/errors, and reusable Python functions.
 - [product.md](product.md): research scope, experiments, scientific boundaries.
 - [architecture.md](architecture.md): current-to-target pipeline, identity,
   splitting, prediction and metric contracts.

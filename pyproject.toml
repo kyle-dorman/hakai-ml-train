@@ -1,44 +1,49 @@
 [project]
-name = "hakai-ml-train"
+name = "kelpseg"
 version = "0.1.0"
-description = "Training scripts for segmentation models"
+description = "Researcher-friendly binary kelp segmentation on Planet imagery"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "albumentations>=2.0.8",
-    "datasets>=4.5.0",
-    "einops>=0.8.1",
-    "habitat-mapper>=0.15.0",
-    "huggingface-hub>=1.4.1",
-    "lightly[timm]>=1.5.21",
-    "lightning>=2.5.1,<2.6.2",
-    "matplotlib>=3.10.5",
-    "onnx>=1.18.0",
-    "onnxscript>=0.6.2",
-    "opencv-python-headless>=4.13.0.92",
-    "pydantic>=2.11.7",
-    "rich>=14.2.0",
-    "segmentation-models-pytorch>=0.5.0",
-    "terratorch>=1.2.7",
-    "torch>=2.11.0",
-    "torchmetrics>=1.7.3",
-    "torchvision>=0.26.0",
-    "tqdm>=4.67.1",
-    "transformers>=5.1.0",
-    "wandb>=0.21.0",
-    "webdataset>=1.0.2",
+    "typer>=0.25.1,<0.26",
 ]
+
+[project.scripts]
+kelpseg = "kelpseg.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.12.12,<0.13"]
+build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "jupyter>=1.1.1",
-    "notebook>=7.5.6",
     "pre-commit>=4.1.0",
     "pytest>=8.4.2",
     "ruff>=0.11.2",
+    "uv_build>=0.12.12,<0.13",
+]
+legacy = [
+    "albumentations>=2.0.8",
+    "huggingface-hub>=1.4.1",
+    "jsonargparse[signatures]>=4.49,<5",
+    "lightning>=2.5.1,<2.6.2",
+    "matplotlib>=3.10.5",
+    "numpy>=2,<3",
+    "opencv-python-headless>=4.13.0.92",
+    "PyYAML>=6,<7",
+    "rasterio>=1.4,<2",
+    "segmentation-models-pytorch>=0.5.0",
+    "shapely>=2,<3",
+    "torch>=2.11.0",
     "torchgeo>=0.9.0",
+    "torchmetrics>=1.7.3",
+    "torchvision>=0.26.0",
+    "tqdm>=4.67.1",
+    "wandb>=0.21.0",
 ]
 
+[tool.uv]
+default-groups = ["dev", "legacy"]
 
 [tool.ruff.lint]
 extend-select = [

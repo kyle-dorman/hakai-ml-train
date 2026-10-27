@@ -1,0 +1,41 @@
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  cpu:
+    # arm64 matches the locked macOS Torch wheels and needs no CUDA packages.
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      WANDB_MODE: offline
+      HF_HUB_OFFLINE: "1"
+      NO_ALBUMENTATIONS_UPDATE: "1"
+      CUDA_VISIBLE_DEVICES: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.12.12"
+          enable-cache: true
+      - name: Install frozen Python 3.12 environment
+        run: |
+          uv python install 3.12
+          uv lock --check
+          uv sync --python 3.12 --frozen
+          uv run --frozen python -c 'import platform; assert platform.machine() == "arm64"'
+      - name: CPU fixtures and isolated distribution checks
+        env:
+          UV_OFFLINE: "1"
+        run: uv run --frozen pytest -q
+      - name: Ruff
+        run: |
+          uv run --frozen ruff format --check .
+          uv run --frozen ruff check .
+      - name: Repository hygiene
+        run: uv run --frozen pre-commit run --all-files

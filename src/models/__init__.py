@@ -1,7 +1,6 @@
 import importlib
 import inspect
 
-import torch
 import torch.nn as nn
 
 
@@ -56,22 +55,7 @@ def configure_optimizers(module):
     """
     optimizer_cls = _import_class(module.hparams.optimizer_class)
 
-    llrd_opts = getattr(module.hparams, "llrd_opts", None)
-    if llrd_opts:
-        # Lazy import: only loaded for models that opt into LLRD.
-        from .llrd import build_llrd_param_groups
-
-        opts = module.hparams.optimizer_opts or {}
-        if "lr" not in opts:
-            raise ValueError(
-                "LLRD requires optimizer_opts['lr'] to be set as the base learning rate."
-            )
-        base_lr = opts["lr"]
-        param_groups = build_llrd_param_groups(module, **llrd_opts)
-        for g in param_groups:
-            g["lr"] = base_lr * g["lr_scale"]
-    else:
-        param_groups = _param_groups(module)
+    param_groups = _param_groups(module)
 
     optimizer = optimizer_cls(
         param_groups,
@@ -80,14 +64,6 @@ def configure_optimizers(module):
 
     scheduler_cls = _import_class(module.hparams.lr_scheduler_class)
     scheduler_kwargs = dict(module.hparams.lr_scheduler_opts or {})
-
-    # When LLRD is active, OneCycleLR requires max_lr as a per-group list.
-    if llrd_opts and scheduler_cls is torch.optim.lr_scheduler.OneCycleLR:
-        max_lr = scheduler_kwargs.get("max_lr")
-        if isinstance(max_lr, (int, float)):
-            scheduler_kwargs["max_lr"] = [
-                max_lr * g.get("lr_scale", 1.0) for g in param_groups
-            ]
 
     # Auto-inject total_steps/T_max for schedulers that need the total
     # training step count (e.g., OneCycleLR, CosineAnnealingLR).
