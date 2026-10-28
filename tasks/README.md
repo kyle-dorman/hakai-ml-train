@@ -67,6 +67,7 @@ are authorized by Task 024.
 | [032A](032a_collection_and_split_implementation.md) | Local implementation/tiny smoke | Complete | Approved memberships/ten folds and tiny v2 pass; readability, errors and progress follow-up complete; followed by 032A.1 |
 | [032A.1](032a_1_nonoverlapping_chip_evaluation.md) | Local selection/tiny smoke | Complete | Disjoint existing-chip validation/test; overlap exclusions and geometric coverage verified; next 032B |
 | [032B](032b_produce_and_publish_chip_release.md) | Local production/Box | Complete | 26,573 canonical chips; both variants/ten folds; portable declaration, Box path/size checks, bounded restore and offline tiny v2 pass; next Task 033 |
+| [032C](032c_archive_legacy_and_evict_local_data.md) | Local archive/code/data cleanup | Complete | Prewritten plan; 34 MB historical archive; bootstrap retired; about 410 GB reclaimed; current data/evidence retained and Box untouched |
 
 ## Historical queue: Tasks 000–023
 

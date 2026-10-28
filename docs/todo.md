@@ -61,9 +61,15 @@ The full chip/split release is published; the approved mixed temporal split
 stays unchanged. The full variant and
 provenance contract lives in [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases).
 
+Local cleanup follow-up [Task 032C is complete](../tasks/032c_archive_legacy_and_evict_local_data.md#outcome-2026-10-28):
+small historical records are archived, the catalog bootstrap is retired and
+about 410 GB of obsolete local data/raw/organized copies were removed. Current
+cleaned/chips/analyses/references stay local; Box was untouched. Task 033 stays
+separate.
+
 ## Ordered roadmap
 
-Tasks through 032B are complete. Remaining later rows are ordered scope slots, not permission
+Tasks through 032C are complete. Remaining later rows are ordered scope slots, not permission
 to execute multiple tasks in one window. Create and refine each contract when
 selected; split further if needed.
 
@@ -82,6 +88,7 @@ selected; split further if needed.
 | [032A](../tasks/032a_collection_and_split_implementation.md) | Implement source assignments/window selection and grow tiny v2 — complete | Locked 216/53/58; spacecraft/day isolation; both training variants; ten folds; 13-crop example; no full production |
 | [032A.1](../tasks/032a_1_nonoverlapping_chip_evaluation.md) | Non-overlapping chip validation/test — complete | Reuse existing chips; preserve source assignments; report geometric coverage |
 | [032B](../tasks/032b_produce_and_publish_chip_release.md) | Produce full chips/assignments and publish to Box — complete | 26,573 canonical payloads; both variants/ten folds; Box path/size comparisons, bounded restore and fetched tiny-v2 offline checks |
+| [032C](../tasks/032c_archive_legacy_and_evict_local_data.md) | Archive historical controls, retire bootstrap and evict obsolete local copies — complete | Prewritten plan; 34 MB historical archive; about 410 GB reclaimed; current data/evidence retained and Box untouched |
 | 033 | Simple baseline recipes and portable saved models — next | Local update/validation/save/load/resume for 8/4/3 bands; matched with/without-011/012 training recipes and declared sampling/budget; portable settings |
 | 034 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
 | 035 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics; region/date/year/month prevalence and errors; signed area bias and supported matched-footprint change checks; see experiments.md |

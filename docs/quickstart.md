@@ -100,41 +100,38 @@ unsplit release with stable names. Source grids, classes, nodata and band order
 stay unchanged. A valid plan checks declarations and member listings; it does
 not establish verified member bytes until copying succeeds.
 
-For a first build into a fresh destination, preview before copying. The current
-CA/BC `v1` is already closed, so this recipe now refuses that existing output;
-fetch the published release below or select a fresh release ID for a new build.
+The current CA/BC recipe uses the finished input catalog at
+`<data_root>/preparation_inputs/ca_bc/v1/`. Its `deliveries.csv`, `membership.csv`,
+`aliases.csv`, `assets.csv` and `catalog_manifest.json` remain available. Use
+those declarations directly; normal organization does not read old merge CSVs
+or import a historical bootstrap. That one-time converter has been retired.
+Historical controls/source are archived locally under
+`<data_root>/history/legacy_pre_rebuild_v1/`.
+
+The raw ZIPs and organized v1 payloads were evicted locally after their verified
+Box publication. Upcoming training uses the current chips; full-TIFF work uses
+the retained
+cleaned release. To obtain organized v1, use the
+[Box recovery recipe](box_backup.md#restore-the-organized-cabc-release).
+
+To rebuild organization instead, first restore the three original ZIPs into the
+paths declared by the existing catalog. This is a download recipe, not a step
+needed for training. Choose the artifact root in your local settings:
 
 ```bash
-uv run kelpseg organize --recipe configs/organize/ca_bc.toml --paths paths.local.toml --dry-run
-```
-
-The current CA/BC recipe uses the existing reconstructed external input catalog.
-Task 030A built and verified the full 369-pair organized release; use the
-[Box recovery recipe](box_backup.md#restore-the-organized-cabc-release) to fetch
-it into a fresh directory. Do not rerun organization against the closed release.
-The metadata-only catalog reconstruction is reproducible from Task 026/027
-evidence:
-
-```python
-from pathlib import Path
-import logging
-
-from kelpseg.prepare.legacy_catalog import build_legacy_ca_bc_catalog
-from kelpseg.paths import load_paths
-
-logging.basicConfig(level=logging.INFO, format="%(message)s")
-paths = load_paths("paths.local.toml")
-build_legacy_ca_bc_catalog(
-    paths, Path("configs/regions.csv"),
-    paths.data_root / "preparation_inputs/ca_bc/v1",
+(
+  set -e
+  data_root='/Volumes/x10pro/kelpseg'
+  test ! -e "$data_root/zip_archive"
+  rclone copy kelp-box:kelpseg/data/1_raw/ca_bc_sources_v1 "$data_root/zip_archive" --immutable --size-only --ignore-checksum --transfers 1 --checkers 2
+  uv run kelpseg organize --recipe configs/organize/ca_bc.toml --paths paths.local.toml --dry-run
 )
 ```
 
-Catalog construction is a one-pass operation into a fresh destination; it does
-not resume or reuse an existing catalog. Existing catalogs retain their original
-producer/code hashes after a source-code move. Use the existing catalog directly; do not regenerate or rewrite it just to
-change Python import paths. A new reconstruction with changed producer code
-needs a new catalog version and an explicit recipe change.
+Preview before any organization write. Local output must be fresh; choose a new
+release ID when changing inputs/settings and preserve the published Box v1.
+The finished catalog retains its original historical producer/evidence metadata;
+retiring the converter does not require rewriting that catalog.
 
 For a new independent dataset, create a catalog under your `data_root` and
 supply its own tables; no CA/BC mapping or Python edits are needed. Example
@@ -234,7 +231,8 @@ rewriting them. No failure automatically deletes or replaces existing work.
 
 The preparation code lives in `src/kelpseg/prepare/`: start with
 `organize_inputs.py` for table/recipe validation and `organize.py` for the
-one-pass copy flow. `legacy_catalog.py` is only the historical CA/BC conversion.
+one-pass copy flow. Historical CA/BC catalog construction is retired; the
+organizer consumes the existing explicit tables directly.
 Reusable functions have no CLI context:
 
 ```python

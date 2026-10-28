@@ -87,7 +87,6 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             for module in (
                 "organize",
                 "organize_inputs",
-                "legacy_catalog",
                 "check",
                 "clean_inputs",
                 "clean",

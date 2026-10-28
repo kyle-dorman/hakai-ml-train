@@ -11,6 +11,15 @@ Task 030A also verified the organized release at
 `data/2_organized/ca_bc/v1/`, with its separate evidence at
 `transfers/task030a_organized_ca_bc_v1/`; see the recovery recipe below.
 
+Local raw ZIPs and organized v1 payloads were evicted in
+[Task 032C](../tasks/032c_archive_legacy_and_evict_local_data.md); their Box copies
+remain unchanged. Current cleaned imagery/chips stay local. The small historical
+archive is local at `history/legacy_pre_rebuild_v1/`; it was not uploaded by that
+cleanup. Normal organization uses the retained `preparation_inputs/ca_bc/v1/`
+catalog, so restoring raw ZIPs does not require the retired catalog bootstrap.
+Use the [quickstart raw restore](quickstart.md#organize-raw-sources) to populate
+that catalog's declared `zip_archive/` paths.
+
 To restore into a new local project-shaped directory, choose a fresh `DEST` and run:
 
 ```bash

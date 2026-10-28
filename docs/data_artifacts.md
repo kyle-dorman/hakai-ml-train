@@ -11,9 +11,8 @@ Track source, preparation/split algorithms, small hand-authored configs,
 focused fixtures/tests, human cleanup documentation, and task records in Git.
 Store real dataset manifests and generated split assignments with versioned
 external data releases. Large imagery, chips, archives, checkpoints, predictions,
-and generated reports stay outside Git. Historical tracked split CSVs remain
-until their legacy catalog/comparison consumers are replaced; external copies
-are preserved in Task 032A. New generated splits are external. Keep current
+and generated reports stay outside Git. Historical tracked split CSVs remain as
+small legacy records; external copies are preserved in Task 032A. New generated splits are external. Keep current
 split-generation rules in Git.
 
 `rclone` is installed and a remote named `kelp-box` is configured. Task 027 verified the project folder, account limits, small round trip, and backup. See [Box backup and recovery](box_backup.md) for actual paths and recipes.
@@ -39,6 +38,25 @@ Reject unresolved known conflicts without adding new payload hashing.
 The 339 CA filenames are not yet a proven unique-content count. Backup of
 unchanged deliveries does not require deleting duplicates or resolving every
 alias first. Task 027 verified copies while preserving this variant-1 boundary.
+
+## Current local working set
+
+Keep current cleaned imagery, canonical chips, split/collection controls and tiny
+inputs under `data/`, plus analyses, references, audits, preparation inputs,
+backup evidence and small historical experiment results. Local raw ZIPs and
+organized v1 payloads were evicted after verified Box publication; restore them
+from Box only when needed for reconstruction. Box releases remain immutable.
+
+Small historical controls, the 31 pre-repair label snapshots and retired
+bootstrap source/tests are at
+`/Volumes/x10pro/kelpseg/history/legacy_pre_rebuild_v1/`, preserving their former
+relative paths. The finished `preparation_inputs/ca_bc/v1/` catalog stays active.
+The installed preparation/loading workflows do not require the obsolete
+merge/chip directory layout. Bulk old datasets,
+ZIP/TAR copies, local smoke checkpoints and generated smoke/restore/example runs
+were removed. The [Task 032C record](../tasks/032c_archive_legacy_and_evict_local_data.md)
+contains the pre-execution deletion plan, archive scope and measured results.
+The archive is local only; this cleanup performed no Box operation.
 
 ## Box project organization and upload verification
 
@@ -213,11 +231,13 @@ package, organization, checking and cleanup; Tasks 030A/030B build and publish
 the full variants 2 and 3.
 [Task 027](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27) verified the Box backup of variant 1, the reference, and audit.
 
-## Existing local evidence
+## Historical local evidence
 
-A bounded inventory on 2026-10-26 found these artifacts. Counts/existence are
-fresh inventory observations; payload hashes were not rerun in that inventory.
-The original collection's full membership still requires user-assisted audit.
+A bounded inventory on 2026-10-26 found the artifacts below. Their paths/counts
+describe that historical inventory, not current local availability. Task 032C
+evicted the bulk payloads and retained small controls/snapshots in the history
+archive above. Payload hashes were not rerun by that inventory. The original
+collection's full historical delivery membership remains unconfirmed.
 
 | Family | Existing location | Inventory |
 |---|---|---|
@@ -243,7 +263,8 @@ at `/Volumes/x10pro/kelpseg/audits/task026_originals_v1`. See
 [cleanup_provenance.md](cleanup_provenance.md) for observed lineage, prior
 cleanup decisions, and remaining coverage/mask/band questions. Archive indexes
 were listed without verifying payloads; original-delivery completeness remains
-unconfirmed. Preserve candidate originals, companion masks, and sidecars.
+unconfirmed. Raw ZIPs and the organized Box release preserve source/companion
+payloads; local historical controls and snapshots preserve the cleanup evidence.
 
 ## Reconstructing cleanup
 
@@ -257,7 +278,9 @@ unconfirmed. Preserve candidate originals, companion masks, and sidecars.
    copy with the external release. Record what changes, why, source evidence,
    exact producing command/config, and validation.
 4. Test the transformation on small raster fixtures and real examples. Rebuild
-   into a new versioned root; preserve every original and old derived collection.
+   into a new versioned root. Preserve original deliveries on Box and retain
+   useful historical controls/snapshots; obsolete local derived payloads may be
+   evicted under an explicit recorded cleanup scope.
 5. Publish practical source/cleaned/chip inventories, split assignments and
    parameters with each dataset release. Check counts/paths/sizes and a bounded
    restore/load example before calling its Box copy usable.
@@ -376,15 +399,18 @@ affected imagery. Preserve that distinction if recovering old artifacts.
 The implemented organizer reads explicit portable tables and recipe settings;
 [quickstart.md](quickstart.md#organize-raw-sources) owns their complete schema
 and operating recipes. Generated declarations live under
-`preparation_inputs/<dataset>/<version>/` outside Git. The one-time
-`kelpseg.prepare.legacy_catalog.build_legacy_ca_bc_catalog` converter reconstructs the
-current input catalog from the named Task 026 metadata and Task 027 trusted
-archive catalog. It does not read source payloads. Other datasets supply the
-same tables directly.
+`preparation_inputs/<dataset>/<version>/` outside Git. The existing CA/BC
+catalog at `preparation_inputs/ca_bc/v1/` was constructed
+from Task 026/027 evidence and remains unchanged. The historical bootstrap is
+retired; its source and historical input controls are archived under
+`history/legacy_pre_rebuild_v1/`. Normal organization reads the finished tables
+directly. Other datasets supply the same tables without a dataset-specific
+bootstrap. Restore the raw ZIPs to their declared paths before rebuilding.
 
-The full unsplit `ca_bc/v1` organized release is verified locally at
-`/Volumes/x10pro/kelpseg/data/2_organized/ca_bc/v1` and on Box at the same project
-relative path: 369 pairs, 418 companions, 3,919 aliases, 1,163 total files and
+The full unsplit `ca_bc/v1` organized release is preserved on Box at
+`kelp-box:kelpseg/data/2_organized/ca_bc/v1`; its formerly verified local payloads
+were evicted by Task 032C. Release totals remain: 369 pairs, 418 companions,
+3,919 aliases, 1,163 total files and
 28,568,499,959 bytes. Root manifest SHA-256:
 `435e1fbc30d413f9941c3bcb56be074df9e2e863e564479b05fca04c87c817a8`.
 [Task 030A's outcome](../tasks/030a_build_and_publish_organized.md#outcome-2026-10-27)

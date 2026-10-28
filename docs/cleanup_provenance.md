@@ -11,16 +11,29 @@ Start with `README.txt` and `findings.json`. The
 [task outcome](../tasks/026_inventory_originals_and_cleanup_provenance.md#outcome-2026-10-26)
 records the checks and producer invocations.
 
+## Current storage
+
+The collection paths below describe Task 026's historical inventory. Task 032C
+subsequently evicted their obsolete local payloads and local raw/organized
+copies under the user's explicit cleanup instruction. Original raw deliveries
+and organized/cleaned/chip releases remain on Box; current cleaned imagery and
+chips remain local. Small historical controls and all 31 pre-repair label
+snapshots are retained at `history/legacy_pre_rebuild_v1/` under the data root.
+The one-time catalog bootstrap is retired; the finished input catalog remains
+at `preparation_inputs/ca_bc/v1/`. See the
+[cleanup record](../tasks/032c_archive_legacy_and_evict_local_data.md) for the
+prewritten plan and results. The audit and references are unchanged.
+
 ## Which collections contain what
 
 | Collection | Established evidence | Interpretation |
 |---|---|---|
-| `ca/` | 339 image/label pairs; 325 companion `nan_mask` rasters | Candidate source collection; masks must be preserved |
+| `ca/` | 339 image/label pairs; 325 companion `nan_mask` rasters | Candidate source collection; raw/companion payloads preserved on Box |
 | `zip_archive/ca_data.zip` and `extra_data.zip` | 325 source families plus 14 mapped additional pairs reconcile to CA's 339 IDs | Candidate delivery archives; member indexes do not verify payload integrity |
 | `bc/Planet8bSR_BC_Labelled/` | 30 tile pairs and six full-scene pairs; BC ZIP index matches local TIFF paths/sizes | Candidate source collection; original delivery completeness remains unconfirmed |
 | `merged_all_regions_v1/` | 369 copied images and aligned/repaired labels, documented by manifests and previous tasks | Derived dataset; its historical raw-merge name does not make labels original |
 | `merged_ds/` and `hakai_match/` | Same 289 source identities; manifests document merging and reconstruction/renaming | Older derived collections, omitting 79 CA and one BC source from the current 369 |
-| Chips, repaired archives, and `hakai_match_v0.tar` | Chip/repair manifests and archive member listings | Derived artifacts or derived-archive candidates; retain as historical evidence |
+| Chips, repaired archives, and `hakai_match_v0.tar` | Chip/repair manifests and archive member listings | Superseded payloads; small historical controls/snapshots retained |
 
 The 79 omitted CA identities are 35 in `ca_006`, 32 in `ca_007`, and 12 in
 `ca_011`. The missing BC identity is
@@ -122,7 +135,7 @@ starts over; there is no automatic recovery or reuse of unfinished output.
 
 ## Remaining limits and later preparation
 
-- The three source ZIPs and current CA/BC folders account for the observed
+- The three source ZIPs and historically inventoried CA/BC folders account for the observed
   scope, but no independent delivery manifest establishes that they exhaust
   all original deliveries. Preserve their candidate status.
 - All 325 companion-mask grids match their CA image grids; mask meanings were
@@ -132,36 +145,29 @@ starts over; there is no automatic recovery or reuse of unfinished output.
   333 CA and five BC headers are untagged or generic. Do not extend those names
   to every source merely from channel count or a conventional RGB display.
 - Historical background filling does not independently establish negative
-  annotation truth beyond the BC mosaic's coverage. The new release must retain
-  coverage provenance and explicitly state its labeled/scored scope. Existing
+  annotation truth beyond the BC mosaic's coverage. The cleaned release retains
+  coverage provenance; scoring must explicitly state its labeled/scored scope. Existing
   processing history and new scientific interpretation are separate questions.
 - Archive listings and recorded CRCs/sizes are not fresh integrity checks or
   proof of a verified backup. Task 027 owns transfer and backup verification.
 
-The user selected the three source ZIPs as the sufficient declared raw scope
-for Task 027, alongside the legacy reference and this audit. Preserve archive
-members, including masks/sidecars, unchanged. Extra CA/BC folder copies remain
-optional historical preservation, not a prerequisite for backing up that raw
-baseline. The audit's earlier proposed roots in `findings.json` remain evidence
-of the inventory scope. Tasks 029A/029B implement organization and shared
-checking/cleanup; Tasks 030A/030B will build and publish the two
-intermediates. Original and historical datasets remain unchanged; the reusable
-walkthrough starts after cleaned intermediate 3 is established.
+The user selected the three source ZIPs as the sufficient declared raw scope.
+Task 027 verified their Box preservation alongside the legacy reference and
+this audit. Archive members, including masks/sidecars, remain unchanged there.
+The audit's earlier proposed roots in `findings.json` remain historical evidence
+of its inventory scope, not required current local paths.
 
-The user's raw-baseline preference is recorded in
-[data_artifacts.md](data_artifacts.md#storage-and-git-boundary): preserve unchanged
-deliveries first, treat the raw catalog as unsplit, and keep repairs, renaming,
-deduplication decisions, and new experimental splits in separate derived work.
-Existing delivery train/val folders can be retained as provenance without
-adopting their assignments. No upload or data reorganization has occurred.
+Tasks 029A/029B implemented organization and shared checking/cleanup;
+Tasks 030A/030B built and published the complete 369-pair organized and cleaned
+releases. Task 032B published canonical chips, source assignments and tiny v2.
+Task 032C then evicted obsolete local datasets and raw/organized copies after
+archiving their small historical records. Current cleaned imagery, chips,
+analyses, audits and references remain local; Box was untouched by cleanup.
+The finished catalog remains available without the retired bootstrap.
 
-The three variants are **1 raw ZIPs**, **2 organized intermediate**, and
-**3 cleaned intermediate**. Variant 2 is a byte-preserving, short-name, unsplit
-369-pair collection with region-code and per-file alias/source tables. Variant 3
-records cleanup independently and remains unsplit until the later split task.
-The repaired current merge cannot supply original label bytes; its
-manifest identifies the upstream originals, whose 369 image/label paths are
-still present. The exact release/mapping contract is owned by
-[data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases).
-Only bounded smoke intermediates have been produced; full production builds
-remain Tasks 030A/030B. Raw ZIP preservation is already verified by Task 027.
+The raw catalog stays unsplit. Organization/renaming, cleanup and experimental
+assignments remain separate. Source delivery train/val names are provenance,
+not adopted experimental memberships. The repaired historical merge cannot
+supply original label bytes; its archived manifest identifies source members
+preserved in the raw Box delivery. The current release/mapping contract is
+owned by [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases).

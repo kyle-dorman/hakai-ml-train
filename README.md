@@ -86,6 +86,11 @@ LORO folds are published with portable controls; the 13-crop tiny v2 is availabl
 from Box for offline split/chip/load practice. See the
 [researcher guide](docs/quickstart.md#restore-and-use-the-full-cabc-chip-release).
 
+The local working set keeps cleaned imagery/chips and small controls/evidence.
+Raw ZIPs and organized payloads can be restored from Box; obsolete local datasets
+were evicted after archiving their small historical records. See
+[storage policy](docs/data_artifacts.md#current-local-working-set).
+
 The first spectral comparison is interpreted as 8 bands, RGB+NIR, and RGB from
 the same acquisitions. Start with the working SegFormer recipe; a possible RGB
 DINOv3 variant follows separately. New-region work compares direct transfer,

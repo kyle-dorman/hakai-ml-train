@@ -45,8 +45,9 @@ workflow code only when its command runs. Preparation modules live together in
 `organize.py` copies/verifies bytes, `check.py` validates directory scopes,
 `clean_inputs.py` defines cleanup settings/plans, and `clean.py` writes/verifies
 separate derived outputs. `nodata.py` and `alignment.py` hold shared scientific
-functions; `legacy_catalog.py` converts only historical CA/BC metadata. Keep
-these as explicit functions and ordinary loops;
+functions. The one-time historical catalog bootstrap is retired; existing
+explicit catalog tables are normal organizer inputs. Keep these as explicit
+functions and ordinary loops;
 the CLI uses standard Python logging for progress, without a custom logging
 or orchestration layer. Later tasks add model workflow commands. The selected
 training command style is `uv run kelpseg train --recipe <recipe-file>`;
