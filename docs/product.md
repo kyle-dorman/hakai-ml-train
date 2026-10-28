@@ -24,6 +24,38 @@ changes to augmentations and learning rate are in scope. A possible RGB
 DINOv3 initialization experiment follows a working baseline; broad model or
 architecture sweeps are outside the core rebuild.
 
+## California target and temporal consistency
+
+The immediate application is mapping the California coast beyond the small
+labeled geographic sample. Geographic generalization is the main concern;
+future-date/year testing and stable errors through time at each location also
+matter. A location-specific under/overestimate is more acceptable than an error
+that changes with year and creates an artificial trend. Real kelp changes should
+remain visible; temporal consistency is evaluated against supplied labels.
+
+Regions 001–010, including both Baja regions, are eligible for validation/test.
+Regions 011 (Calvert Island) and 012 (BC tiles) are training-only. Compare runs
+with both 011/012 included versus both excluded, keeping the evaluation-region
+training/validation/test assignments fixed. Neither training-only region creates
+a LORO test fold or contributes to validation/checkpoint selection. Report
+California and Baja results explicitly so geographic scope remains clear.
+
+Within each experiment/fold, group by physical spacecraft ID plus UTC acquisition
+date across regions and crops. Each group can contribute to only one of train,
+validation and test; the same spacecraft on different days may cross partitions.
+Keep regional date groups intact too. The approved baseline uses reverse
+chronology for 001–008 and forward for 009/010; exact assignments are locked
+in Task 032A before model evaluation.
+The baseline is then a region-specific temporal holdout, not a uniform future-
+year benchmark. LORO still supplies the primary geographic generalization test.
+
+The temporal split must reflect the actual sparse year/month support. Keep
+later-date generalization distinct from a strict future-year claim. Low-kelp
+dates remain part of the declared evaluation scope; expose label prevalence,
+false positives/negatives and temporal error patterns rather than dropping
+those dates to improve F1. Detailed evaluation requirements live in
+[experiments.md](experiments.md#evaluation-and-comparison).
+
 ## New regions
 
 All datasets, including the current CA/BC scope, follow the same raw → organized

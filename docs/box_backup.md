@@ -30,7 +30,7 @@ uv run --no-sync --project /path/to/hakai-ml-train python -I "$DEST/references/l
 uv run --no-sync --project /path/to/hakai-ml-train python -I "$DEST/audits/task026_originals_v1/verify_package.py"
 ```
 
-For future transfers, follow the [artifact verification policy](data_artifacts.md#box-project-organization-and-upload-verification): compare Box SHA-1, size, and paths with a local catalog; stream a SHA-256 readback only for affected files when native hashes are absent or disagree. Avoid overwriting versioned releases. Task 027's full evidence and completion identity are in its [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
+For new work, follow the [current artifact policy](data_artifacts.md#box-project-organization-and-upload-verification): ordinary copies, path/count/size checks and bounded restore/load examples, with no new hashing or receipt machinery. Avoid overwriting versioned releases. The recipes above and below retain historical checksum workflows for the older releases; they are not new-task requirements. Task 027's evidence remains in its [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 
 ## Restore the organized CA/BC release
 

@@ -7,7 +7,7 @@ all earlier suite identities are historical. New datasets and model recipes
 receive distinct run/group/output identities; do not resume or relabel old
 experiments as part of the rebuild. Keep smoke runs separate from production.
 
-Each run records dataset release, split/manifest identity and hashes, band
+Each run records dataset release, split/manifest reference, band
 names/order, normalization, model and initialization, resolved recipe, seed,
 budget, participating regions, checkpoint selection, Git commit, runtime,
 status, and output paths. Held-out region and adaptation case are explicit
@@ -72,6 +72,43 @@ Compare baseline and LORO on matching source TIFFs unseen by both models;
 full-region LORO remains a separate summary. Reuse source assignments and
 training policy across spectral comparisons unless the experiment explicitly
 controls a change. No held-out results select preprocessing or model settings.
+
+For the current California-focused comparison, regions 001–010 (including Baja)
+provide evaluation scopes; 011/012 are a single optional training-only group.
+Compare inclusion versus exclusion of that group on identical evaluation-region
+source assignments, with no 011/012 validation or held-out fold. Keep CA source
+membership, band recipe, initialization, checkpoint/threshold selection rules
+and evaluation coverage matched. Declare the sampling and training budget so
+extra BC data and extra optimization are distinguishable experiment choices;
+those recipe details are selected in the training task.
+
+Tasks 035/036 must add temporal-consistency reporting alongside pooled accuracy:
+
+- Retain per-source/date confusion counts, scoreable/covered area and labeled
+  kelp prevalence; summarize by region, represented year and represented month.
+  Report precision, recall, F1/IoU and absolute false-positive/negative counts
+  or area, including zero-kelp cases and explicit undefined metrics.
+- Show signed area error (predicted minus labeled kelp) across dates within
+  each location. Compare changes across dates on common valid labeled footprints
+  where supported, resolving overlapping observations before calling an area
+  unique. Report available pairs, season/date gaps and coverage; unsupported
+  comparisons remain unavailable rather than fabricated.
+- Use both pooled source-pixel metrics and region/date summaries, keeping
+  California and Baja scope explicit. Examine shared temporal shifts in error
+  where dates/months overlap; changing region composition must not masquerade
+  as a statewide annual bias. Sparse support limits trend conclusions.
+
+Do not choose favorable test dates or remove low-kelp periods to increase F1.
+Audit label support before fixing a scientifically declared split, and preserve
+its representative low/zero-kelp cases. Low F1 in low-prevalence imagery needs
+the accompanying error counts; it is not evidence by itself of temporal drift.
+Acquisition month and label counts do not establish tide, growth or annotation
+causes. Test label-based error stability, not constant predictions through time.
+
+Future-date tests and strict future-year extrapolation are distinct scopes.
+If claiming no training data from a future year, enforce that cutoff for all
+training regions, including 011/012. Region-specific later-date tests may have
+other regions' later imagery in training and must be described accordingly.
 
 ## Local-to-GPU progression
 

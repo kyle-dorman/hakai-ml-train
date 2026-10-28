@@ -103,13 +103,15 @@ Keep organization/renaming separate from cleanup. The implemented organizer for 
 contains the current 369 pair identities (339 CA-family sources and 30 BC tiles),
 unchanged source image/label bytes, and no experimental split. Publish a stable
 region-code table and source/member/filename aliases with separate image/label
-hashes; retain original paths even when long product names are unavailable.
+hashes in the existing release; retain original paths even when long product
+names are unavailable. New work follows the simpler artifact policy without
+adding hashing or receipt machinery.
 Original grids need not match until the cleaning stage. The repaired historical
 merge supplies membership/provenance evidence, not original label payloads.
 See [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases)
 for stage boundaries and mapping requirements. Organization and cleanup are
-implemented, and the full CA/BC releases are complete. Full chip production
-remains Task 032.
+implemented, and the full CA/BC releases are complete. Task 032A implements
+assignments; Task 032B handles full chip production/publication.
 
 Cleanup writes into a fresh sibling `.<output-name>.incomplete` directory and
 renames it to the requested output only after all checks pass. Failed runs leave
@@ -126,7 +128,7 @@ absent. This deliberately changes derived image bytes and supersedes historical
 BC outside-coverage background filling; raw/organized payloads stay unchanged.
 Detect retained all-zero value collisions instead of silently changing validity.
 Detailed coverage/reason rasters are optional and off by default; compact
-counts, transformation records, source/output hashes and asset dispositions
+counts, transformation records, source/output references and asset dispositions
 remain required. Rewritten image and label sidecars must not reactivate stale
 metadata/masks/overviews. Existing scientific logic and correctness tests are
 reused, with explicit regression changes for the new policy. Task 029B records
@@ -197,10 +199,36 @@ conflicting annotation versions before selecting a collection's scoring labels.
 
 Chips inherit source-level assignments, and acquisition-date groups remain
 intact in the temporal baseline. Match source assignments across spectral
-variants. LORO test is the complete held-out region; train/validation exclude
-that region. Document the remaining regions' train/validation selection when
-the replacement split task is selected. Training background exclusions never
+variants. Within each experiment/fold, a `(satellite_id, UTC date)` group
+contributes to only one of train/validation/test, including all regional crops.
+The same spacecraft on different dates can cross partitions. Record spacecraft
+ID explicitly in collection/split metadata using the declared filename convention
+or supplied metadata; never mistake a crop suffix for it. Reconcile regional
+cutoffs jointly. Forward/reverse chronology can vary by region, with choices
+fixed before model results are seen.
+
+LORO test is the complete held-out region; train/validation exclude
+that region. Current LORO folds cover regions 001–010, including Baja. Reproduce
+the historical source policy for the other evaluation regions: their temporal
+training and validation sources retain those roles and their temporal test
+sources remain unused. Regions 011/012 are training-only and toggled together
+in the with/without comparison; neither contributes validation or a test fold.
+For every LORO fold, also leave other-region companions sharing a held-out
+test spacecraft/date unused. Apply the same group-isolation rule to optional
+training inputs. These are manifest exclusions; canonical imagery stays intact.
+Keep 001–010 assignments identical across that comparison. The approved
+baseline uses reverse chronology for 001–008 and forward for 009/010; Task
+032A owns exact locked cutoffs and the approved external source assignments.
+Historical hard-link views
+implemented this policy; new workflows use portable manifests without requiring
+link trees. Training background exclusions never
 silently constrain evaluation. Validate all joins and leakage boundaries.
+
+Audit actual region/year/month and label support before choosing chronological
+boundaries; the sparse collection does not support a uniform annual design.
+LORO geographic generalization is the primary California deployment concern.
+Keep later-date/future-year tests and the temporal-consistency reporting in
+[experiments.md](experiments.md#evaluation-and-comparison) explicit.
 
 ## Prediction and scoring
 

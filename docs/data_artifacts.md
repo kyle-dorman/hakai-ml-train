@@ -32,8 +32,9 @@ BC delivery folders named train/val are historical provenance, not assignments f
 workflow. Treat the raw catalog as one unsplit collection. Keep any future
 cleaned release and generated split assignments separate.
 
-Use a separate filename/hash crosswalk to reconcile differently named copies;
-hash images and labels independently and retain every delivery association.
+Use source identities and known filename aliases to reconcile differently named
+copies; retain every delivery association and any existing content evidence.
+Reject unresolved known conflicts without adding new payload hashing.
 The 339 CA filenames are not yet a proven unique-content count. Backup of
 unchanged deliveries does not require deleting duplicates or resolving every
 alias first. Task 027 verified copies while preserving this variant-1 boundary.
@@ -65,45 +66,28 @@ kelpseg/
   transfers/task030b_cleaned_ca_bc_v1/       # cleaned QA, checks, completion
 ```
 
-Create only needed folders as work arrives. Keep versioned dataset payloads at
-their project locations; transfer receipts refer to them rather than creating
-another full data copy per transfer. Never put receipts inside a closed
-reference/audit package or silently overwrite an existing release.
+Create only needed folders as work arrives. Keep versioned payloads at their
+project locations and never silently overwrite a release. Existing transfer
+evidence stays with its historical release.
 
-The default for this and future dataset uploads is a local SHA-256 identity
-plus a provider-native transfer checksum. For Box, compare **every file's
-SHA-1, byte size, and relative path** with Box metadata; rclone's
-[Box documentation](https://rclone.org/box/#modification-times-and-hashes)
-documents SHA-1 support. Require actual nonempty checksum values; `--checksum`
-alone may fall back to size and is not sufficient verification evidence.
+For all tasks, the user's current direction is plain manifests, ordinary
+functions and minimal bookkeeping. Do not add new hashing, checksum catalogs,
+authentication catalogs, transfer receipts or verification frameworks. This
+supersedes the heavier requirements in older contracts. Existing published
+hashes/receipts and implemented legacy command behavior remain documented as
+historical evidence and current behavior; they are not requirements for new work.
 
-Calculate local SHA-1 and SHA-256 together in one intentional read of finalized
-files when no trusted catalog exists. Reuse verified immutable-release catalogs
-when their identity/provenance remains valid; size/mtime alone is not proof of
-content identity. Do not force repeated full rehashes or full remote readbacks
-for every upload. Check source metadata before/after and rehash affected files
-when inputs change or trust in a saved catalog is lost. Rclone may perform its
-own hashing during transfer; this policy avoids extra deliberate full passes.
-
-Use streamed remote SHA-256 readback for affected files if native checksums
-are missing or disagree; use a whole-release deep readback only when explicitly
-requested or justified by a recorded problem. Diagnose a mismatch; do not
-accept size-only matches or silently ignore conflicting hashes. Record each
-file's method as `provider_sha1_verified` or `readback_sha256_verified`, with
-native-checksum failures retained as evidence. This distinguishes provider
-verification from end-to-end download verification without forcing both.
-
-Keep the initial small real round trip. Task 027 also restored the relatively
-small reference/audit packages and runs their own SHA-256 verifiers; it does not
-redownload all raw ZIPs by default. Later large releases use their scoped task's
-bounded restoration check with the same checksum/fallback policy. No extraction
-or per-TIFF hashing inside raw ZIPs is required merely to back up those ZIPs.
+Use ordinary explicit rclone copies and compare relative paths, file counts and
+sizes. Test a bounded representative restore by opening/loading the actual data
+and comparing small arrays where useful. Record the scope and limits in the task
+outcome; do not call path/size or load checks checksum verification. Keep sources
+immutable, stop on errors and use fresh versioned destinations.
 
 ## Adding regions and combined datasets
 
 All datasets are peers. The current 369-pair scope can be dataset `ca_bc`, with
 exactly the same variant folders, release versions, manifests, preparation and
-checksum rules as any other dataset. It is not an automatic parent or mandatory
+storage rules as any other dataset. It is not an automatic parent or mandatory
 member of later collections. Every published release remains unchanged, whether
 it was created first or later. "Baseline" is an explicitly chosen experiment
 role, not a privileged storage or ingestion category.
@@ -115,7 +99,7 @@ metadata, independent of delivery, dataset/release, and filename identity.
 For every dataset, including the current one:
 
 1. Preserve its original files under a new `data/1_raw/<delivery_id>/`, with
-   hashes, provenance and the normal checksum-based backup. Leave earlier raw
+   source metadata and an ordinary Box backup. Leave earlier raw
    folders unchanged; new dates from an existing region are a new delivery too.
 2. Register any new stable region codes/names without renumbering existing
    regions. Version the small mapping/settings in Git and publish a mapping
@@ -140,8 +124,9 @@ For every dataset, including the current one:
 Keep raw deliveries and all aliases even when a collection resolves duplicates.
 This is a few manifests and ordinary folders, not a dataset-management service.
 The researcher guide gains a copyable "add a region" recipe as these stages
-arrive. Tasks 029A/029B implement extensible preparation; Task 032 supplies
-collection-aware assignments; Task 037 uses those prepared data for its four
+arrive. Tasks 029A/029B implement extensible preparation; Task 032A supplies
+collection-aware assignments and Task 032B produces/publishes the full release;
+Task 037 uses those prepared data for its four
 new-region comparisons. None of that ingestion is executed by Task 027.
 
 ## Planned raw, intermediate, and cleaned releases
@@ -166,7 +151,7 @@ below define only the first dataset's input scope, not special pipeline rules.
    image nodata pixels plus metadata to 0. Labels keep valid class-zero
    background and use nodata/ignore value and metadata 3. For paired data,
    outside-label coverage becomes all-band image zero plus label 3; image-only
-   inputs retain their valid imagery. Record original/output hashes, grids,
+   inputs retain their valid imagery. Record original/output paths, grids,
    nodata rules, changed-pixel counts and asset dispositions. Detailed coverage/
    reason rasters are optional QA outputs, off by default. Keep this collection
    unsplit too; experimental assignments arrive separately after chipping.
@@ -183,13 +168,14 @@ folders, using the existing 369-row merge manifest to establish membership and
 upstream paths. Do not try to undo the repaired labels in
 `merged_all_regions_v1`; that collection is historical derived evidence.
 All 369 referenced source image and source label paths were present on
-2026-10-27. Check each source/output byte hash during production; no source is
+2026-10-27. Keep source/output identity explicit during production; no source is
 renamed or modified in place. Original image/label grids may differ at this
 stage, including full regional BC label mosaics; alignment belongs to cleanup.
 
 The organizer publishes `images/`, `labels/`, `regions.csv`, `sources.csv`, and
 `filename_aliases.csv`. Variant 3 retains those identities/crosswalks and records
-variant-2 parent hashes, cleanup parameters/changes, and new output hashes.
+variant-2 parent references and cleanup parameters/changes. Historical releases
+also retain their existing hashes.
 The region table retains existing
 CA codes 001–011 and their legacy region IDs/names; code 012 is
 the BC tile group, retaining legacy ID `bc`. Region code is the key: 005 and
@@ -201,8 +187,9 @@ from row order.
 
 For every pair, the portable source manifest records canonical ID, region code,
 legacy source ID, acquisition date, output-relative image/label paths, source
-archive names/hashes, exact source member paths, and separate input/output
-image and label hashes. Preserve all known longer-name and shorter-name aliases
+archive names, exact source member paths, and separate input/output image and
+label references. Existing hashes stay as historical metadata. Preserve all
+known longer-name and shorter-name aliases
 with their evidence and alias type (archive member or recorded legacy name);
 allow several aliases per role. Existing evidence provides long aliases for
 290 identities (260 CA and 30 BC); the other 79 CA sources have exact short
@@ -257,7 +244,7 @@ unconfirmed. Preserve candidate originals, companion masks, and sidecars.
 
 ## Reconstructing cleanup
 
-1. Inventory candidate collections, filenames, pairings, hashes where useful,
+1. Inventory candidate collections, filenames, pairings, existing evidence,
    source metadata, region/date identity, band order, label classes, and grids.
    Distinguish original deliveries, derived artifacts, duplicates, and unknowns.
 2. Trace representative cleaned CA/BC pairs back to candidate originals. Explain
@@ -268,9 +255,9 @@ unconfirmed. Preserve candidate originals, companion masks, and sidecars.
    exact producing command/config, and validation.
 4. Test the transformation on small raster fixtures and real examples. Rebuild
    into a new versioned root; preserve every original and old derived collection.
-5. Publish source/cleaned/chip inventories, split assignments, payload hashes,
-   parameters, QA receipt, and completion identity with each dataset release.
-   Verify the local release and its Box copy before calling it backed up.
+5. Publish practical source/cleaned/chip inventories, split assignments and
+   parameters with each dataset release. Check counts/paths/sizes and a bounded
+   restore/load example before calling its Box copy usable.
 
 Previous cleanup aligned labels to image grids and repaired source-aware nodata,
 including some declared `65535` sources rather than only zero. CA labels used a
@@ -319,8 +306,9 @@ See [the walkthrough](quickstart.md#tiny-real-data-walkthrough) for fetch and
 offline use. Real payloads/generated metadata stay outside Git; synthetic
 correctness fixtures stay in Git. Task 025 remains a separate historical reference.
 
-For Task 031 the user explicitly removed new hashing/checksum/catalog/receipt
-work. The example used ordinary copy/fetch with relative path/size checks and bounded array
+For all tasks the user explicitly removed new hashing/checksum/catalog/receipt
+machinery. The Task 031
+example used ordinary copy/fetch with relative path/size checks and bounded array
 comparisons, without new checksum verification. Chipping retains practical
 source/band/window/shape/exclusion metadata and a compact completion summary;
 it does not inherit the organizer/cleaner authentication machinery. Historical
@@ -379,8 +367,9 @@ restored images/labels load independently. [Task 030B](../tasks/030b_build_and_p
 owns detailed evidence and limits; [Box recovery](box_backup.md#cleaned-cabc-v1)
 owns trusted completion/catalog identities and the fresh-directory recipe.
 
-Published release payloads are immutable and include completion hashes over
-all payload/control files. The organizer's portable plan identity covers
+Published release payloads are immutable. The historical organized/cleaned
+releases include completion hashes over their payload/control files; new work
+uses the simpler policy above. The existing organizer's portable plan identity covers
 normalized declarations, recipe values and delivery content/evidence identities;
 resolved machine paths, stat hints and logs do not define that identity. It is
 provenance, not a job-recovery protocol.
@@ -390,6 +379,6 @@ Organization, catalog construction and cleanup write once into a fresh sibling
 output. Neither the final nor incomplete path may already exist. Preparation has
 no resume, writer lock, saved per-file receipt or recovery journal. A failed run
 leaves the incomplete directory; inspect and deliberately move/remove it before
-a full rerun, or choose a fresh output. Source/output hashes, source paths,
-original/output grids, counts and the final completion manifest remain required.
-Completed releases can be independently verified without rerunning preparation.
+a full rerun, or choose a fresh output. Keep practical source paths, original/
+output grids, counts and a compact completion summary. Existing commands retain
+their recorded hash fields; new workflows do not add hash machinery.

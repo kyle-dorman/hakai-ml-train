@@ -37,6 +37,10 @@ full task contracts when selected; split them further when needed.
   messages for researchers with limited Python/ML experience. The current
   one-pass cleaner is an upper bound on file complexity, not a target to grow
   toward. Prefer smaller files that each do one clear job.
+- For all tasks, use plain manifests, ordinary functions, and minimal
+  bookkeeping. Do not add new hashing, checksum, authentication-catalog, or
+  receipt machinery. This user direction overrides heavier requirements in
+  older task contracts and docs; preserve their recorded historical evidence.
 - Keep validation focused on ordinary input mistakes and scientific correctness:
   settings, identity joins, spatial alignment, and initial overwrite refusal.
   Assume inputs stay unchanged and steps run sequentially. Do not add guards
@@ -53,7 +57,7 @@ full task contracts when selected; split them further when needed.
   code explicit: plain functions, straightforward loops, one schema definition,
   and no clever shorthand or unnecessary layers.
 - Show preparation progress by default in the CLI using standard Python logging:
-  phases, current file, counts/bytes, and long-copy/hash updates. Explain rerun
+  phases, current file, counts/bytes, and long-copy updates. Explain rerun
   or resume decisions only for commands that support them.
 - Remove unrelated dataset/model families and unused dependencies within the
   selected task. Preserve useful correctness tests as implementations change.
@@ -71,6 +75,9 @@ full task contracts when selected; split them further when needed.
 - Never split chips from one source TIFF across train/validation/test. Keep
   acquisition-date groups intact for the temporal baseline; LORO holds out an
   entire region. Compare spectral variants on matching source assignments.
+- Within each baseline or LORO fold, keep all imagery from the same physical
+  spacecraft on the same UTC acquisition date in one partition. Observations
+  from that spacecraft on different dates may belong to different partitions.
 - Never select thresholds, recipes, or checkpoints using held-out test results.
 - For overlap, reconstruct source probabilities before thresholding once. Score
   each covered source pixel once; aggregate TIFF confusion counts for metrics.
