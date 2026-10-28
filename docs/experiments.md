@@ -38,6 +38,45 @@ recovery checkpoint as distinct artifacts. Record whether inference uses raw or
 averaged weights; preserve EMA semantics if retained. Test save/load and resume
 locally, including the difference from new fine-tuning initialization.
 
+## Selected rebuild baseline recipe
+
+Task 033's training implementation is still planned. The user selected the
+existing 0.7 smoothed-BCE / 0.3 Lovasz loss, EMA with decay 0.999, equal epochs
+for the BC comparison, and the newly measured **kelp-positive with-BC training
+statistics**, computed after a **5000 upper cap**, for normalization. Use raw-unit
+`(min(image, 5000) - mean) / std`, selecting statistics by band name and storing
+the cap and values directly in recipes/model bundles. Detect native nodata
+before clipping; training's final cap follows photometric augmentation and
+precedes standardization. Validation/prediction use the same cap and statistics.
+Training eligibility requires at least one kelp pixel per chip, using existing
+manifest counts after split selection. Keep background-only canonical chips
+and evaluation rows; report training exclusions separately. This filter belongs
+to Task 033 and does not change Task 032B's published inputs or assignments.
+The [Task 033 contract](../tasks/033_baseline_training_and_portable_models.md#selected-training-normalization)
+owns the exact values and estimation scope. Use one fixed baseline reference
+across spectral and BC variants; record its with-BC origin explicitly. A
+without-BC run using it is not independent of BC-derived preprocessing.
+
+This is a substantial change from the legacy Clay constants: Clay means are
+about 4.5–5.3 times larger than the selected estimates. Give the new recipe a
+distinct identity. Preserve the original normalization when loading a legacy
+checkpoint. The selected estimates were recomputed after clipping at 5000;
+earlier unclipped estimates are historical references. LORO cannot treat these
+baseline estimates as training-only when they include its held-out region.
+
+Keep ordinary training weights and EMA state in the recovery checkpoint; use
+EMA for validation and the selected portable model after averaging begins.
+Before the first averaging update, validate current weights. Augmentation
+parameters must be checked with previews from the same transforms used in
+training, including aligned masks and visible clipping/ignore behavior.
+The first pass is [033A's isolated strength previews](../tasks/033a_individual_augmentation_previews.md):
+legacy square symmetry, additive brightness and spatial dropout, plus small
+independent channel shifts and band dropout. Smooth illumination and the broader
+noise/blur/haze/misregistration catalog are excluded. Band dropout preserves
+labels/validity; spatial dropout ignores erased targets. Review isolated outputs
+with the user in 033B before choosing production settings or testing requested
+combinations. No implementation or preview generation is currently authorized.
+
 ## Portable prediction model
 
 Tasks 033–034 save a model bundle containing weights, architecture settings,

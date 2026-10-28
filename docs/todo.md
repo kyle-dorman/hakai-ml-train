@@ -37,9 +37,10 @@ the primary baseline.
 [Task 032B is complete](../tasks/032b_produce_and_publish_chip_release.md#outcome-2026-10-28):
 26,573 canonical chips, both variants and ten folds are published on Box with
 portable controls. Exact path/size comparisons, the bounded restore and fetched
-tiny-v2 offline walkthrough pass. Next action is to review/refine Task 033's
-baseline-recipe and portable-model contract in its own window; no Task 033
-implementation ran here.
+tiny-v2 offline walkthrough pass. Task 033 is now split into seven bounded
+contracts. Its first implementation step, when explicitly selected, is
+[033A's individual augmentation previews](../tasks/033a_individual_augmentation_previews.md).
+The current instruction is documentation only; no Task 033 implementation starts.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -89,7 +90,14 @@ selected; split further if needed.
 | [032A.1](../tasks/032a_1_nonoverlapping_chip_evaluation.md) | Non-overlapping chip validation/test — complete | Reuse existing chips; preserve source assignments; report geometric coverage |
 | [032B](../tasks/032b_produce_and_publish_chip_release.md) | Produce full chips/assignments and publish to Box — complete | 26,573 canonical payloads; both variants/ten folds; Box path/size comparisons, bounded restore and fetched tiny-v2 offline checks |
 | [032C](../tasks/032c_archive_legacy_and_evict_local_data.md) | Archive historical controls, retire bootstrap and evict obsolete local copies — complete | Prewritten plan; 34 MB historical archive; about 410 GB reclaimed; current data/evidence retained and Box untouched |
-| 033 | Simple baseline recipes and portable saved models — next | Local update/validation/save/load/resume for 8/4/3 bands; matched with/without-011/012 training recipes and declared sampling/budget; portable settings |
+| [033](../tasks/033_baseline_training_and_portable_models.md) | Shared baseline decisions and split plan | Exact 5000-capped normalization and family routing; no umbrella implementation |
+| [033A](../tasks/033a_individual_augmentation_previews.md) | Individual augmentation previews — planned first | Legacy transforms plus small channel shifts/band dropout; isolated strengths only; no stacking or training |
+| [033B](../tasks/033b_review_augmentation_settings.md) | Review and select augmentation settings — planned | User reviews isolated outputs before strengths/probabilities and requested combination checks |
+| [033C](../tasks/033c_simplify_pixel_statistics.md) | Simplify pixel statistics — planned | Small NumPy prepare/ utility reproduces selected capped reference |
+| [033D](../tasks/033d_model_and_training_inputs.md) | Model and training inputs — planned | Shared preprocessing, kelp-only tensors, real B3 update and loss/confusion checks |
+| [033E](../tasks/033e_training_validation_and_ema.md) | Training, validation and EMA — planned | Flat recipes, equal epochs, validation-only selection, local records and saved states |
+| [033F](../tasks/033f_portable_models_and_resume.md) | Portable models and resume — planned | Copied bundle and completed-epoch recovery verified independently |
+| [033G](../tasks/033g_tiny_walkthrough_and_handoff.md) | Tiny walkthrough and handoff — planned | Installed fresh-directory rehearsal, all six production previews and Task 034 handoff |
 | 034 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
 | 035 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics; region/date/year/month prevalence and errors; signed area bias and supported matched-footprint change checks; see experiments.md |
 | 036 | LORO runner and matching-TIFF comparisons | Ten 001–010 folds; paired with/without-011/012 CA/Baja results; temporal-consistency and later-date scopes reported separately; tiny suite checks |

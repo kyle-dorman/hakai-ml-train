@@ -166,8 +166,10 @@ omit payloads only above that limit and keep their manifest records. Count
 actual source-window pixels, excluding artificial padding. The supporting
 [Task 031 study](../tasks/031_chipping_bands_and_tiny_walkthrough.md#512-pixel-analysis-outcome-2026-10-27)
 uses the approved 512/256 fixed grid with retained partial edge chips.
-Historical 1024/512 geometry and positive-only training selection do not become
-new defaults. Use ignore index `-100` for unscored labels and padding.
+Historical 1024/512 geometry does not become a new default. Task 033 explicitly
+selects kelp-positive training eligibility as a separate recipe setting; this
+does not remove canonical backgrounds or filter evaluation. Use ignore index
+`-100` for unscored labels and padding.
 
 `chip_inputs.py` validates a flat recipe, optional exact-key identity CSV and
 cleaned headers; `chip.py` reads windows sequentially without cleaning or
@@ -252,7 +254,12 @@ source controls to original assignments and returns window rows with roles/
 reasons and paths resolved from the explicit chip root. Omitted windows stay
 unused without payloads. Selection reads no arrays and creates no fold copies.
 
-Training uses all canonical retained windows, including overlap. For chip-based
+The installed selector returns all canonical retained assigned training windows,
+including overlap. Task 033's planned training loader further requires
+`kelp_pixels > 0` for train rows, using existing manifest counts. It reports
+eligible and excluded training counts without changing the canonical release,
+assignments or validation/test selection. Task 032B needs no rebuild or upload
+change for this training policy. For chip-based
 validation/test, the selector visits existing windows in crop-key then numeric
 row/column order and reserves a disjoint subset in original TIFF coordinates.
 Crops of the same original share this exclusion, so their pixels cannot repeat.
