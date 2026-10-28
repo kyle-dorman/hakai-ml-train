@@ -11,9 +11,10 @@ Track source, preparation/split algorithms, small hand-authored configs,
 focused fixtures/tests, human cleanup documentation, and task records in Git.
 Store real dataset manifests and generated split assignments with versioned
 external data releases. Large imagery, chips, archives, checkpoints, predictions,
-and generated reports stay outside Git. The currently tracked split CSVs move
-out during the replacement split task, after their historical copies are saved.
-Do not remove the split-generation rules.
+and generated reports stay outside Git. Historical tracked split CSVs remain
+until their legacy catalog/comparison consumers are replaced; external copies
+are preserved in Task 032A. New generated splits are external. Keep current
+split-generation rules in Git.
 
 `rclone` is installed and a remote named `kelp-box` is configured. Task 027 verified the project folder, account limits, small round trip, and backup. See [Box backup and recovery](box_backup.md) for actual paths and recipes.
 Do not assume the old 45 GB ZIP is a suitable Box transfer unit. Prefer explicit
@@ -305,6 +306,15 @@ belong separately under `<data_root>/examples/runs/<fresh-name>/`.
 See [the walkthrough](quickstart.md#tiny-real-data-walkthrough) for fetch and
 offline use. Real payloads/generated metadata stay outside Git; synthetic
 correctness fixtures stay in Git. Task 025 remains a separate historical reference.
+
+Task 032A extends the local example at `<data_root>/data/examples/tiny_ca_bc/v2/`
+to 13 crop pairs, preserving v1 and its partial edge. V2 has 82,537,678 input
+bytes; its split/chip walkthrough is local only until Task 032B publication.
+The installed splitter writes a plain crop collection, Task 031 chip-identity
+export and original-source assignments separately from the chip payload root.
+Dataset/release/source references are explicit; generated controls contain no
+machine paths. [The split walkthrough](quickstart.md#tiny-v2-split-chip-and-load-locally)
+owns the routine recipes; Task 032A records exact validation/output paths.
 
 For all tasks the user explicitly removed new hashing/checksum/catalog/receipt
 machinery. The Task 031

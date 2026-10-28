@@ -4,9 +4,9 @@
 
 The installed `src/kelpseg/` package provides the Typer command and read-only
 machine-path checks, generic byte-preserving organization, quick/full directory
-checks, shared cleanup, and native-band chipping with optional labels. The
-checkout retains legacy Planet `src.*` modules, root
-`trainer.py`, `scripts/`, relevant configs, and focused tests until their
+checks, shared cleanup, native-band chipping with optional labels, and source
+assignment/window-selection functions. The checkout retains legacy Planet
+`src.*` modules, root `trainer.py`, `scripts/`, relevant configs, and focused tests until their
 replacements land. Unrelated application/model/export families are removed.
 The legacy recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
 
@@ -53,7 +53,7 @@ training command style is `uv run kelpseg train --recipe <recipe-file>`;
 it remains planned until the training task implements it. See
 [quickstart.md](quickstart.md) for working setup and preparation recipes.
 
-The preparation surface is `organize`, `check`, shared `clean`, and `chip`;
+The preparation surface is `organize`, `check`, shared `clean`, `chip`, and `split`;
 there is no BC-specific command or intermediate. Task 029B implements
 direct-directory
 checking/cleanup for imagery with optional paired labels, without requiring an
@@ -110,8 +110,8 @@ Original grids need not match until the cleaning stage. The repaired historical
 merge supplies membership/provenance evidence, not original label payloads.
 See [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases)
 for stage boundaries and mapping requirements. Organization and cleanup are
-implemented, and the full CA/BC releases are complete. Task 032A implements
-assignments; Task 032B handles full chip production/publication.
+implemented, and the full CA/BC releases are complete. Source assignments are
+implemented; Task 032B handles full chip production/publication.
 
 Cleanup writes into a fresh sibling `.<output-name>.incomplete` directory and
 renames it to the requested output only after all checks pass. Failed runs leave
@@ -193,8 +193,9 @@ remove the requirement for hard-linked train/validation/test directory trees.
 
 New-region and combined-data experiments select an explicit collection version.
 Generate versioned assignments for that scope and preserve declared fixed test
-identities. Check aliases/content overlap across deliveries as well as source
-IDs so renamed copies cannot leak between train, validation and test. Resolve
+identities. Check known declared aliases across deliveries as well as source
+IDs so known renamed copies cannot leak between train, validation and test.
+This uses identity declarations, without new content-hash discovery. Resolve
 conflicting annotation versions before selecting a collection's scoring labels.
 
 Chips inherit source-level assignments, and acquisition-date groups remain
@@ -229,6 +230,24 @@ boundaries; the sparse collection does not support a uniform annual design.
 LORO geographic generalization is the primary California deployment concern.
 Keep later-date/future-year tests and the temporal-consistency reporting in
 [experiments.md](experiments.md#evaluation-and-comparison) explicit.
+
+`split_inputs.py` reads trusted cleaned controls or explicit CSV rows without
+opening TIFFs; full cleaned chip keys come from canonical image references.
+`configs/split/ca_bc_v1.toml` contains the approved cutoffs. `splits.py` generates
+one assignment per namespaced original/experiment/variant and validates region/
+date and spacecraft/day isolation. Only present evaluation regions create folds.
+The unresolved BC token `241` stays literal and is allowed only on dates without
+evaluation imagery; explicit known Planet metadata must agree with its original ID.
+
+The installed `split` command publishes only `collection.csv`,
+`chip_metadata.csv`, `assignments.csv`, `recipe.json` and `summary.json` through
+a fresh incomplete sibling. The chip metadata export reuses Task 031's exact
+identity columns and excludes satellite ID. `select_windows(chip_root,
+assignments, experiment="baseline", variant="base")` joins list-shaped chip
+source controls to original assignments and returns window rows with roles/
+reasons and paths resolved from the explicit chip root. Omitted windows stay
+unused without payloads. Selection reads no arrays and creates no fold copies.
+See [the researcher recipes](quickstart.md#assign-sources-and-select-chip-windows).
 
 ## Prediction and scoring
 

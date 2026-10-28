@@ -10,6 +10,7 @@ from kelpseg.cli.chip import chip_command
 from kelpseg.cli.clean import clean_command
 from kelpseg.cli.organize import organize_command
 from kelpseg.cli.paths import check_paths_command
+from kelpseg.cli.split import split_command
 
 app = typer.Typer(
     help="Tools for binary kelp segmentation on Planet imagery.",
@@ -40,3 +41,5 @@ app.command("check")(check_command)
 app.command("clean")(clean_command)
 
 app.command("chip")(chip_command)
+
+app.command("split")(split_command)

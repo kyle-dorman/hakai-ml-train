@@ -1,6 +1,6 @@
 # Task 032A: Implement the approved source splits
 
-Status: Ready for implementation — plan finalized 2026-10-27. Not started.
+Status: Complete — 2026-10-28. Approved split unchanged; stop before Task 032B.
 Depends on: completed Task 031. Execute only this task, then hand off to 032B.
 
 ## Abstract
@@ -83,9 +83,9 @@ Do not restore the old non-overlap evaluation grid or positive-only training.
 The mixed baseline is not a uniform future-year benchmark. Temporal/prevalence
 reporting remains assigned to Tasks 035/036 in `docs/experiments.md`.
 
-## Planned implementation and interface
+## Implemented interface
 
-These interfaces are **planned**, not installed yet:
+The installed interfaces implemented in this task are:
 
 - `src/kelpseg/prepare/split_inputs.py`: one recipe definition, source controls/
   CSV normalization, spacecraft extraction and chip-metadata export.
@@ -215,3 +215,254 @@ limitations and simplicity check. Give 032B the final CLI/function names,
 `chip_metadata.csv` schema, recipe path and copyable full production commands.
 Confirm all locked memberships remain unchanged, update both queues, then stop.
 Next task is [032B](032b_produce_and_publish_chip_release.md).
+
+## Implementation checklist (2026-10-28)
+
+- Normalize cleaned controls or declared CSV rows to Task 031 identity columns
+  plus satellite ID; preserve original/crop keys, offsets and dimensions. Export
+  exactly `IDENTITY_COLUMNS` for chipping, excluding satellite metadata.
+- Deduplicate original identities by dataset/release/source; reject conflicting
+  crops, duplicate crop keys and declared original-TIFF aliases. Resolve Planet
+  spacecraft from the original source convention, never crop keys.
+- Apply inclusive temporal cutoffs, optional training roles, then LORO held-out
+  test, companion exclusions and remaining baseline roles in that order.
+  Validate region/date and satellite/day isolation per experiment and variant.
+- Publish five plain controls through one fresh incomplete sibling. Join windows
+  via chip-root/source_key to namespaced original assignments; retain omitted
+  and unused reasons without reading arrays or creating per-fold payloads.
+- Test boundaries, grouping, crops/aliases, malformed settings/joins and optional
+  roles; exercise the installed distributions. Compare all 369 source memberships
+  and ten folds with approved metadata; build only the 13-crop tiny v2, select
+  windows and verify all spectral loads and preserved partial-edge padding.
+- Update routine researcher recipes, record exact artifacts/checks/handoff,
+  close both queues and stop before 032B or any publication/full chipping.
+
+## Outcome (2026-10-28)
+
+Implemented the approved split with plain functions and five portable controls.
+All 369 original memberships and all ten LORO metadata counts match the approved
+reference. No split decision was changed. No full-dataset chips, Box operation,
+training, prediction or scoring ran. Task 032A is complete; Task 032B is next
+and has not started.
+
+### Implementation and removal
+
+Added `prepare/split_inputs.py`, `prepare/splits.py`, `cli/split.py`,
+`configs/split/ca_bc_v1.toml` and `tests/test_splits.py`; registered `split` in
+`cli/__init__.py`. Extended the installed wheel/sdist and CLI tests in
+`tests/test_distribution.py` and `tests/test_package_cli.py`. Updated researcher
+instructions and current-facing status in README, index, architecture,
+data-artifact policy, quickstart and both queues.
+
+`read_collection(cleaned=..., release_id=...)` trusts the existing cleaned
+source controls; `read_collection(sources=...)` normalizes an ordinary CSV.
+`load_split_recipe`, `assign_sources`, `validate_assignments`,
+`summarize_assignments`, `write_splits` and `select_windows` are the reusable
+functions. Original identities are `(dataset_id, release_id, source_id)`;
+collection rows retain crop keys/offsets/dimensions. Full-source chip keys are
+canonical image stems, not shorter organizer catalog keys. Planet dates and
+known spacecraft tokens are checked against supplied metadata; spacecraft
+whitespace is normalized. Unresolved `241` remains literal on its optional-only
+date; no full ID is guessed. Unknown spacecraft on evaluation dates fail.
+
+Output contains only `collection.csv`, `chip_metadata.csv`, `assignments.csv`,
+`recipe.json` and `summary.json`. Controls contain no machine paths; dataset/
+release references are explicit. The exact chip export columns are:
+
+```text
+source_key,source_id,original_tiff,dataset_id,release_id,region,acquisition_date,row_offset,col_offset,original_height,original_width
+```
+
+`select_windows(chip_root, assignments, experiment="baseline", variant="base")`
+accepts an assignment CSV path or rows. It joins `windows.csv` through the
+list-shaped `sources.json` to original assignments. Returned window identity is
+`(chip_root, source_key, row, col)`, payloads resolve from the explicit root,
+and omitted windows stay unused with their disposition as reason and no payload.
+No NPZ is opened for this join. Retained background/overlapping windows remain;
+there are no non-overlap or foreground eligibility filters.
+
+Removed `scripts/create_temporal_baseline_split.py` after checking consumers.
+Archived its source and both historical tracked split CSVs at
+`/Volumes/x10pro/kelpseg/analyses/task032a_legacy_split_reference_v1/` using
+ordinary copies. Retained both tracked CSVs: `prepare/legacy_catalog.py` still
+reads `planet8b_image_splits.csv`, while the legacy comparison script defaults
+to `planet8b_temporal_image_splits.csv`. Retained the old fold materializer and
+its tests because `run_context.py`, comparison/evaluation and legacy recipes
+still consume its link-tree controls. Rewriting those consumers is out of scope.
+Useful duplicate/join, original/date isolation and LORO role assertions were
+ported into the new manifest tests.
+
+Simplicity check: one recipe schema, straightforward source/fold loops and
+ordinary CSV/JSON. Publication uses a fresh incomplete sibling and final rename.
+No new hashing, checksum catalogs, receipts, locks, recovery/reuse, concurrency
+protection, payload discovery or repeated upstream audits were introduced.
+
+### Full metadata check
+
+Generated only controls at
+`/Volumes/x10pro/kelpseg/analyses/task032a_full_metadata_v1/` from the trusted
+cleaned `sources.json`; no TIFF was opened. There are 369 originals/crop rows,
+12 regions, 227 distinct dates and 315 spacecraft/day groups. All reference
+`source_id`, date/spacecraft and approved `proposed_role` memberships agree.
+Base baseline is **216 train / 53 val / 58 test / 42 unused**; augmented is
+**258 / 53 / 58 / 0**. The ten folds match the approved JSON's augmented counts,
+shared-day exclusions and zero partition conflicts. Base fold counts were
+checked by removing optional training rows, without changing evaluation roles.
+
+Comparison and source-support summary:
+`/Volumes/x10pro/kelpseg/analyses/task032a_metadata_comparison_v1.json`.
+Prior supplied-label source statistics give mean kelp pixels/TIFF and mean
+scoreable kelp fraction/TIFF of 118,088.38 / 3.1483% (base train),
+50,606.94 / 1.4549% (validation), 130,425.55 / 2.9190% (test), and
+109,029.07 / 2.8635% (augmented train). Validation/test are unchanged.
+These reuse existing source statistics, not new label scans, overlapping-window
+sums, model accuracy or unique ecological area.
+
+### Tiny v2 and exact artifacts
+
+- Preserved v1 at `/Volumes/x10pro/kelpseg/data/examples/tiny_ca_bc/v1/`.
+- V2 inputs: `/Volumes/x10pro/kelpseg/data/examples/tiny_ca_bc/v2/`.
+- Bounded crop producer: `/Volumes/x10pro/kelpseg/examples/make_tiny_ca_bc_v2.py`.
+- Splits: `/Volumes/x10pro/kelpseg/examples/runs/task032a_tiny_splits_v1/`.
+- Chips: `/Volumes/x10pro/kelpseg/examples/runs/task032a_tiny_chips_v1/`.
+- Smoke results: `/Volumes/x10pro/kelpseg/analyses/task032a_tiny_smoke_v1.json`.
+
+V2 copies all nine v1 crop pairs unchanged and adds the four contract sources
+at exactly the approved offsets (002: 1024/768; 003: 1536/1024). Each new
+768-square crop supplies four supervised retained windows; no nearby replacement
+or partition change was needed. Added imagery/labels match their bounded cleaned
+windows and georeferenced placement. V1 TIFF copies match byte-for-byte.
+V2 has 28 files totaling **82,537,678 bytes**, below 128 MiB. It is local only;
+publishing/fetching v2 belongs to Task 032B.
+
+The installed split and chip previews and writes passed sequentially using the
+exported identity CSV. Base source counts are **2 / 2 / 6 / 3**; augmented is
+**5 / 2 / 6 / 0**. Only the two present evaluation regions generate folds.
+The chipper retained all **54** candidate windows, including **31** without kelp,
+with zero nodata omissions. Chips total **151,552,032 bytes**, split controls
+**14,922 bytes**; combined generated outputs are below 1 GiB.
+
+| Experiment/variant | Train windows | Val | Test | Unused |
+|---|---:|---:|---:|---:|
+| baseline/base | 8 | 8 | 26 | 12 |
+| baseline/augmented | 20 | 8 | 26 | 0 |
+| loro_002/base | 4 | 4 | 22 | 24 |
+| loro_002/augmented | 16 | 4 | 22 | 12 |
+| loro_003/base | 4 | 4 | 20 | 26 |
+| loro_003/augmented | 16 | 4 | 20 | 14 |
+
+All six window selections preserve identical window identities. Every retained
+window loaded in native eight, RGB+NIR and RGB modes: **162** successful array/
+target comparisons with the local crop windows. The two 512-by-257 edge windows
+retain `(0, 0, 0, 255)` padding; image zero and target -100 padding invert exactly.
+Source counts and window counts are separate; foreground window counts were
+not summed as unique area. The quickstart includes copyable split → chip →
+select/load commands and common error fixes.
+
+### Validation
+
+Passed **182 focused tests**, including the new split fixtures, chipping/loading,
+shared label/alignment/nodata assertions, CLI/progress, retained legacy fold
+assertions and isolated wheel/sdist installation outside the checkout. Installed
+checks cover metadata-only dry-run/write, exact chip-export columns and lazy
+help without ML imports. Synthetic fixtures need no Box, GPU or research inputs.
+
+`uv run ruff format --check .`, `uv run ruff check .` and
+`uv run pre-commit run --all-files` passed. Explicit pre-commit checks also cover
+all new untracked files. Checked 127 local links/anchors and 35 fenced blocks
+across the eight changed Markdown files; Python snippets parse and
+`git diff --check` passes. No unrelated failure was observed in these checks;
+the full legacy suite was not rerun. Final runtime assignments exactly reproduce
+the saved full-scope controls after the review fixes.
+
+### Exact handoff to Task 032B
+
+Next action: select and execute only
+[Task 032B](032b_produce_and_publish_chip_release.md), reading its entry route
+and this outcome. The splitter and chipper are installed. Use
+`configs/split/ca_bc_v1.toml` and `configs/chip/planet8.toml`; keep the chip
+export schema above unchanged. Later production commands, **not run in 032A**:
+
+```bash
+(
+  set -e
+  KELP_DATA_ROOT='/Volumes/x10pro/kelpseg'
+  mkdir -p "$KELP_DATA_ROOT/data/splits/ca_bc" "$KELP_DATA_ROOT/data/chips/ca_bc"
+  uv run kelpseg split --cleaned "$KELP_DATA_ROOT/data/3_cleaned/ca_bc/v1" --release-id v1 --recipe configs/split/ca_bc_v1.toml --output "$KELP_DATA_ROOT/data/splits/ca_bc/v1" --dry-run
+  uv run kelpseg split --cleaned "$KELP_DATA_ROOT/data/3_cleaned/ca_bc/v1" --release-id v1 --recipe configs/split/ca_bc_v1.toml --output "$KELP_DATA_ROOT/data/splits/ca_bc/v1"
+  uv run kelpseg chip --images "$KELP_DATA_ROOT/data/3_cleaned/ca_bc/v1/images" --labels "$KELP_DATA_ROOT/data/3_cleaned/ca_bc/v1/labels" --metadata "$KELP_DATA_ROOT/data/splits/ca_bc/v1/chip_metadata.csv" --recipe configs/chip/planet8.toml --output "$KELP_DATA_ROOT/data/chips/ca_bc/v1" --dry-run
+  uv run kelpseg chip --images "$KELP_DATA_ROOT/data/3_cleaned/ca_bc/v1/images" --labels "$KELP_DATA_ROOT/data/3_cleaned/ca_bc/v1/labels" --metadata "$KELP_DATA_ROOT/data/splits/ca_bc/v1/chip_metadata.csv" --recipe configs/chip/planet8.toml --output "$KELP_DATA_ROOT/data/chips/ca_bc/v1"
+)
+```
+
+Inspect storage and preview output as required by 032B before writing the full
+release. The separate analysis-only full metadata check above is already valid;
+032B owns the fresh production paths, portable collection declaration, ordinary
+Box copies, bounded restore/load and tiny-v2 publication/fetch. Retain the
+historical CSV/materializer consumers until their later replacements.
+
+No unresolved implementation blocker remains. The mixed split is not a uniform
+future-year benchmark; labels and band-order assumptions retain their recorded
+limits. Tiny crop support does not establish full-release retained-window
+coverage. Tasks 035/036 still own prevalence/temporal model reporting.
+
+## Researcher usability follow-up checklist (2026-10-28)
+
+Status: Complete; this follow-up remains within Task 032A.
+
+- Keep current modules, public interfaces, manifests and approved assignments.
+  Extract only single-row normalization from collection-wide identity checks.
+- Identify actual unknown/missing recipe keys and the affected region; include
+  source and input-row context in CSV errors. Preserve strict validation.
+- Add short inline comments explaining scientific grouping, assignment order,
+  crop joins and publication, and ordinary progress logs for input controls,
+  source/fold counts, validation, file writes and large manifest joins.
+- Make local tiny v2 the primary walkthrough, with one researcher-editable
+  name for fresh output paths; retain v1 and its fetch recipe.
+- Run focused/installed tests, compare saved full and tiny controls without
+  reading payloads, check docs/lint/pre-commit and record the result.
+  Stop before 032B, production chipping or Box work.
+
+## Researcher usability follow-up outcome (2026-10-28)
+
+Applied the requested small readability/usability cleanup without changing the
+module layout, public functions/CLI, five-file schema, recipe or approved split.
+
+- `prepare/split_inputs.py`: extracted `_normalize_source_row` from
+  collection-wide duplicate/original/alias checking. Recipe errors list actual
+  unknown/missing keys and the affected region rule. CSV errors locate the source
+  and input row, counting the header as row 1. Added inline comments for original
+  IDs, crop placement and canonical cleaned keys.
+- `prepare/split_inputs.py` and `prepare/splits.py`: ordinary progress logs show
+  recipe/control paths, control bytes, row/original counts (every 100 source rows
+  plus completion), each baseline/LORO assignment phase, group validation, each
+  output file and publication. Window selection logs its input controls, joins
+  and every 10,000 window rows plus completion. Library code uses logging only;
+  existing CLI setup shows progress on stderr and restores the caller's logger.
+- `prepare/splits.py`: comments explain inclusive chronology, collapsing crops,
+  held-out spacecraft/day exclusion order, temporal-test unused roles, atomic
+  publication, window placement and omitted payloads. The existing loops and
+  scientific checks remain unchanged.
+- `docs/quickstart.md`: made local v2 the main walkthrough, with one researcher-
+  chosen `example_name` deriving both fresh output paths. Preserved v1 and its
+  Box fetch instructions, documented stderr/notebook progress and error fixes,
+  and kept historical smoke paths in this task record.
+- `tests/test_splits.py`: six focused usability cases cover specific setting/row
+  errors, library phase logs, no direct library printing, and CLI dry-run progress/
+  logger restoration. Both queues retain Task 032B as the unstarted next task.
+
+Validation passed: **188 focused tests**, including isolated wheel/sdist checks;
+Ruff format/check; all-file pre-commit and explicit checks on new files; Markdown
+links/anchors, fenced blocks and Python snippets; and `git diff --check`. No
+unrelated failure was observed; the full legacy suite was not rerun.
+
+Metadata-only temporary writes reproduced **all five controls byte-for-byte**
+for both the saved 369-source full scope (8,118 assignment rows) and tiny v2
+(13 sources, 78 rows). All six tiny window selections match saved counts. Those
+checks opened no TIFFs or NPZs, retained no new external artifacts, and left
+every previous input/output unchanged. No new preparation features, hashes,
+receipts, recovery or concurrency machinery were added.
+
+Exact next action remains Task 032B using the installed interfaces and production
+commands in the handoff above. This follow-up stops before Task 032B, full-dataset
+chipping, Box work, training or model evaluation.

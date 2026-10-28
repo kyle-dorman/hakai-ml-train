@@ -1,0 +1,62 @@
+schema_version = 1
+training_only_regions = ["011", "012"]
+
+[[regions]]
+region = "001"
+direction = "reverse"
+first_cutoff = "2020-12-31"
+second_cutoff = "2021-03-31"
+
+[[regions]]
+region = "002"
+direction = "reverse"
+first_cutoff = "2020-12-31"
+second_cutoff = "2021-03-31"
+
+[[regions]]
+region = "003"
+direction = "reverse"
+first_cutoff = "2021-04-30"
+second_cutoff = "2021-05-31"
+
+[[regions]]
+region = "004"
+direction = "reverse"
+first_cutoff = "2021-04-30"
+second_cutoff = "2021-06-30"
+
+[[regions]]
+region = "005"
+direction = "reverse"
+first_cutoff = "2021-04-30"
+second_cutoff = "2021-08-31"
+
+[[regions]]
+region = "006"
+direction = "reverse"
+first_cutoff = "2021-06-30"
+second_cutoff = "2021-11-30"
+
+[[regions]]
+region = "007"
+direction = "reverse"
+first_cutoff = "2021-03-31"
+second_cutoff = "2021-04-30"
+
+[[regions]]
+region = "008"
+direction = "reverse"
+first_cutoff = "2020-12-31"
+second_cutoff = "2021-05-31"
+
+[[regions]]
+region = "009"
+direction = "forward"
+first_cutoff = "2022-05-31"
+second_cutoff = "2022-06-15"
+
+[[regions]]
+region = "010"
+direction = "forward"
+first_cutoff = "2021-08-31"
+second_cutoff = "2021-09-30"

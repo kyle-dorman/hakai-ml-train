@@ -25,12 +25,13 @@ is also complete; its immutable parent remains unchanged.
 installed chipping, 8/4/3-band loading and the nine-crop real walkthrough passed.
 The follow-up correctness/simplicity review also passed; details remain in its
 [review outcome](../tasks/031_chipping_bands_and_tiny_walkthrough.md#follow-up-review-outcome-2026-10-27).
-Next action: implement [Task 032A](../tasks/032a_collection_and_split_implementation.md).
-Both 032A/032B handoff plans are finalized against Task 031's actual interfaces.
-The mixed split is approved and locked: reverse 001–008, forward 009/010,
-216/53/58 baseline TIFFs, plus optional training-only 011/012. Same-spacecraft/
-same-UTC-day groups cross no partitions. Task 032A/032B implementation has not
-started; the approved assignment reference lives in Task 032A.
+[Task 032A is complete](../tasks/032a_collection_and_split_implementation.md#outcome-2026-10-28):
+installed source assignments/window selection reproduce all 369 approved
+memberships and ten folds; the 13-crop local tiny-v2 walkthrough passes.
+Its [usability follow-up](../tasks/032a_collection_and_split_implementation.md#researcher-usability-follow-up-outcome-2026-10-28)
+adds clearer comments/errors, progress logs and fresh-name example recipes.
+Next action: [Task 032B](../tasks/032b_produce_and_publish_chip_release.md),
+full chip production and publication. Task 032B has not started.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -47,14 +48,14 @@ fresh outputs; interrupted work is not resumed. No BC stage exists.
 
 The agreed dataset variants are **1 raw**, **2 organized intermediate**, and
 **3 cleaned intermediate**. Both intermediates are unsplit; generated
-train/validation/test assignments remain Task 032A, followed by full production
-and publication in Task 032B. Both contracts are ready for handoff; the
-mixed temporal split is approved. The full variant and
+train/validation/test assignments are implemented separately in Task 032A.
+Full production and publication remain Task 032B; the approved mixed temporal
+split stays unchanged. The full variant and
 provenance contract lives in [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases).
 
 ## Ordered roadmap
 
-Tasks through 031 are complete. Remaining later rows are ordered scope slots, not permission
+Tasks through 032A are complete. Remaining later rows are ordered scope slots, not permission
 to execute multiple tasks in one window. Create and refine each contract when
 selected; split further if needed.
 
@@ -70,8 +71,8 @@ selected; split further if needed.
 | [030A](../tasks/030a_build_and_publish_organized.md) | Build and publish organized intermediate 2 — complete | 369 pairs/418 companions; all 1,163 Box checksums, bounded restore and final evidence marker verified |
 | [030B](../tasks/030b_build_and_publish_cleaned.md) | Build and publish cleaned intermediate 3 — complete | All 369 pairs/12 regions; full cleaned QA, 747 Box checksums, bounded restore and final evidence marker verified |
 | [031](../tasks/031_chipping_bands_and_tiny_walkthrough.md) | Simplify chipping/band selection and start the tiny walkthrough — complete | Configurable 512/256/50, native bands, partial-edge loading; nine-crop Box fetch/offline smoke and focused checks pass |
-| [032A](../tasks/032a_collection_and_split_implementation.md) | Implement source assignments/window selection and grow tiny v2 — ready | Locked 216/53/58; spacecraft/day isolation; both training variants; ten folds; 13-crop example; no full production |
-| [032B](../tasks/032b_produce_and_publish_chip_release.md) | Produce full chips/assignments and publish to Box — ready after 032A | Installed commands, one native-band release, portable manifests, ordinary copies and bounded restore/load checks |
+| [032A](../tasks/032a_collection_and_split_implementation.md) | Implement source assignments/window selection and grow tiny v2 — complete | Locked 216/53/58; spacecraft/day isolation; both training variants; ten folds; 13-crop example; no full production |
+| [032B](../tasks/032b_produce_and_publish_chip_release.md) | Produce full chips/assignments and publish to Box — next | Installed commands, one native-band release, portable manifests, ordinary copies and bounded restore/load checks |
 | 033 | Simple baseline recipes and portable saved models | Local update/validation/save/load/resume for 8/4/3 bands; matched with/without-011/012 training recipes and declared sampling/budget; portable settings |
 | 034 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
 | 035 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics; region/date/year/month prevalence and errors; signed area bias and supported matched-footprint change checks; see experiments.md |

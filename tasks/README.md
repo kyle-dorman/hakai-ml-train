@@ -64,8 +64,8 @@ are authorized by Task 024.
 | [030A](030a_build_and_publish_organized.md) | Local production/Box | Complete | Immutable 369-pair local parent; all 1,163 Box checksums, 90.7 MB bounded restore and final evidence marker verified; 030B also complete |
 | [030B](030b_build_and_publish_cleaned.md) | Local production/Box | Complete | 369 aligned pairs/12 regions; full QA, 747 Box checksums, 108.3 MB bounded restore and final marker verified; next existing Task 031 planning |
 | [031](031_chipping_bands_and_tiny_walkthrough.md) | Local implementation/smoke | Complete | Installed 512/256/50 chipper, native 8/4/3 selection, partial-edge loading and nine-crop Box fetch/offline walkthrough; correctness/simplicity review passed; next Task 032 |
-| [032A](032a_collection_and_split_implementation.md) | Local implementation/tiny smoke | Ready | Final contract: locked split, metadata/window selection and 13-crop tiny v2; implement next |
-| [032B](032b_produce_and_publish_chip_release.md) | Local production/Box | Ready after 032A | Final contract: full chips/splits, portable collection declaration, Box copy and bounded restore/load |
+| [032A](032a_collection_and_split_implementation.md) | Local implementation/tiny smoke | Complete | Approved memberships/ten folds and tiny v2 pass; readability, errors and progress follow-up complete; next 032B |
+| [032B](032b_produce_and_publish_chip_release.md) | Local production/Box | Ready | Next: full chips/splits, portable collection declaration, Box copy and bounded restore/load |
 
 ## Historical queue: Tasks 000–023
 

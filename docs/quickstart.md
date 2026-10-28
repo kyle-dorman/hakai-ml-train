@@ -2,8 +2,8 @@
 
 The installed `kelpseg` command checks machine paths, organizes raw catalogs,
 checks ordinary image directories, cleans imagery with optional paired labels,
-and chips cleaned TIFFs into one native-band collection. Training, prediction, and evaluation
-arrive in later tasks; see [the roadmap](todo.md). Retained legacy Planet code
+chips cleaned TIFFs into one native-band collection, and assigns source splits.
+Training, prediction, and evaluation arrive in later tasks; see [the roadmap](todo.md). Retained legacy Planet code
 is development/reference material, outside the installed package.
 
 ## Install
@@ -21,7 +21,7 @@ Normal checkout setup includes developer tools and dependencies needed by the
 retained Planet correctness tests. The installed package itself currently needs
 Typer, NumPy, and Rasterio (including their dependencies). Help/version do not
 import the geospatial stack. Organization dry-run reads declarations only;
-check and clean dry-run inspect TIFF headers.
+check and clean dry-run inspect TIFF headers. Split dry-run reads metadata only.
 
 ## Set paths once per machine
 
@@ -588,15 +588,167 @@ width and `(top, bottom, left, right)` padding. The returned nodata mask marks
 native nodata only; artificial padding stays separate. Remove padding with
 `array[:true_height, :true_width]` before placing results on the source grid.
 
+## Assign sources and select chip windows
+
+`split` assigns original TIFFs before chipping; it never reads image pixels.
+Use the approved `configs/split/ca_bc_v1.toml` for CA/BC. Preview the full
+cleaned catalog with its explicit release version:
+
+```bash
+uv run kelpseg split --cleaned /Volumes/x10pro/kelpseg/data/3_cleaned/ca_bc/v1 --release-id v1 --recipe configs/split/ca_bc_v1.toml --output /Volumes/x10pro/kelpseg/examples/runs/my-source-splits-v1 --dry-run
+```
+
+Remove `--dry-run` to write the five controls into a fresh output. Its parent
+must exist; neither the final directory nor its incomplete sibling may exist.
+A failed run stops; choose a fresh output for the next attempt. The command
+prints resolved paths, original-source/crop/region/date counts and all split
+counts. Progress on stderr shows recipe/source reading, row counts, fold
+assignment and validation, then each output file. Full CA/BC baseline `base`
+has 216 train, 53 validation and 58 test sources; `augmented` adds 42 training-only sources from 011/012. There are ten
+LORO folds, one per evaluation region 001–010.
+
+For a subset, crops or a combined collection, use `--sources identity.csv`
+instead of `--cleaned ... --release-id ...`. Its columns are the chipping
+identity schema above plus optional `satellite_id`. Splitting requires
+`source_key`, `source_id`, `dataset_id`, `release_id`, `region` and
+`acquisition_date`. Keep zero-padded region codes as strings. Supply physical
+`satellite_id` for other naming conventions; current Planet original source IDs
+resolve it without using crop suffixes. Crops retain their original ID, offsets
+and dimensions. Every crop/chip of `(dataset_id, release_id, source_id)` inherits
+one assignment. Region/date and spacecraft/UTC-day groups stay together across
+regions; a spacecraft may cross partitions on different dates.
+
+Outputs are `collection.csv`, `chip_metadata.csv`, `assignments.csv`,
+`recipe.json` and `summary.json`. `collection.csv` records crops and satellite
+IDs; `assignments.csv` records each original source's experiment, variant,
+split and reason. `chip_metadata.csv` exports exactly the chipping identity
+columns above, without `satellite_id`; pass it to `chip --metadata`. For full
+cleaned sources, its key is the canonical image stem. No per-fold copies or
+link trees are needed. Generated rows stay outside Git.
+
+Baseline uses the approved inclusive cutoffs. Each LORO fold tests every date
+of its held-out region; other-region spacecraft/day companions are unused.
+Remaining baseline train/validation roles persist, while remaining baseline
+test sources are unused. The `base` variant excludes 011/012; `augmented`
+includes them for training, subject to those companion exclusions. Both keep
+evaluation-region memberships fixed. Canonical background chips remain.
+
+Missing/duplicate keys, conflicting original metadata or known aliases, missing
+region rules, unresolved spacecraft on evaluation dates and cross-partition
+groups fail with an actionable error. Recipe errors name unknown/missing keys
+and the affected region; source CSV errors identify the row/source to fix.
+Correct the declaration before rerunning; do not adjust approved CA/BC dates or
+partitions. Other datasets may use their own flat recipe with `schema_version`,
+`training_only_regions` and `[[regions]]` rows containing `region`, `direction`, `first_cutoff`, `second_cutoff`.
+
+The same source operations are ordinary Python functions:
+
+```python
+from kelpseg.paths import load_paths
+from kelpseg.prepare.split_inputs import load_split_recipe, read_collection
+from kelpseg.prepare.splits import assign_sources, write_splits
+
+root = load_paths("paths.local.toml").data_root
+collection = read_collection(cleaned=root / "data/3_cleaned/ca_bc/v1",
+                             release_id="v1")
+recipe = load_split_recipe("configs/split/ca_bc_v1.toml")
+assignments = assign_sources(collection, recipe)
+# Choose a fresh output whose parent exists:
+output = write_splits(collection, assignments, recipe,
+                      root / "examples/runs/my-source-splits-v1")
+```
+
 ## Tiny real-data walkthrough
 
-The reusable inputs contain nine small CA/BC crop pairs across three regions
-and three dates per region. They total 54,463,809 bytes including the identity
-CSV and selection note; eight crops are 768 square and one is 768 by 769.
-This example proves chipping/loading only. It will grow with later workflows.
+Use tiny v2 below to practice splitting, chipping and loading. It contains
+13 small CA/BC crop pairs across regions 002/003/012, including a 769-wide
+crop that exercises partial-edge padding. V2 preserves all nine v1 pairs and
+adds four 768-square crops for train/validation support. Inputs are about
+83 MB; generated outputs are about 152 MB.
 
-Set `data_root` to the same artifact root as your local path settings. Fetch
-once into a fresh directory (skip this step when that local input already exists):
+V2 is currently local at `data/examples/tiny_ca_bc/v2/`; its Box publication
+belongs to Task 032B. Start from those existing inputs. The
+[preserved v1 example](#preserved-v1-example) below remains available from Box.
+
+## Tiny v2: split, chip and load locally
+
+Set `data_root` to the artifact root in your local path settings. Pick one
+`example_name` for this attempt; change it for each repeat. Both output folders
+must be fresh. These ordinary commands stop at the first failure:
+
+```bash
+(
+  set -e
+  data_root='/Volumes/x10pro/kelpseg'
+  example_name='my-tiny-v2-01'  # Change this for each new attempt.
+  tiny="$data_root/data/examples/tiny_ca_bc/v2"
+  splits="$data_root/examples/runs/${example_name}-splits"
+  chips="$data_root/examples/runs/${example_name}-chips"
+  mkdir -p "$data_root/examples/runs"
+  uv run kelpseg split --sources "$tiny/metadata.csv" --recipe configs/split/ca_bc_v1.toml --output "$splits" --dry-run
+  uv run kelpseg split --sources "$tiny/metadata.csv" --recipe configs/split/ca_bc_v1.toml --output "$splits"
+  uv run kelpseg chip --images "$tiny/images" --labels "$tiny/labels" --metadata "$splits/chip_metadata.csv" --recipe configs/chip/planet8.toml --output "$chips" --dry-run
+  uv run kelpseg chip --images "$tiny/images" --labels "$tiny/labels" --metadata "$splits/chip_metadata.csv" --recipe configs/chip/planet8.toml --output "$chips"
+)
+```
+
+Expected **source** counts are 2 train / 2 validation / 6 test / 3 unused for
+baseline `base`, and 5 / 2 / 6 / 0 for `augmented`. Only `loro_002` and
+`loro_003` are generated for this subset. The chipper retains all 54 candidate
+windows, including 31 without kelp: baseline base has 8 train / 8 validation /
+26 test / 12 unused windows; augmented has 20 / 8 / 26 / 0. These source and
+window counts are separate; overlapping foreground counts are not unique area.
+
+Select existing windows without opening arrays or copying payloads. Progress
+logs show the assignment and source manifests being joined, with periodic
+window counts on larger inputs. All candidate rows retain `split` and `reason`;
+omitted windows are unused with an empty payload. Retained paths resolve from
+the explicit chip root. Window identity is `(chip_root, source_key, row, col)`.
+Use the same `example_name` as the shell block:
+
+```python
+import json
+import logging
+from collections import Counter
+from kelpseg.paths import load_paths
+from kelpseg.prepare.splits import select_windows
+from kelpseg.chips import load_chip
+
+logging.basicConfig(level=logging.INFO)  # Show library progress in a notebook.
+root = load_paths("paths.local.toml").data_root
+example_name = "my-tiny-v2-01"  # Match the shell block above.
+split_root = root / "examples/runs" / f"{example_name}-splits"
+chip_root = root / "examples/runs" / f"{example_name}-chips"
+recipe = json.loads((chip_root / "recipe.json").read_text())
+for experiment in ("baseline", "loro_002", "loro_003"):
+    for variant in ("base", "augmented"):
+        rows = select_windows(chip_root, split_root / "assignments.csv",
+                              experiment=experiment, variant=variant)
+        print(experiment, variant, Counter(row["split"] for row in rows))
+
+# Partial-edge chips keep their true size; loading adds bottom/right padding.
+edge = next(row for row in rows if row["payload"] and int(row["width"]) == 257)
+for selection in ("all", "rgbnir", "rgb"):
+    chip = load_chip(edge["payload"], recipe["source_band_names"], selection,
+                     recipe["chip_size"])
+    print(selection, chip["image"].shape, chip["padding"])
+    assert chip["padding"] == (0, 0, 0, 255)
+    h, w = chip["true_height"], chip["true_width"]
+    true_image = chip["image"][:h, :w]  # Remove padding before source placement.
+    assert (chip["image"][:, w:] == 0).all()
+    assert (chip["label"][:, w:] == -100).all()
+```
+
+Expected shapes are `(512, 512, 8)`, `(512, 512, 4)`, `(512, 512, 3)` from the
+same payload and assignment. Full-dataset chipping and publication remain
+Task 032B; model training and evaluation arrive later.
+
+## Preserved v1 example
+
+The earlier nine-pair example proves chipping/loading and remains on Box. It
+has no CA train/validation sources under the approved split, so use v2 for
+split practice. Fetch v1 once into a fresh directory, or skip the copy if that
+local input already exists:
 
 ```bash
 (
@@ -609,68 +761,26 @@ once into a fresh directory (skip this step when that local input already exists
 )
 ```
 
-The copy uses ordinary paths/sizes; it performs no checksum verification.
-Then work offline from those local inputs. Set a fresh `run` name for each
-repeat; do not reuse an existing final or incomplete output:
-
-```bash
-(
-  set -e
-  data_root='/Volumes/x10pro/kelpseg'
-  tiny="$data_root/data/examples/tiny_ca_bc/v1"
-  run="$data_root/examples/runs/my-tiny-chips-v1"
-  mkdir -p "$(dirname "$run")"
-  uv run kelpseg chip --images "$tiny/images" --labels "$tiny/labels" --metadata "$tiny/metadata.csv" --output "$run" --recipe configs/chip/planet8.toml --dry-run
-  uv run kelpseg chip --images "$tiny/images" --labels "$tiny/labels" --metadata "$tiny/metadata.csv" --output "$run" --recipe configs/chip/planet8.toml
-)
-```
-
-Expect 9 sources, 38 candidate windows, 38 retained payloads (including 21
-without kelp), and about 102 MB of generated output. The retained windows cover
-all 5,309,184 crop pixels, including 150,741 kelp pixels. There are 57,329 image
-nodata/ignored pixels and no uncovered crop pixels. These are bounded example
-results, not full-collection coverage or model performance.
-
-Inspect a partial-edge chip from that run. Set the last path component to the
-run name chosen above:
-
-```python
-import csv
-import json
-from kelpseg.paths import load_paths
-from kelpseg.chips import load_chip
-
-run = load_paths("paths.local.toml").data_root / "examples/runs/my-tiny-chips-v1"
-recipe = json.loads((run / "recipe.json").read_text())
-with (run / "windows.csv").open(newline="") as stream:
-    edge = next(row for row in csv.DictReader(stream)
-                if row["payload"] and int(row["width"]) == 257)
-for selection in ("all", "rgbnir", "rgb"):
-    chip = load_chip(run / edge["payload"], recipe["source_band_names"], selection)
-    print(selection, chip["image"].shape, chip["padding"])
-    h, w = chip["true_height"], chip["true_width"]
-    true_image = chip["image"][:h, :w]  # 512 x 257, ready for source placement
-    assert chip["padding"] == (0, 0, 0, 255)
-    assert (chip["image"][:, w:] == 0).all()
-    assert (chip["label"][:, w:] == -100).all()
-```
-
-Expected shapes are `(512, 512, 8)`, `(512, 512, 4)`, `(512, 512, 3)`. Crop
-metadata retains original TIFF IDs/windows; future split assignments must group
-by original source, not by crop or chip. Keep inputs closed and outputs separate.
+The copy checks ordinary paths/sizes. To run offline, use the
+[chipping recipe](#chip-cleaned-imagery) with v1's `images`, `labels` and
+`metadata.csv`, choosing a fresh output. Expect 9 sources, 38 retained windows
+and about 102 MB of output. The same partial-edge loading example applies:
+select a retained `windows.csv` row with width 257 and resolve its payload from
+the v1 chip root. Original v1 paths and detailed results remain in
+[Task 031](../tasks/031_chipping_bands_and_tiny_walkthrough.md#outcome-2026-10-27).
 
 ## Later workflows and outputs
 
 The selected future training style is
 `uv run kelpseg train --recipe <recipe-file>`. It is not available yet.
-Training, prediction, scoring, LORO, and
+Training, prediction, scoring, LORO model comparisons, and
 adding a region will gain copyable recipes here when implemented. Most settings
 will live in those recipes, with a few explicit command options.
 
 Later run-producing commands will use `<runs_root>/<run_id>/`, with resolved
 settings/input identities at the root and `checkpoints/`, `metrics/`, and
 `figures/` underneath. This is an agreed layout, not an implemented run manager.
-The reusable real-data walkthrough above covers Task 031. Current automated
+The reusable real-data walkthrough above covers chipping, loading and source splitting. Current automated
 fixtures use temporary synthetic data, requiring no Box/W&B login, GPU, model weights, or research-data download.
 
 See [data and artifacts](data_artifacts.md) for storage/backup rules and

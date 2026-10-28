@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import os
@@ -82,6 +83,7 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             assert "kelpseg/paths.py" in names
             assert "kelpseg/bands.py" in names
             assert "kelpseg/chips.py" in names
+            assert "kelpseg/cli/split.py" in names
             for module in (
                 "organize",
                 "organize_inputs",
@@ -93,6 +95,8 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
                 "alignment",
                 "chip_inputs",
                 "chip",
+                "split_inputs",
+                "splits",
             ):
                 assert f"kelpseg/prepare/{module}.py" in names
                 assert f"kelpseg/{module}.py" not in names
@@ -160,8 +164,64 @@ runpy.run_module("kelpseg", run_name="__main__")
             ("check", "--help"),
             ("clean", "--help"),
             ("chip", "--help"),
+            ("split", "--help"),
         ):
             run(python, "-I", "-c", lazy_probe, *arguments, cwd=unrelated)
+
+        # Splitting uses declared identities only; these TIFFs need not exist.
+        sources, split_recipe = _split_fixture(unrelated)
+        splits = unrelated / "source splits"
+        split_arguments = (
+            "split",
+            "--sources",
+            sources,
+            "--recipe",
+            split_recipe,
+            "--output",
+            splits,
+        )
+        run(command, *split_arguments, "--dry-run", cwd=tmp_path)
+        assert not splits.exists()
+        assert not splits.with_name(f".{splits.name}.incomplete").exists()
+        run(command, *split_arguments, cwd=tmp_path)
+        assert {path.name for path in splits.iterdir()} == {
+            "collection.csv",
+            "chip_metadata.csv",
+            "assignments.csv",
+            "recipe.json",
+            "summary.json",
+        }
+        with (splits / "assignments.csv").open(newline="") as stream:
+            assignments = list(csv.DictReader(stream))
+        baseline = {
+            (row["source_id"], row["variant"]): row["split"]
+            for row in assignments
+            if row["experiment"] == "baseline"
+        }
+        for variant in ("base", "augmented"):
+            assert [baseline[(name, variant)] for name in ("train", "val", "test")] == [
+                "train",
+                "val",
+                "test",
+            ]
+        assert baseline[("optional", "base")] == "unused"
+        assert baseline[("optional", "augmented")] == "train"
+        assert {row["experiment"] for row in assignments} == {"baseline", "loro_001"}
+        # The exported metadata feeds the existing chipper without satellite columns.
+        run(
+            python,
+            "-I",
+            "-c",
+            "import csv, sys; from pathlib import Path; "
+            "from kelpseg.prepare.chip_inputs import IDENTITY_COLUMNS, read_identities; "
+            "p=Path(sys.argv[1]); "
+            "reader=csv.DictReader(p.open()); "
+            "assert tuple(reader.fieldnames)==IDENTITY_COLUMNS; "
+            "assert len(read_identities(p, {'train', 'val', 'test', 'optional'}))==4; "
+            "assert not any(n in sys.modules for n in ('src','scripts','torch','wandb'))",
+            splits / "chip_metadata.csv",
+            cwd=tmp_path,
+        )
 
         (unrelated / "data with spaces").mkdir()
         (unrelated / "runs").mkdir()
@@ -406,3 +466,47 @@ def _directory_fixture(root: Path) -> tuple[Path, Path, Path, Path, Path]:
         expectations + 'qa_masks = false\ncompression = "deflate"\n'
     )
     return images, labels, source_recipe, cleaned_recipe, clean_recipe
+
+
+def _split_fixture(root: Path) -> tuple[Path, Path]:
+    sources = root / "declared sources.csv"
+    with sources.open("w", newline="") as stream:
+        writer = csv.DictWriter(
+            stream,
+            fieldnames=(
+                "source_key",
+                "source_id",
+                "original_tiff",
+                "dataset_id",
+                "release_id",
+                "region",
+                "acquisition_date",
+                "satellite_id",
+            ),
+        )
+        writer.writeheader()
+        for source, region, day in (
+            ("train", "001", "2021-01-15"),
+            ("val", "001", "2021-02-15"),
+            ("test", "001", "2021-03-15"),
+            ("optional", "012", "2021-04-15"),
+        ):
+            writer.writerow(
+                dict(
+                    source_key=source,
+                    source_id=source,
+                    original_tiff=f"{source}.tif",
+                    dataset_id="external",
+                    release_id="v1",
+                    region=region,
+                    acquisition_date=day,
+                    satellite_id="fixture-spacecraft",
+                )
+            )
+    recipe = root / "split.toml"
+    recipe.write_text(
+        'schema_version = 1\ntraining_only_regions = ["011", "012"]\n'
+        '[[regions]]\nregion = "001"\ndirection = "forward"\n'
+        'first_cutoff = "2021-01-31"\nsecond_cutoff = "2021-02-28"\n'
+    )
+    return sources, recipe
