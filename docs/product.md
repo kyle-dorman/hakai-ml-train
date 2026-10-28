@@ -37,7 +37,9 @@ Regions 001–010, including both Baja regions, are eligible for validation/test
 Regions 011 (Calvert Island) and 012 (BC tiles) are training-only. Compare runs
 with both 011/012 included versus both excluded, keeping the evaluation-region
 training/validation/test assignments fixed. Neither training-only region creates
-a LORO test fold or contributes to validation/checkpoint selection. Report
+a LORO test fold or contributes to validation/checkpoint selection. The run
+including both BC regions is the primary baseline; without both is the comparison.
+The manifest names remain `augmented` and `base`, respectively. Report
 California and Baja results explicitly so geographic scope remains clear.
 
 Within each experiment/fold, group by physical spacecraft ID plus UTC acquisition
@@ -91,8 +93,14 @@ never enters the training or validation pool after adaptation.
 - Select preprocessing, thresholds, and checkpoints without held-out results.
 - Default cross-run comparisons use matching unseen source TIFFs. Report
   full-region LORO summaries separately from paired temporal-test comparisons.
-- Reconstruct overlapping probabilities before scoring each source pixel once;
-  report ignored and uncovered pixels. Never average chip IoUs as region IoU.
+- During training, use non-overlapping existing validation chips for loss and
+  aggregate confusion counts, with explicit uncovered edge/gap reporting. Test
+  stays held out until model selection is finished; chip-based test uses the
+  same disjoint-window rule. Training chips may overlap.
+- For post-training tiled/source scoring, reconstruct overlapping probabilities
+  before scoring each source pixel once; report ignored and uncovered pixels.
+  Keep chip-scope and full-TIFF results distinct. Never average chip IoUs as
+  region IoU.
 - Report agreement with supplied segmentation labels on the represented
   imagery, regions, dates, sensors, and preprocessing. Do not claim independent
   ecological truth or universal transfer performance.

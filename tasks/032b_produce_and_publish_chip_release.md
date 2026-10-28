@@ -1,7 +1,7 @@
 # Task 032B: Produce and publish chips and approved splits
 
-Status: Ready after Task 032A — plan finalized 2026-10-27. Not started.
-Depends on: completed Task 032A and its passing metadata/tiny-v2 handoff.
+Status: Ready after Task 032A.1. Not started.
+Depends on: completed Tasks 032A and 032A.1 and their passing metadata/tiny-v2 handoffs.
 
 ## Abstract
 
@@ -13,9 +13,10 @@ summaries; no new framework, hashes or transfer receipts.
 ## Read and inputs
 
 Follow the entry route, then [032A](032a_collection_and_split_implementation.md),
+[032A.1](032a_1_nonoverlapping_chip_evaluation.md),
 [quickstart](../docs/quickstart.md#chip-cleaned-imagery),
 [artifact policy](../docs/data_artifacts.md#box-project-organization-and-upload-verification),
-[documentation](../docs/documentation.md) and 032A's final outcome.
+[documentation](../docs/documentation.md) and both final outcomes.
 No historical split debate or old checksum protocol is needed.
 
 Under `/Volumes/x10pro/kelpseg/`:
@@ -25,7 +26,8 @@ Under `/Volumes/x10pro/kelpseg/`:
   `analyses/task032_mixed_satellite_day_approved_v1/`.
 - Existing chip recipe: `configs/chip/planet8.toml` (512 size / 256 stride /
   max 50% nodata, true-size edges, native eight bands, canonical backgrounds).
-- Implemented split recipe: `configs/split/ca_bc_v1.toml`, after 032A.
+- Implemented split recipe: `configs/split/ca_bc_v1.toml`.
+- Task 032A.1's non-overlapping chip validation/test selector and coverage policy.
 - Completed local `data/examples/tiny_ca_bc/v2/` from 032A.
 
 ## User decisions required
@@ -55,15 +57,24 @@ installed readers receive explicit local roots after restore.
 
 Keep source-level assignments separate from chip retention. Base baseline counts
 are **216 train / 53 val / 58 test** across 001–010; augmented adds only the
-42 training-only 011/012 sources. There are ten LORO folds, never an 011/012 fold.
+42 training-only 011/012 sources. With BC (`augmented`) is the primary baseline;
+without both (`base`) is the comparison. There are ten LORO folds, never an
+011/012 fold.
 All sources belong to the declared scope even if a source produces no retained
 window; report that distinction rather than silently changing its assignment.
 
+Training uses all canonical retained windows. Task 032A.1 selects disjoint
+existing val/test windows in original TIFF coordinates, including across crops.
+Overlaps become `unused`/`evaluation_overlap`; nodata omissions keep their reason.
+No extra edge payloads or per-fold link trees are created. Report geometric
+uncovered edges/gaps separately from payload retention and source assignments.
+Ordinary chip validation selects checkpoints; test remains held out. Later
+post-training tiled prediction/source scoring remains a separate workflow.
+
 ## Execution plan
 
-Use the final installed interface recorded by 032A. These split commands are
-planned here until 032A implements them; `chip` already exists. Set the local
-root once. Do not run these commands as part of planning.
+Use the installed interfaces and selector policy recorded by 032A/032A.1.
+Set the local root once. Do not run these commands as part of planning.
 
 ```bash
 KELP_DATA_ROOT='/Volumes/x10pro/kelpseg'
@@ -86,8 +97,11 @@ After writing:
    membership between base/augmented and band choices.
 2. Read the chipper's `summary.json` (`status="complete"`), `sources.json` list
    and `windows.csv`. Reconcile retained/omitted windows, empty omitted payload
-   paths and source joins using 032A's selector. Load representative retained
-   8/4/3 inputs and a partial edge. Do not audit every NPZ or remap labels again.
+   paths and source joins using the updated selector. Reconcile active train/
+   val/test and `evaluation_overlap` counts separately; check disjoint original
+   pixel rectangles and report geometric grid/retained coverage and omissions.
+   Load representative active 8/4/3 inputs and a canonical partial edge. Do not
+   audit every NPZ or remap labels again.
 3. Write the small collection declaration and a compact source summary including
    region/date support, mean kelp pixels/TIFF and mean labeled kelp fraction/TIFF
    using existing source statistics. Label those as source statistics, not sums
@@ -99,8 +113,8 @@ After writing:
    sync. Keep existing raw/organized/cleaned releases unchanged.
 5. Restore the small manifests and a bounded chip subset into a fresh local
    directory. Preserve their relative layout; select examples from all three
-   baseline splits and both training-only regions, with a partial edge and a
-   background chip. Include all window metadata needed to resolve those files,
+   active baseline splits and both training-only regions, with a partial edge
+   and a background chip. Include all window metadata needed to resolve those files,
    while loading only the downloaded subset. Keep this restore below 128 MiB.
    Open/load and compare selected arrays with local originals. Report path/size
    and load/array checks honestly, without a checksum-verification claim.
@@ -117,11 +131,15 @@ hypothetical concurrent-edit checks.
 
 - The single native-band chip release and both split variants resolve all ten
   folds without source/date/spacecraft-day leakage. Backgrounds remain canonical;
-  band selection happens while loading. No copied per-fold/per-band datasets.
+  band selection happens while loading. Active chip val/test rectangles share
+  no original pixel, with explicit geometric uncovered edge/gap reporting.
+  Training retains overlap. No copied per-fold/per-band datasets.
 - All actual candidate/retained/omitted/source counts and bytes reconcile.
   Treat the earlier 40,571-candidate / 26,573-retained analysis as a projection,
   not an exact production promise; investigate unexplained differences without
-  automatically changing the approved recipe or memberships.
+  automatically changing the approved recipe or memberships. The chipper's
+  canonical candidate/retained projections are unchanged by selector exclusions;
+  report active evaluation window counts separately.
 - Box path/count/size checks and bounded restore/load checks pass; tiny v2 can
   be fetched once and used offline. Relative paths work from the new local root.
 - Inspect Markdown/links and run `git diff --check`. This is a production task;

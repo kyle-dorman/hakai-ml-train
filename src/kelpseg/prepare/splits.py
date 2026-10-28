@@ -235,6 +235,109 @@ def write_splits(
     return output
 
 
+def _rectangle_union_area(rectangles: list[tuple[int, int, int, int]]) -> int:
+    """Area of crop footprints without double-counting their intersections."""
+    edges = sorted({edge for top, _, bottom, _ in rectangles for edge in (top, bottom)})
+    area = 0
+    # Between adjacent row edges, the same set of horizontal intervals applies.
+    # Merge those intervals; no image-sized coverage mask is needed.
+    for top, bottom in zip(edges, edges[1:], strict=False):
+        intervals = sorted(
+            (left, right)
+            for r0, left, r1, right in rectangles
+            if r0 < bottom and r1 > top
+        )
+        covered = 0
+        end = None
+        for left, right in intervals:
+            start = left if end is None else max(left, end)
+            covered += max(0, right - start)
+            end = right if end is None else max(end, right)
+        area += (bottom - top) * covered
+    return area
+
+
+def _select_evaluation_windows(
+    rows: list[dict], sources: dict, assignments: dict
+) -> None:
+    """Keep the first disjoint existing windows, including nominal nodata slots."""
+    evaluation = []
+    footprints = {}
+    for source in sources.values():
+        original = original_key(source)
+        if assignments[original]["split"] not in ("val", "test"):
+            continue
+        top, left = source["row_offset"], source["col_offset"]
+        footprints.setdefault(original, []).append(
+            (top, left, top + source["height"], left + source["width"])
+        )
+    for row in rows:
+        if original_key(row) in footprints:
+            evaluation.append(row)
+
+    logger.info(
+        "Selecting non-overlapping validation/test windows: %d candidates",
+        len(evaluation),
+    )
+    chosen, grid_area, retained_area = {}, Counter(), Counter()
+    # Order is independent of CSV row order and label content. Crops of one
+    # original share these rectangles, even when their local grids differ.
+    for row in sorted(
+        evaluation,
+        key=lambda item: (item["source_key"], int(item["row"]), int(item["col"])),
+    ):
+        source = sources[row["source_key"]]
+        original = original_key(source)
+        top = source["row_offset"] + int(row["row"])
+        left = source["col_offset"] + int(row["col"])
+        bottom, right = top + int(row["height"]), left + int(row["width"])
+        previous = chosen.setdefault(original, [])
+        # Half-open pixel bounds allow adjacent windows to touch without
+        # sharing a pixel. Test original coordinates, not crop-local positions.
+        overlaps = any(
+            top < r1 and bottom > r0 and left < c1 and right > c0
+            for r0, c0, r1, c1 in previous
+        )
+        if overlaps:
+            if row["disposition"] == "retained":
+                row.update(split="unused", reason="evaluation_overlap")
+            continue
+        previous.append((top, left, bottom, right))
+        area = (bottom - top) * (right - left)
+        grid_area[original] += area
+        # Reserve a nominal slot even if it was omitted for nodata. Otherwise
+        # an overlapping neighbor could silently replace the evaluation grid.
+        if row["disposition"] == "retained":
+            retained_area[original] += area
+
+    input_pixels = grid_pixels = retained_pixels = 0
+    for original, rectangles in footprints.items():
+        footprint = _rectangle_union_area(rectangles)
+        grid, retained = grid_area[original], retained_area[original]
+        logger.info(
+            "Evaluation coverage %s: input footprint %d; disjoint grid %d; retained %d; uncovered edges/gaps %d; nodata-omitted window area %d pixels",
+            "/".join(original),
+            footprint,
+            grid,
+            retained,
+            footprint - grid,
+            grid - retained,
+        )
+        input_pixels += footprint
+        grid_pixels += grid
+        retained_pixels += retained
+    # These are geometric window areas, including native nodata within retained
+    # windows. Label validity and artificial loading padding are separate.
+    logger.info(
+        "Evaluation geometry totals: input footprint %d; disjoint grid %d; retained %d; uncovered edges/gaps %d; nodata-omitted window area %d pixels",
+        input_pixels,
+        grid_pixels,
+        retained_pixels,
+        input_pixels - grid_pixels,
+        grid_pixels - retained_pixels,
+    )
+
+
 def select_windows(
     chip_root, assignments, experiment="baseline", variant="base"
 ) -> list[dict]:
@@ -243,6 +346,9 @@ def select_windows(
     Returned payloads are absolute paths rooted at chip_root. Omitted windows
     have no payload and are unused, preserving their disposition as the reason.
     Window identity is (chip_root, source_key, row, col), not a chip_id.
+    Training keeps overlap. Validation/test use the first disjoint existing
+    windows in crop-key/row/column order; excluded rows become unused. Coverage
+    logs report geometric edge/gap and nodata-window omissions without arrays.
     """
     chip_root = Path(chip_root).expanduser().resolve()
     logger.info("Selecting windows for %s/%s from %s", experiment, variant, chip_root)
@@ -327,6 +433,7 @@ def select_windows(
                     variant,
                     key,
                 )
+    _select_evaluation_windows(result, sources, selected)
     logger.info(
         "Selected %s/%s: %s windows",
         experiment,

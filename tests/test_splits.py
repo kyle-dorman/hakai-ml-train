@@ -7,12 +7,13 @@ import json
 import logging
 from pathlib import Path
 
+import numpy as np
 import pytest
 from typer.testing import CliRunner
 
 from kelpseg.cli import app
 from kelpseg.prepare.check import PreparationError
-from kelpseg.prepare.chip_inputs import IDENTITY_COLUMNS
+from kelpseg.prepare.chip_inputs import IDENTITY_COLUMNS, chip_windows
 from kelpseg.prepare.split_inputs import load_split_recipe, read_collection
 from kelpseg.prepare.splits import (
     assign_sources,
@@ -363,39 +364,49 @@ def test_invalid_split_recipe_fails(tmp_path, text):
         load_split_recipe(path)
 
 
-def chip_controls(root, inputs):
+def chip_controls(
+    root,
+    inputs,
+    *,
+    height=512,
+    width=769,
+    chip_size=512,
+    stride=256,
+    omitted=((0, 512),),
+):
+    """Write real-shaped controls only; payloads are deliberately absent."""
     root.mkdir()
-    (root / "sources.json").write_text(json.dumps(inputs))
+    sources = [dict(item, height=height, width=width) for item in inputs]
+    (root / "sources.json").write_text(json.dumps(sources))
+    (root / "recipe.json").write_text(
+        json.dumps(dict(chip_size=chip_size, stride=stride))
+    )
     rows = []
-    for item in inputs:
-        rows.extend(
-            [
+    for item in sources:
+        for index, window in enumerate(chip_windows(width, height, chip_size, stride)):
+            row, col = int(window.row_off), int(window.col_off)
+            h, w = int(window.height), int(window.width)
+            excluded = (row, col) in omitted
+            rows.append(
                 dict(
                     source_key=item["source_key"],
-                    row="0",
-                    col="0",
-                    disposition="retained",
-                    payload=f"chips/{item['source_key']}/r0_c0.npz",
-                    kelp_pixels="0",
-                ),
-                dict(
-                    source_key=item["source_key"],
-                    row="0",
-                    col="256",
-                    disposition="retained",
-                    payload=f"chips/{item['source_key']}/r0_c256.npz",
-                    kelp_pixels="1",
-                ),
-                dict(
-                    source_key=item["source_key"],
-                    row="256",
-                    col="0",
-                    disposition="omitted_nodata",
-                    payload="",
-                    kelp_pixels="0",
-                ),
-            ]
-        )
+                    row=row,
+                    col=col,
+                    height=h,
+                    width=w,
+                    original_row=item["row_offset"] + row,
+                    original_col=item["col_offset"] + col,
+                    nodata_pixels=h * w if excluded else 0,
+                    background_pixels=h * w if index == 0 else 0,
+                    kelp_pixels=0 if index == 0 or excluded else h * w,
+                    ignored_pixels=h * w if excluded else 0,
+                    valid_ignored_pixels=0,
+                    disposition="omitted_nodata" if excluded else "retained",
+                    payload=""
+                    if excluded
+                    else f"chips/{item['source_key']}/r{row}_c{col}.npz",
+                )
+            )
     write_csv(root / "windows.csv", rows)
     return root
 
@@ -416,7 +427,7 @@ def test_window_join_keeps_overlapping_backgrounds_and_omissions_without_payload
     assert all(Path(row["chip_root"]) == root.resolve() for row in rows)
     assert Path(rows[0]["payload"]) == root / "chips/crop/r0_c0.npz"
     assert rows[0]["kelp_pixels"] == "0"  # Backgrounds are not filtered.
-    assert rows[1]["col"] == "256"  # No old non-overlap-grid exclusion.
+    assert rows[1]["col"] == "256"  # Training keeps overlapping windows.
     # No NPZ was created: the selector joins controls only.
     output = write_splits(inputs, assignments, settings, tmp_path / "splits")
     assert select_windows(root, output / "assignments.csv") == rows
@@ -596,3 +607,187 @@ def test_split_cli_dry_run_logs_progress_and_restores_logging(tmp_path):
     assert not output.exists()
     assert not output.with_name(f".{output.name}.incomplete").exists()
     assert (logger.level, logger.propagate, tuple(logger.handlers)) == previous
+
+
+def active_rectangles(rows, role):
+    return [
+        (
+            int(row["original_row"]),
+            int(row["original_col"]),
+            int(row["height"]),
+            int(row["width"]),
+        )
+        for row in rows
+        if row["split"] == role
+    ]
+
+
+def assert_disjoint(rows, role):
+    """No original pixel can enter two active evaluation windows."""
+    originals = {}
+    for row in rows:
+        if row["split"] != role:
+            continue
+        key = tuple(row[name] for name in ("dataset_id", "release_id", "source_id"))
+        top, left, height, width = (
+            int(row[name])
+            for name in ("original_row", "original_col", "height", "width")
+        )
+        rectangle = top, left, top + height, left + width
+        for other in originals.setdefault(key, []):
+            assert not (
+                top < other[2]
+                and other[0] < rectangle[2]
+                and left < other[3]
+                and other[1] < rectangle[3]
+            )
+        originals[key].append(rectangle)
+
+
+@pytest.mark.parametrize(
+    "length,covered", [(511, 511), (512, 512), (513, 512), (768, 512), (769, 769)]
+)
+def test_validation_reuses_disjoint_existing_windows_and_reports_edges(
+    tmp_path,
+    caplog,
+    length,
+    covered,
+):
+    inputs = collection(tmp_path, [source("001", "2021-02-10")])
+    assignments = assign_sources(inputs, recipe(tmp_path, **{"001": "reverse"}))
+    chips = chip_controls(
+        tmp_path / "chips", inputs, height=length, width=length, omitted=()
+    )
+    with caplog.at_level(logging.INFO, logger="kelpseg.prepare"):
+        rows = select_windows(chips, assignments)
+    mask = np.zeros((length, length), dtype=np.uint8)
+    for top, left, height, width in active_rectangles(rows, "val"):
+        mask[top : top + height, left : left + width] += 1
+    assert mask.max() == 1
+    assert int(mask.sum()) == covered**2
+    assert_disjoint(rows, "val")
+    assert "coverage" in caplog.text.lower()
+    assert "geometry" in caplog.text.lower()
+    assert str(length**2 - covered**2) in caplog.text
+    for row in rows:
+        if row["split"] == "unused":
+            assert row["reason"] == "evaluation_overlap"
+            assert row["payload"]  # Payload references survive exclusion.
+    # All windows are manifest-only: selection must not attempt NPZ reads.
+    assert not list(chips.rglob("*.npz"))
+
+
+def test_training_keeps_overlap_while_validation_and_test_are_disjoint(tmp_path):
+    inputs = collection(
+        tmp_path,
+        [
+            source("001", "2021-03-01"),
+            source("001", "2021-02-10"),
+            source("001", "2021-01-01"),
+            source("012", "2021-08-11", "245c"),
+        ],
+    )
+    assignments = assign_sources(inputs, recipe(tmp_path, **{"001": "reverse"}))
+    before = [dict(row) for row in assignments]
+    chips = chip_controls(tmp_path / "chips", inputs, height=768, width=768, omitted=())
+    base = select_windows(chips, assignments, variant="base")
+    augmented = select_windows(chips, assignments, variant="augmented")
+    assert len([row for row in base if row["split"] == "train"]) == 4
+    assert len([row for row in augmented if row["split"] == "train"]) == 8
+    for role in ("val", "test"):
+        assert_disjoint(base, role)
+        assert_disjoint(augmented, role)
+
+        def identity(row):
+            return row["source_key"], row["row"], row["col"]
+
+        assert {identity(row) for row in base if row["split"] == role} == {
+            identity(row) for row in augmented if row["split"] == role
+        }
+        assert len([row for row in base if row["split"] == role]) == 1
+    assert assignments == before
+    heldout = select_windows(
+        chips, assignments, experiment="loro_001", variant="augmented"
+    )
+    assert_disjoint(heldout, "test")
+    assert len([row for row in heldout if row["split"] == "test"]) == 3
+
+
+@pytest.mark.parametrize(
+    "second_offset,expected,footprint",
+    [((0, 0), 1, 16), ((1, 1), 1, 23), ((0, 4), 2, 32)],
+)
+def test_crops_of_one_original_cannot_repeat_evaluation_pixels(
+    tmp_path,
+    caplog,
+    second_offset,
+    expected,
+    footprint,
+):
+    first = source(
+        "001", "2021-02-10", source_key="a_crop", row_offset="1", col_offset="3"
+    )
+    second = {
+        **first,
+        "source_key": "b_crop",
+        "row_offset": str(1 + second_offset[0]),
+        "col_offset": str(3 + second_offset[1]),
+    }
+    inputs = collection(tmp_path, [first, second])
+    assignments = assign_sources(inputs, recipe(tmp_path, **{"001": "reverse"}))
+    chips = chip_controls(
+        tmp_path / "chips", inputs, height=4, width=4, chip_size=4, stride=2, omitted=()
+    )
+    with caplog.at_level(logging.INFO, logger="kelpseg.prepare"):
+        rows = select_windows(chips, assignments)
+    assert f"input footprint {footprint};" in caplog.text
+    assert_disjoint(rows, "val")
+    assert len(active_rectangles(rows, "val")) == expected
+    assert active_rectangles(rows, "val")[0][:2] == (1, 3)
+
+
+def test_omitted_nominal_evaluation_window_reserves_its_footprint(tmp_path):
+    inputs = collection(tmp_path, [source("001", "2021-02-10")])
+    assignments = assign_sources(inputs, recipe(tmp_path, **{"001": "reverse"}))
+    chips = chip_controls(
+        tmp_path / "chips", inputs, height=512, width=768, omitted=((0, 0),)
+    )
+    rows = select_windows(chips, assignments)
+    assert [row["split"] for row in rows] == ["unused", "unused"]
+    assert [row["reason"] for row in rows] == ["omitted_nodata", "evaluation_overlap"]
+    assert rows[0]["payload"] == ""
+    assert rows[1]["payload"]
+
+
+def test_evaluation_selection_is_independent_of_manifest_row_order(tmp_path):
+    inputs = collection(tmp_path, [source("001", "2021-02-10")])
+    assignments = assign_sources(inputs, recipe(tmp_path, **{"001": "reverse"}))
+    chips = chip_controls(tmp_path / "chips", inputs, height=769, width=769, omitted=())
+    first = select_windows(chips, assignments)
+    with (chips / "windows.csv").open() as stream:
+        windows = list(csv.DictReader(stream))
+    write_csv(chips / "windows.csv", list(reversed(windows)))
+    second = select_windows(chips, assignments)
+
+    def identity(row):
+        return row["source_key"], row["row"], row["col"]
+
+    assert {identity(row) for row in first if row["split"] == "val"} == {
+        identity(row) for row in second if row["split"] == "val"
+    }
+    assert len(active_rectangles(second, "val")) == 4
+
+
+def test_nondividing_stride_reports_interior_gaps_without_duplicate_pixels(
+    tmp_path, caplog
+):
+    inputs = collection(tmp_path, [source("001", "2021-02-10", original_width="2048")])
+    assignments = assign_sources(inputs, recipe(tmp_path, **{"001": "reverse"}))
+    chips = chip_controls(
+        tmp_path / "chips", inputs, height=512, width=1100, stride=300, omitted=()
+    )
+    with caplog.at_level(logging.INFO, logger="kelpseg.prepare"):
+        rows = select_windows(chips, assignments)
+    assert_disjoint(rows, "val")
+    assert active_rectangles(rows, "val") == [(0, 0, 512, 512), (0, 600, 512, 500)]
+    assert "uncovered edges/gaps 45056;" in caplog.text

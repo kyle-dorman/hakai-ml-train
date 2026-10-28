@@ -631,7 +631,9 @@ of its held-out region; other-region spacecraft/day companions are unused.
 Remaining baseline train/validation roles persist, while remaining baseline
 test sources are unused. The `base` variant excludes 011/012; `augmented`
 includes them for training, subject to those companion exclusions. Both keep
-evaluation-region memberships fixed. Canonical background chips remain.
+evaluation-region source memberships fixed. With BC (`augmented`) is the
+primary baseline; without both BC regions (`base`) is the comparison. Canonical
+background chips remain.
 
 Missing/duplicate keys, conflicting original metadata or known aliases, missing
 region rules, unresolved spacecraft on evaluation dates and cross-partition
@@ -695,15 +697,32 @@ must be fresh. These ordinary commands stop at the first failure:
 Expected **source** counts are 2 train / 2 validation / 6 test / 3 unused for
 baseline `base`, and 5 / 2 / 6 / 0 for `augmented`. Only `loro_002` and
 `loro_003` are generated for this subset. The chipper retains all 54 candidate
-windows, including 31 without kelp: baseline base has 8 train / 8 validation /
-26 test / 12 unused windows; augmented has 20 / 8 / 26 / 0. These source and
-window counts are separate; overlapping foreground counts are not unique area.
+windows, including 31 without kelp. That is canonical payload retention;
+`select_windows` subsequently excludes overlapping validation/test candidates.
+Source counts, retained payload counts and active selection counts are separate.
+After selection, baseline `base` has **8 train / 2 validation / 7 test / 37 unused**
+windows; primary baseline `augmented` has **20 / 2 / 7 / 25**. Training overlap
+is unchanged. The validation/test input footprint is 4,719,360 geometric pixels;
+selected windows cover 2,228,736, leaving 2,490,624 uncovered. This small-crop
+edge loss is explicit and does not estimate full-release coverage. Retained
+window area can include nodata; it is not scoreable-label area. Overlapping
+foreground counts are not unique area.
 
-Select existing windows without opening arrays or copying payloads. Progress
-logs show the assignment and source manifests being joined, with periodic
-window counts on larger inputs. All candidate rows retain `split` and `reason`;
-omitted windows are unused with an empty payload. Retained paths resolve from
-the explicit chip root. Window identity is `(chip_root, source_key, row, col)`.
+Select existing windows without opening arrays or copying payloads. Training
+keeps all retained overlapping chips. Validation/test reserve a deterministic
+disjoint subset in crop-key then numeric row/column order, using original TIFF
+coordinates so crops of the same source cannot repeat pixels. Retained overlap
+exclusions become `unused` with reason `evaluation_overlap`; their payloads stay
+canonical. Nodata omissions keep their reason and empty payload, with no
+replacement by overlapping alternatives.
+
+Progress logs show manifest joins and geometric coverage: input crop-union
+footprint, nominal disjoint-grid area, retained selected area, uncovered edges/
+gaps and nodata-omitted window area. Reusing existing chips can leave edge strips
+(and with some strides interior gaps). Geometry excludes padding but is not
+valid-label area or model performance. All candidate rows retain `split` and
+`reason`; use only the requested active split for model input. Paths resolve
+from the explicit chip root; identity is `(chip_root, source_key, row, col)`.
 Use the same `example_name` as the shell block:
 
 ```python
@@ -725,8 +744,11 @@ for experiment in ("baseline", "loro_002", "loro_003"):
         rows = select_windows(chip_root, split_root / "assignments.csv",
                               experiment=experiment, variant=variant)
         print(experiment, variant, Counter(row["split"] for row in rows))
+        validation = [row for row in rows if row["split"] == "val"]
+        # Later training reads only this active list for chip validation.
 
-# Partial-edge chips keep their true size; loading adds bottom/right padding.
+# Inspect a canonical partial edge, which may be unused in this experiment.
+# True-size edge chips get bottom/right padding only when loaded.
 edge = next(row for row in rows if row["payload"] and int(row["width"]) == 257)
 for selection in ("all", "rgbnir", "rgb"):
     chip = load_chip(edge["payload"], recipe["source_band_names"], selection,
@@ -740,8 +762,12 @@ for selection in ("all", "rgbnir", "rgb"):
 ```
 
 Expected shapes are `(512, 512, 8)`, `(512, 512, 4)`, `(512, 512, 3)` from the
-same payload and assignment. Full-dataset chipping and publication remain
-Task 032B; model training and evaluation arrive later.
+same payload. For model input, filter by the active `split`; a retained payload
+may still be excluded from that experiment. During training, validation loss and
+aggregate chip confusion counts use the disjoint list; test stays held out until
+model selection ends. Post-training tiled prediction/source scoring can combine
+overlapping probabilities separately. Full-dataset chipping/publication remain
+Task 032B; model training and evaluation commands arrive later.
 
 ## Preserved v1 example
 

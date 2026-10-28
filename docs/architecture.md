@@ -214,6 +214,8 @@ the historical source policy for the other evaluation regions: their temporal
 training and validation sources retain those roles and their temporal test
 sources remain unused. Regions 011/012 are training-only and toggled together
 in the with/without comparison; neither contributes validation or a test fold.
+The with-BC `augmented` variant is the primary baseline; `base` without both
+regions is the comparison. These names identify membership, not scientific rank.
 For every LORO fold, also leave other-region companions sharing a held-out
 test spacecraft/date unused. Apply the same group-isolation rule to optional
 training inputs. These are manifest exclusions; canonical imagery stays intact.
@@ -247,11 +249,33 @@ assignments, experiment="baseline", variant="base")` joins list-shaped chip
 source controls to original assignments and returns window rows with roles/
 reasons and paths resolved from the explicit chip root. Omitted windows stay
 unused without payloads. Selection reads no arrays and creates no fold copies.
+
+Training uses all canonical retained windows, including overlap. For chip-based
+validation/test, the selector visits existing windows in crop-key then numeric
+row/column order and reserves a disjoint subset in original TIFF coordinates.
+Crops of the same original share this exclusion, so their pixels cannot repeat.
+Retained overlapping candidates become `unused` with reason `evaluation_overlap`;
+all canonical rows and payloads remain available. Nodata-omitted nominal windows
+keep their omission reason and are not replaced by overlapping alternatives.
+
+Reuse existing chips rather than adding edge payloads. Log geometric input
+footprint (union of crops), disjoint-grid area, retained selected area, uncovered
+edge/gap area and nodata-omitted window area. These areas exclude artificial
+padding and are not valid-label or model scores. Existing strides can leave
+interior gaps as well as edge strips. Keep source assignments separate from
+this window selection; both BC and all spectral variants share evaluation scope.
 See [the researcher recipes](quickstart.md#assign-sources-and-select-chip-windows).
 
 ## Prediction and scoring
 
-Share one image/window predictor between unlabeled inference and labeled
+During training, validate ordinary non-overlapping chips and aggregate their
+confusion counts; validation alone selects checkpoints. Test remains held out
+until model selection is complete. This chip scope is reported with its coverage
+and does not claim a stitched full-TIFF score. Training/evaluation commands are
+implemented by later tasks.
+
+Post-training tiled prediction and source-level scoring use the separate rules
+below. Share one image/window predictor between unlabeled inference and labeled
 evaluation. Labels are optional for scoring and must not be required to infer
 padding offsets or spatial alignment. Record padding placement explicitly and
 invert it before placing predictions on the source grid.

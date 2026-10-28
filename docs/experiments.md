@@ -63,10 +63,23 @@ preprocessing, including eight-band normalization and centered-pad inversion.
 
 ## Evaluation and comparison
 
-Use a recorded validation-selected checkpoint and a pre-test threshold. Keep
-chip diagnostics for traceability, but calculate primary metrics from one
-prediction per covered source pixel. Export georeferenced probabilities/masks
-and compact TIFF/region summaries as needed. Record coverage and ignored pixels.
+Use a recorded validation-selected checkpoint and a pre-test threshold. During
+training, ordinary chip validation uses the selector's non-overlapping windows
+and aggregate confusion counts, without TIFF reconstruction each epoch. Training
+chips may overlap. Keep test held out until model selection is finished;
+chip-based test applies the same disjoint-window rule.
+
+Reuse existing chips and report geometric uncovered edges/gaps, including when
+multiple crops share one original source. Do not silently replace nodata-omitted
+nominal windows with overlapping alternatives. Record input footprint, nominal
+disjoint-grid area, retained selected area and omissions separately; geometry
+alone does not count valid labels. Never call an average chip IoU a region IoU.
+
+Post-training tiled prediction/source scoring combines overlapping probabilities
+before thresholding, with one prediction per covered source pixel. Export
+georeferenced probabilities/masks and compact TIFF/region summaries as needed.
+Record coverage and ignored pixels, and distinguish these TIFF results from
+chip-scope validation/test metrics.
 
 Compare baseline and LORO on matching source TIFFs unseen by both models;
 full-region LORO remains a separate summary. Reuse source assignments and
@@ -75,8 +88,10 @@ controls a change. No held-out results select preprocessing or model settings.
 
 For the current California-focused comparison, regions 001–010 (including Baja)
 provide evaluation scopes; 011/012 are a single optional training-only group.
-Compare inclusion versus exclusion of that group on identical evaluation-region
-source assignments, with no 011/012 validation or held-out fold. Keep CA source
+The run including both BC regions (`augmented`) is the primary baseline;
+without both (`base`) is the comparison. Compare inclusion versus exclusion of
+that group on identical evaluation-region source assignments, with no 011/012
+validation or held-out fold. Keep CA source
 membership, band recipe, initialization, checkpoint/threshold selection rules
 and evaluation coverage matched. Declare the sampling and training budget so
 extra BC data and extra optimization are distinguishable experiment choices;

@@ -314,7 +314,14 @@ The installed splitter writes a plain crop collection, Task 031 chip-identity
 export and original-source assignments separately from the chip payload root.
 Dataset/release/source references are explicit; generated controls contain no
 machine paths. [The split walkthrough](quickstart.md#tiny-v2-split-chip-and-load-locally)
-owns the routine recipes; Task 032A records exact validation/output paths.
+owns the routine recipes; Tasks 032A and 032A.1 record validation/output paths.
+
+Task 032A.1 selects disjoint existing validation/test windows while retaining
+all canonical chips and overlapping training windows. Overlap exclusions are
+manifest selections with reason `evaluation_overlap`, not payload deletions or
+per-fold copies. Uncovered edge/gap geometry is explicit; no new edge chips are
+created. Keep candidate/retained payload counts separate from active evaluation
+window counts when publishing/restoring the release.
 
 For all tasks the user explicitly removed new hashing/checksum/catalog/receipt
 machinery. The Task 031

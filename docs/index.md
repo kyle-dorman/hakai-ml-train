@@ -7,7 +7,8 @@ The current work rebuilds this fork for Planet 8/4/3-band binary kelp
 segmentation. The installed package provides CLI/path checks, byte-preserving
 organization, quick/full directory checks, shared cleanup, and native-band
 chipping with optional labels, source-level baseline/LORO assignments and
-manifest-based window selection. A NumPy loader selects bands and pads partial
+manifest-based window selection with overlapping training and disjoint chip
+validation/test. A NumPy loader selects bands and pads partial
 edges. Preparation writes run once into a fresh output and stop on failure.
 Retained legacy Planet implementations support the ongoing replacement;
 model workflows arrive through later numbered tasks. Tasks 000–023 describe the

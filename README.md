@@ -9,8 +9,10 @@ The installed `kelpseg` package currently provides help/version and read-only
 machine-path checks, byte-preserving raw organization from explicit catalogs,
 quick/full directory checks, shared cleanup, native-band chipping with optional
 labels, and source-level baseline/LORO split manifests. The chip loader selects
-8/4/3 bands and pads partial edges. Preparation runs once into a fresh output and stops on failure, with no restart support. Training
-and prediction commands arrive in later tasks. Retained legacy Planet code/tests
+8/4/3 bands and pads partial edges. Window selection keeps overlap for training;
+chip validation/test selection is disjoint and reports geometric coverage gaps.
+Preparation runs once into a fresh output and stops on failure, with no restart
+support. Training and prediction commands arrive in later tasks. Retained legacy Planet code/tests
 support the ongoing rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
 starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
 

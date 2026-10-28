@@ -223,6 +223,35 @@ runpy.run_module("kelpseg", run_name="__main__")
             cwd=tmp_path,
         )
 
+        # Installed selection uses only metadata, preserving training overlap
+        # while ordinary val/test inputs share no original source pixels.
+        selection_chips = _selection_controls(unrelated / "selection chips", sources)
+        run(
+            python,
+            "-I",
+            "-c",
+            """
+import sys
+from collections import Counter
+from pathlib import Path
+from kelpseg.prepare.splits import select_windows
+
+chips, assignments = Path(sys.argv[1]), Path(sys.argv[2])
+for variant, training, unused in (("base", 2, 4), ("augmented", 4, 2)):
+    rows = select_windows(chips, assignments, variant=variant)
+    assert Counter(row["split"] for row in rows) == {
+        "train": training, "val": 1, "test": 1, "unused": unused,
+    }
+    excluded = [row for row in rows if row["reason"] == "evaluation_overlap"]
+    assert len(excluded) == 2 and all(row["payload"] for row in excluded)
+assert not list(chips.rglob("*.npz"))
+assert not any(name in sys.modules for name in ("src", "scripts", "torch", "wandb"))
+""",
+            selection_chips,
+            splits / "assignments.csv",
+            cwd=tmp_path,
+        )
+
         (unrelated / "data with spaces").mkdir()
         (unrelated / "runs").mkdir()
         settings = unrelated / "settings.toml"
@@ -510,3 +539,51 @@ def _split_fixture(root: Path) -> tuple[Path, Path]:
         'first_cutoff = "2021-01-31"\nsecond_cutoff = "2021-02-28"\n'
     )
     return sources, recipe
+
+
+def _selection_controls(root: Path, source_csv: Path) -> Path:
+    root.mkdir()
+    with source_csv.open(newline="") as stream:
+        sources = list(csv.DictReader(stream))
+    for source in sources:
+        source.update(
+            row_offset=0,
+            col_offset=0,
+            height=4,
+            width=6,
+            original_height=4,
+            original_width=6,
+        )
+    (root / "sources.json").write_text(json.dumps(sources))
+    with (root / "windows.csv").open("w", newline="") as stream:
+        writer = csv.DictWriter(
+            stream,
+            fieldnames=(
+                "source_key",
+                "row",
+                "col",
+                "height",
+                "width",
+                "original_row",
+                "original_col",
+                "disposition",
+                "payload",
+            ),
+        )
+        writer.writeheader()
+        for source in sources:
+            for col in (0, 2):
+                writer.writerow(
+                    dict(
+                        source_key=source["source_key"],
+                        row=0,
+                        col=col,
+                        height=4,
+                        width=4,
+                        original_row=0,
+                        original_col=col,
+                        disposition="retained",
+                        payload=f"chips/{source['source_key']}/r0_c{col}.npz",
+                    )
+                )
+    return root
