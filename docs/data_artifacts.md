@@ -45,8 +45,10 @@ alias first. Task 027 verified copies while preserving this variant-1 boundary.
 Use the verified project root `kelp-box:kelpseg` and its [recorded folder identity](box_backup.md).
 Task 027 populated the raw/reference/audit paths; Task 030A verified the organized
 `data/2_organized/ca_bc/v1` release and its separate transfer evidence. Task 030B
-verified `data/3_cleaned/ca_bc/v1` and its own evidence. Other locations below
-are reserved until their owning tasks publish them:
+verified `data/3_cleaned/ca_bc/v1` and its own evidence. Task 032B published
+`data/chips/ca_bc/v1`, `data/splits/ca_bc/v1`,
+`data/collections/ca_bc/v1` and `data/examples/tiny_ca_bc/v2`.
+Other locations below are reserved until their owning tasks publish them:
 
 ```text
 kelpseg/
@@ -126,7 +128,7 @@ Keep raw deliveries and all aliases even when a collection resolves duplicates.
 This is a few manifests and ordinary folders, not a dataset-management service.
 The researcher guide gains a copyable "add a region" recipe as these stages
 arrive. Tasks 029A/029B implement extensible preparation; Task 032A supplies
-collection-aware assignments and Task 032B produces/publishes the full release;
+collection-aware assignments and Task 032B published the full release;
 Task 037 uses those prepared data for its four
 new-region comparisons. None of that ingestion is executed by Task 027.
 
@@ -307,9 +309,9 @@ See [the walkthrough](quickstart.md#tiny-real-data-walkthrough) for fetch and
 offline use. Real payloads/generated metadata stay outside Git; synthetic
 correctness fixtures stay in Git. Task 025 remains a separate historical reference.
 
-Task 032A extends the local example at `<data_root>/data/examples/tiny_ca_bc/v2/`
-to 13 crop pairs, preserving v1 and its partial edge. V2 has 82,537,678 input
-bytes; its split/chip walkthrough is local only until Task 032B publication.
+The published example at `<data_root>/data/examples/tiny_ca_bc/v2/` and the
+matching Box path has 13 crop pairs, preserving v1 and its partial edge.
+V2 has 28 files / 82,537,678 input bytes; fetch it once for offline use.
 The installed splitter writes a plain crop collection, Task 031 chip-identity
 export and original-source assignments separately from the chip payload root.
 Dataset/release/source references are explicit; generated controls contain no
@@ -322,6 +324,30 @@ manifest selections with reason `evaluation_overlap`, not payload deletions or
 per-fold copies. Uncovered edge/gap geometry is explicit; no new edge chips are
 created. Keep candidate/retained payload counts separate from active evaluation
 window counts when publishing/restoring the release.
+
+The full native-band `ca_bc/v1` chip release is at
+`data/chips/ca_bc/v1/` locally and on Box: 369 sources, 40,571 candidate
+windows, 26,573 retained payloads (14,386 background-only and 2,982 partial
+edges), 13,998 nodata omissions; 26,577 files / 65,565,628,953 bytes including
+controls. Every source has retained windows. `data/splits/ca_bc/v1/` contains
+five controls / 935,947 bytes, covering both variants and ten LORO folds.
+`data/collections/ca_bc/v1/collection.json` is a 539-byte declaration with
+relative cleaned/chip/split references and the existing split `collection.csv`.
+It does not copy TIFFs or duplicate the collection CSV. Runtime readers take
+explicit local chip/split roots.
+
+With-BC `augmented` is primary; `base` is the comparison. Active baseline
+window counts are 18,311/933/1,262 train/val/test with BC and
+15,621/933/1,262 without BC. All 6,067 retained evaluation overlap exclusions
+remain canonical. The baseline evaluation input footprint is 906,445,909
+geometric pixels: disjoint nominal grid 872,744,371, retained selected area
+557,094,374, uncovered edges/gaps 33,701,538 and nodata-omitted grid area
+315,649,997. These include native nodata within retained windows and exclude
+padding; they are not valid-label support, geographic area or model scores.
+[Task 032B](../tasks/032b_produce_and_publish_chip_release.md#outcome-2026-10-28)
+owns complete fold counts/coverage, ordinary Box inventory comparisons and
+bounded restore/load results. [The quickstart](quickstart.md#restore-and-use-the-full-cabc-chip-release)
+owns the fetch/use recipe. No per-fold or spectral copies exist.
 
 For all tasks the user explicitly removed new hashing/checksum/catalog/receipt
 machinery. The Task 031

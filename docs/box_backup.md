@@ -134,3 +134,32 @@ release. Exact selection and results are in `restore_selection.json` and
 `restore_result.json`; [Task 030B's outcome](../tasks/030b_build_and_publish_cleaned.md#outcome-2026-10-27)
 owns detailed evidence. Physical band identity, companion semantics, completeness
 and annotation truth retain their recorded limits.
+
+## Chip, split and collection CA/BC v1
+
+The matching local/Box paths below are relative to the artifact/project root:
+
+| Artifact | Path | Files | Bytes |
+|---|---|---:|---:|
+| Native-band chips and controls | `data/chips/ca_bc/v1/` | 26,577 | 65,565,628,953 |
+| Both baseline variants and ten LORO folds | `data/splits/ca_bc/v1/` | 5 | 935,947 |
+| Portable declaration | `data/collections/ca_bc/v1/collection.json` | 1 | 539 |
+| Tiny v2 inputs | `data/examples/tiny_ca_bc/v2/` | 28 | 82,537,678 |
+
+The [quickstart restore recipe](quickstart.md#restore-and-use-the-full-cabc-chip-release)
+fetches chips, assignments and declaration into a fresh root with explicit
+reader paths. The declaration references the separate cleaned release too;
+cleaned TIFFs are needed only for workflows that use those sources. Preserve the
+project-relative layout so its paths remain portable. Use `augmented` for the
+primary with-BC baseline, `base` for the comparison, and `loro_001`–`loro_010`
+for the ten held-out-region folds. One canonical chip collection supplies every
+fold and spectral choice; select active windows through the manifests.
+
+Copies use `--immutable --size-only --ignore-checksum`. Complete local/Box
+relative paths, file counts and sizes were compared. Bounded restoration loads
+and compares actual selected 8/4/3-band arrays; this is not checksum verification
+or a full restored-release payload audit. See
+[Task 032B](../tasks/032b_produce_and_publish_chip_release.md#outcome-2026-10-28)
+for the exact restore scope, geometry and evidence. The separate
+[tiny v2 fetch/offline walkthrough](quickstart.md#tiny-real-data-walkthrough)
+provides the small reproducible operating example.

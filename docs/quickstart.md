@@ -660,6 +660,83 @@ output = write_splits(collection, assignments, recipe,
                       root / "examples/runs/my-source-splits-v1")
 ```
 
+## Restore and use the full CA/BC chip release
+
+The published release uses matching paths beneath your local artifact root and
+`kelp-box:kelpseg`:
+
+| Artifact | Relative path |
+|---|---|
+| Native eight-band chips and window controls | `data/chips/ca_bc/v1/` |
+| Source collection and baseline/LORO assignments | `data/splits/ca_bc/v1/` |
+| Portable collection declaration | `data/collections/ca_bc/v1/collection.json` |
+
+Fetch into a fresh local root. Set `data_root` to your chosen destination;
+these sequential copies stop on the first error. The chip copy downloads the
+complete canonical collection, including background and overlapping payloads.
+It needs about 65.6 GB: 26,573 NPZs plus four controls (26,577 files). The
+separate split controls total 935,947 bytes; the declaration is 539 bytes.
+
+```bash
+(
+  set -e
+  data_root="$HOME/kelpseg-release-01"  # Choose a fresh directory.
+  test ! -e "$data_root"
+  mkdir -p "$data_root/runs" "$data_root/data/chips/ca_bc" "$data_root/data/splits/ca_bc" "$data_root/data/collections/ca_bc"
+  rclone copy kelp-box:kelpseg/data/chips/ca_bc/v1 "$data_root/data/chips/ca_bc/v1" --immutable --size-only --ignore-checksum --transfers 1 --checkers 2
+  rclone copy kelp-box:kelpseg/data/splits/ca_bc/v1 "$data_root/data/splits/ca_bc/v1" --immutable --size-only --ignore-checksum --transfers 1 --checkers 2
+  rclone copy kelp-box:kelpseg/data/collections/ca_bc/v1 "$data_root/data/collections/ca_bc/v1" --immutable --size-only --ignore-checksum --transfers 1 --checkers 2
+)
+```
+
+Set `data_root` in `paths.local.toml` to this artifact root and `runs_root` to
+its `runs/` directory before using Python. The small
+`collection.json` references the cleaned, chip and split dataset/release IDs,
+their relative locations and the existing split `collection.csv`. Resolve its
+paths from the declaration's directory, preserving the layout above when moving
+the release. Readers take explicit local roots:
+
+```python
+import json
+import logging
+from collections import Counter
+from kelpseg.paths import load_paths
+from kelpseg.prepare.splits import select_windows
+from kelpseg.chips import load_chip
+
+logging.basicConfig(level=logging.INFO)
+root = load_paths("paths.local.toml").data_root
+chip_root = root / "data/chips/ca_bc/v1"
+split_root = root / "data/splits/ca_bc/v1"
+recipe = json.loads((chip_root / "recipe.json").read_text())
+rows = select_windows(chip_root, split_root / "assignments.csv",
+                      experiment="baseline", variant="augmented")
+print(Counter(row["split"] for row in rows))
+# Primary baseline: 18,311 train, 933 val, 1,262 test, 20,065 unused candidates.
+training = [row for row in rows if row["split"] == "train"]
+validation = [row for row in rows if row["split"] == "val"]
+chip = load_chip(training[0]["payload"], recipe["source_band_names"],
+                 "rgbnir", recipe["chip_size"])
+print(chip["image"].shape, chip["padding"])
+```
+
+Use `augmented` for the primary with-BC baseline and `base` for the comparison
+without both 011/012. Choose `loro_001` through `loro_010` for a held-out region;
+both variants share evaluation memberships. Band choices `all`, `rgbnir` and
+`rgb` load the same canonical payloads and assignments. Select an active
+`split` before loading; retained overlapping validation/test candidates can have
+`split="unused"` and `reason="evaluation_overlap"`. Coverage logs report the
+geometric retained area, uncovered edges/gaps and nodata-window omissions.
+Source assignments are independent of retained-window counts; all 369 sources
+in this release have retained windows. See
+[Task 032B](../tasks/032b_produce_and_publish_chip_release.md) for actual release
+counts, bytes, coverage and the bounded restore/load validation scope.
+
+Missing manifests or payloads usually mean the artifact root or relative layout
+is wrong, or the copy stopped early. Check the selected root and copy exit status.
+A failed copy or preparation attempt needs a fresh destination; existing releases
+are preserved. No per-fold or per-band copies are needed.
+
 ## Tiny real-data walkthrough
 
 Use tiny v2 below to practice splitting, chipping and loading. It contains
@@ -668,20 +745,39 @@ crop that exercises partial-edge padding. V2 preserves all nine v1 pairs and
 adds four 768-square crops for train/validation support. Inputs are about
 83 MB; generated outputs are about 152 MB.
 
-V2 is currently local at `data/examples/tiny_ca_bc/v2/`; its Box publication
-belongs to Task 032B. Start from those existing inputs. The
-[preserved v1 example](#preserved-v1-example) below remains available from Box.
+V2 is published at `kelp-box:kelpseg/data/examples/tiny_ca_bc/v2/`.
+Fetch its 82,537,678 bytes once into a fresh local input directory, or use an
+existing complete local v2. Set `data_root` to your chosen artifact root:
+
+```bash
+(
+  set -e
+  data_root="$HOME/kelpseg-tiny-v2-01"
+  tiny="$data_root/data/examples/tiny_ca_bc/v2"
+  test ! -e "$tiny"
+  mkdir -p "$data_root/runs" "$data_root/data/examples/tiny_ca_bc"
+  rclone copy kelp-box:kelpseg/data/examples/tiny_ca_bc/v2 "$tiny" --immutable --size-only --ignore-checksum --transfers 1 --checkers 2
+)
+```
+
+The copy checks ordinary paths/sizes. After installation and this fetch, the
+split/chip/load walkthrough runs offline. Use `uv run --offline --no-sync`
+in place of `uv run` in the commands below; install the locked environment
+before disconnecting. Choose fresh generated output names each time. No Box
+access is needed during the walkthrough. The
+[preserved v1 example](#preserved-v1-example) remains available separately.
 
 ## Tiny v2: split, chip and load locally
 
-Set `data_root` to the artifact root in your local path settings. Pick one
-`example_name` for this attempt; change it for each repeat. Both output folders
+Set `data_root` to the same artifact root used for the fetch, and update your
+local `data_root` and `runs_root` path settings to match. Pick one `example_name` for this attempt; change
+it for each repeat. Both output folders
 must be fresh. These ordinary commands stop at the first failure:
 
 ```bash
 (
   set -e
-  data_root='/Volumes/x10pro/kelpseg'
+  data_root="$HOME/kelpseg-tiny-v2-01"
   example_name='my-tiny-v2-01'  # Change this for each new attempt.
   tiny="$data_root/data/examples/tiny_ca_bc/v2"
   splits="$data_root/examples/runs/${example_name}-splits"
@@ -766,8 +862,9 @@ same payload. For model input, filter by the active `split`; a retained payload
 may still be excluded from that experiment. During training, validation loss and
 aggregate chip confusion counts use the disjoint list; test stays held out until
 model selection ends. Post-training tiled prediction/source scoring can combine
-overlapping probabilities separately. Full-dataset chipping/publication remain
-Task 032B; model training and evaluation commands arrive later.
+overlapping probabilities separately. The full published release uses the
+[restore recipe above](#restore-and-use-the-full-cabc-chip-release); model training
+and evaluation commands arrive later.
 
 ## Preserved v1 example
 

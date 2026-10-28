@@ -66,7 +66,7 @@ are authorized by Task 024.
 | [031](031_chipping_bands_and_tiny_walkthrough.md) | Local implementation/smoke | Complete | Installed 512/256/50 chipper, native 8/4/3 selection, partial-edge loading and nine-crop Box fetch/offline walkthrough; correctness/simplicity review passed; next Task 032 |
 | [032A](032a_collection_and_split_implementation.md) | Local implementation/tiny smoke | Complete | Approved memberships/ten folds and tiny v2 pass; readability, errors and progress follow-up complete; followed by 032A.1 |
 | [032A.1](032a_1_nonoverlapping_chip_evaluation.md) | Local selection/tiny smoke | Complete | Disjoint existing-chip validation/test; overlap exclusions and geometric coverage verified; next 032B |
-| [032B](032b_produce_and_publish_chip_release.md) | Local production/Box | Ready | Next: full chips/splits, portable collection declaration, Box copy and bounded restore/load |
+| [032B](032b_produce_and_publish_chip_release.md) | Local production/Box | Complete | 26,573 canonical chips; both variants/ten folds; portable declaration, Box path/size checks, bounded restore and offline tiny v2 pass; next Task 033 |
 
 ## Historical queue: Tasks 000–023
 

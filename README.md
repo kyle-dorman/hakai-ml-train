@@ -74,15 +74,17 @@ UCLA Box through rclone is
 the target backup/transfer store; the existing local root is
 `/Volumes/x10pro/kelpseg`.
 
-The planned three variants are **1 raw sources**, **2 organized intermediate**,
+The three dataset stages are **1 raw sources**, **2 organized intermediate**,
 and **3 cleaned intermediate**. Both intermediates stay unsplit; organization
 preserves source bytes, while cleanup records explicit transformations. The
 scoped audit is complete; existing repaired datasets remain historical evidence.
 See [docs/data_artifacts.md](docs/data_artifacts.md) for variant/provenance rules
 and [docs/cleanup_provenance.md](docs/cleanup_provenance.md) for established facts
 and remaining evidence limits. The organized and cleaned CA/BC releases are
-complete. Source splitting and the 13-crop tiny walkthrough are implemented;
-full chip production and publication remain Task 032B.
+complete. The native-band CA/BC chip release, both baseline variants and all ten
+LORO folds are published with portable controls; the 13-crop tiny v2 is available
+from Box for offline split/chip/load practice. See the
+[researcher guide](docs/quickstart.md#restore-and-use-the-full-cabc-chip-release).
 
 The first spectral comparison is interpreted as 8 bands, RGB+NIR, and RGB from
 the same acquisitions. Start with the working SegFormer recipe; a possible RGB

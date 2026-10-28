@@ -111,7 +111,8 @@ merge supplies membership/provenance evidence, not original label payloads.
 See [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases)
 for stage boundaries and mapping requirements. Organization and cleanup are
 implemented, and the full CA/BC releases are complete. Source assignments are
-implemented; Task 032B handles full chip production/publication.
+implemented. Task 032B produced and published one native-band chip release
+with portable baseline/LORO controls and the collection declaration.
 
 Cleanup writes into a fresh sibling `.<output-name>.incomplete` directory and
 renames it to the requested output only after all checks pass. Failed runs leave

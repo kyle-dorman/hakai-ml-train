@@ -33,8 +33,13 @@ adds clearer comments/errors, progress logs and fresh-name example recipes.
 [Task 032A.1 is complete](../tasks/032a_1_nonoverlapping_chip_evaluation.md#outcome-2026-10-28):
 training keeps overlap; chip validation/test use disjoint existing windows with
 reported geometric coverage gaps. Source assignments are unchanged; with BC is
-the primary baseline. Next action is [Task 032B](../tasks/032b_produce_and_publish_chip_release.md),
-which has not started.
+the primary baseline.
+[Task 032B is complete](../tasks/032b_produce_and_publish_chip_release.md#outcome-2026-10-28):
+26,573 canonical chips, both variants and ten folds are published on Box with
+portable controls. Exact path/size comparisons, the bounded restore and fetched
+tiny-v2 offline walkthrough pass. Next action is to review/refine Task 033's
+baseline-recipe and portable-model contract in its own window; no Task 033
+implementation ran here.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -52,13 +57,13 @@ fresh outputs; interrupted work is not resumed. No BC stage exists.
 The agreed dataset variants are **1 raw**, **2 organized intermediate**, and
 **3 cleaned intermediate**. Both intermediates are unsplit; generated
 train/validation/test assignments are implemented separately in Task 032A.
-Full production and publication remain Task 032B; the approved mixed temporal
-split stays unchanged. The full variant and
+The full chip/split release is published; the approved mixed temporal split
+stays unchanged. The full variant and
 provenance contract lives in [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases).
 
 ## Ordered roadmap
 
-Tasks through 032A.1 are complete. Remaining later rows are ordered scope slots, not permission
+Tasks through 032B are complete. Remaining later rows are ordered scope slots, not permission
 to execute multiple tasks in one window. Create and refine each contract when
 selected; split further if needed.
 
@@ -76,8 +81,8 @@ selected; split further if needed.
 | [031](../tasks/031_chipping_bands_and_tiny_walkthrough.md) | Simplify chipping/band selection and start the tiny walkthrough — complete | Configurable 512/256/50, native bands, partial-edge loading; nine-crop Box fetch/offline smoke and focused checks pass |
 | [032A](../tasks/032a_collection_and_split_implementation.md) | Implement source assignments/window selection and grow tiny v2 — complete | Locked 216/53/58; spacecraft/day isolation; both training variants; ten folds; 13-crop example; no full production |
 | [032A.1](../tasks/032a_1_nonoverlapping_chip_evaluation.md) | Non-overlapping chip validation/test — complete | Reuse existing chips; preserve source assignments; report geometric coverage |
-| [032B](../tasks/032b_produce_and_publish_chip_release.md) | Produce full chips/assignments and publish to Box — next | Installed commands, one native-band release, portable manifests, ordinary copies and bounded restore/load checks |
-| 033 | Simple baseline recipes and portable saved models | Local update/validation/save/load/resume for 8/4/3 bands; matched with/without-011/012 training recipes and declared sampling/budget; portable settings |
+| [032B](../tasks/032b_produce_and_publish_chip_release.md) | Produce full chips/assignments and publish to Box — complete | 26,573 canonical payloads; both variants/ten folds; Box path/size comparisons, bounded restore and fetched tiny-v2 offline checks |
+| 033 | Simple baseline recipes and portable saved models — next | Local update/validation/save/load/resume for 8/4/3 bands; matched with/without-011/012 training recipes and declared sampling/budget; portable settings |
 | 034 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
 | 035 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics; region/date/year/month prevalence and errors; signed area bias and supported matched-footprint change checks; see experiments.md |
 | 036 | LORO runner and matching-TIFF comparisons | Ten 001–010 folds; paired with/without-011/012 CA/Baja results; temporal-consistency and later-date scopes reported separately; tiny suite checks |
