@@ -6,6 +6,7 @@ from typing import Annotated
 import typer
 
 from kelpseg.cli.check import check_command
+from kelpseg.cli.chip import chip_command
 from kelpseg.cli.clean import clean_command
 from kelpseg.cli.organize import organize_command
 from kelpseg.cli.paths import check_paths_command
@@ -37,3 +38,5 @@ app.command("organize")(organize_command)
 
 app.command("check")(check_command)
 app.command("clean")(clean_command)
+
+app.command("chip")(chip_command)

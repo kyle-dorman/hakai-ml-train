@@ -5,8 +5,9 @@ Start with `AGENTS.md`, then [todo.md](todo.md) and the selected task under
 
 The current work rebuilds this fork for Planet 8/4/3-band binary kelp
 segmentation. The installed package provides CLI/path checks, byte-preserving
-organization, quick/full directory checks, and shared cleanup with optional
-labels. Preparation writes run once into a fresh output and stop on failure.
+organization, quick/full directory checks, shared cleanup, and native-band
+chipping with optional labels. A NumPy loader selects bands and pads partial
+edges. Preparation writes run once into a fresh output and stop on failure.
 Retained legacy Planet implementations support the ongoing replacement;
 model workflows arrive through later numbered tasks. Tasks 000–023 describe the
 preceding completed PS8B study.

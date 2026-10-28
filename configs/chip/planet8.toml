@@ -1,0 +1,13 @@
+schema_version = 1
+chip_size = 512
+stride = 256
+max_nodata_pct = 50
+# User-declared order for this CA/BC collection; not universal Planet metadata.
+source_band_names = ["coastal_blue", "blue", "green_i", "green", "yellow", "red", "rededge", "nir"]
+
+[label_mapping]
+0 = 0
+1 = 1
+2 = 0
+3 = -100
+4 = 0

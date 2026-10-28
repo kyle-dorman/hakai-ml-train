@@ -281,10 +281,17 @@ historical evidence. Re-establish these rules from actual inputs; do not apply
 a single remap to every label family without checking its meaning.
 
 The old chip recipe used 1024-pixel windows/512 stride, a 50% nodata cutoff,
-and training-only exclusion of non-positive chips. Treat these as documented
-reference choices to examine during reconstruction. Retain canonical background
-chips and store exclusion reasons explicitly. Keep nodata policy consistent
-across train/validation/test; test results never choose it.
+and training-only exclusion of non-positive chips. The replacement's selected
+defaults are configurable 512-pixel windows, stride 256 and a 50% maximum
+image-nodata cutoff. Keep partial edge chips at their true source size, with
+explicit padding during loading. The current
+[study and decision](../tasks/031_chipping_bands_and_tiny_walkthrough.md#512-pixel-analysis-outcome-2026-10-27)
+record unique per-TIFF coverage, the projected-cleanup scope, exact producer/
+parent identities and external evidence paths. Retain canonical background
+chips and all nodata-excluded identities/reasons without requiring excluded
+payloads. Keep chip eligibility consistent across experimental assignments;
+test results never choose it. Sliding-window inference has its own declared
+footprint and does not inherit training-chip omissions.
 
 ## Portable release requirements
 
@@ -301,12 +308,24 @@ Refuse missing pairs, duplicates, silent overwrites, and partial manifest
 publication. Never mutate original source imagery or labels. A small verified
 transfer is required before large upload/download operations.
 
-After Box setup and Task 030B's cleaned intermediate 3, Task 031 selects a tiny
-real-data walkthrough subset and stores it with the external release, with documented
-membership and a one-time fetch recipe. Keep real example payloads outside Git;
-small synthetic test fixtures remain in Git. After fetching, routine walkthrough
-checks work without Box or W&B access. The earlier Task 025 legacy capture is
-a separate reference artifact and retains its original place in the queue.
+Task 031's reusable tiny inputs are external at
+`<data_root>/data/examples/tiny_ca_bc/v1/` and
+`kelp-box:kelpseg/data/examples/tiny_ca_bc/v1/`: nine crop pairs across regions
+002/003/012, three dates per region, including a 768-by-769 partial-edge case.
+`metadata.csv` keeps original TIFF identity, region/date, dimensions and crop
+offsets; `selection.json` describes the selection and band assumption. Chips
+belong separately under `<data_root>/examples/runs/<fresh-name>/`.
+See [the walkthrough](quickstart.md#tiny-real-data-walkthrough) for fetch and
+offline use. Real payloads/generated metadata stay outside Git; synthetic
+correctness fixtures stay in Git. Task 025 remains a separate historical reference.
+
+For Task 031 the user explicitly removed new hashing/checksum/catalog/receipt
+work. The example used ordinary copy/fetch with relative path/size checks and bounded array
+comparisons, without new checksum verification. Chipping retains practical
+source/band/window/shape/exclusion metadata and a compact completion summary;
+it does not inherit the organizer/cleaner authentication machinery. Historical
+recorded checksums remain evidence for those older releases. No study upload or
+new authentication catalog is required.
 
 ## Historical experiment artifacts
 

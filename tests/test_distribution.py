@@ -80,6 +80,8 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             names = archive.namelist()
             assert "kelpseg/cli/__init__.py" in names
             assert "kelpseg/paths.py" in names
+            assert "kelpseg/bands.py" in names
+            assert "kelpseg/chips.py" in names
             for module in (
                 "organize",
                 "organize_inputs",
@@ -89,6 +91,8 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
                 "clean",
                 "nodata",
                 "alignment",
+                "chip_inputs",
+                "chip",
             ):
                 assert f"kelpseg/prepare/{module}.py" in names
                 assert f"kelpseg/{module}.py" not in names
@@ -155,6 +159,7 @@ runpy.run_module("kelpseg", run_name="__main__")
             ("organize", "--help"),
             ("check", "--help"),
             ("clean", "--help"),
+            ("chip", "--help"),
         ):
             run(python, "-I", "-c", lazy_probe, *arguments, cwd=unrelated)
 
@@ -313,6 +318,45 @@ runpy.run_module("kelpseg", run_name="__main__")
             path: hashlib.sha256(path.read_bytes()).hexdigest()
             for path in original_hashes
         } == original_hashes
+
+        chip_recipe = unrelated / "chip.toml"
+        chip_recipe.write_text(
+            'source_band_names = ["red", "green", "blue"]\n'
+            "chip_size = 3\nstride = 2\n[label_mapping]\n0 = 0\n1 = 1\n3 = -100\n"
+        )
+        chips = unrelated / "chips"
+        chip_arguments = (
+            "chip",
+            "--images",
+            cleaned / "images",
+            "--labels",
+            cleaned / "labels",
+            "--output",
+            chips,
+            "--recipe",
+            chip_recipe,
+        )
+        assert "candidate windows: 4" in run(
+            command, *chip_arguments, "--dry-run", cwd=unrelated
+        )
+        assert not chips.exists()
+        run(command, *chip_arguments, cwd=unrelated)
+        run(
+            python,
+            "-I",
+            "-c",
+            "import csv, json, sys; from pathlib import Path; "
+            "from kelpseg.chips import load_chip; "
+            "p=Path(sys.argv[1]); "
+            "assert json.loads((p/'summary.json').read_text())['retained']==4; "
+            "rows=list(csv.DictReader((p/'windows.csv').open())); "
+            "x=load_chip(p/rows[-1]['payload'], ['red','green','blue'], 'rgb', 3); "
+            "assert x['image'].shape==(3,3,3) and x['padding']==(0,1,0,0); "
+            "assert (x['label'][2,:]==-100).all(); "
+            "assert not any(n in sys.modules for n in ('src','scripts','torch','wandb'))",
+            chips,
+            cwd=unrelated,
+        )
 
 
 def _directory_fixture(root: Path) -> tuple[Path, Path, Path, Path, Path]:

@@ -4,8 +4,8 @@
 
 The installed `src/kelpseg/` package provides the Typer command and read-only
 machine-path checks, generic byte-preserving organization, quick/full directory
-checks, and shared cleanup with optional labels. The checkout retains legacy
-Planet `src.*` modules, root
+checks, shared cleanup, and native-band chipping with optional labels. The
+checkout retains legacy Planet `src.*` modules, root
 `trainer.py`, `scripts/`, relevant configs, and focused tests until their
 replacements land. Unrelated application/model/export families are removed.
 The legacy recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
@@ -53,7 +53,7 @@ training command style is `uv run kelpseg train --recipe <recipe-file>`;
 it remains planned until the training task implements it. See
 [quickstart.md](quickstart.md) for working setup and preparation recipes.
 
-The preparation surface is `organize`, `check`, and shared `clean`;
+The preparation surface is `organize`, `check`, shared `clean`, and `chip`;
 there is no BC-specific command or intermediate. Task 029B implements
 direct-directory
 checking/cleanup for imagery with optional paired labels, without requiring an
@@ -108,7 +108,8 @@ Original grids need not match until the cleaning stage. The repaired historical
 merge supplies membership/provenance evidence, not original label payloads.
 See [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases)
 for stage boundaries and mapping requirements. Organization and cleanup are
-implemented; full production release construction/publication remains later work.
+implemented, and the full CA/BC releases are complete. Full chip production
+remains Task 032.
 
 Cleanup writes into a fresh sibling `.<output-name>.incomplete` directory and
 renames it to the requested output only after all checks pass. Failed runs leave
@@ -155,11 +156,32 @@ validated names/indices; RGB and RGB+NIR are not the first three/four PS8B bands
 Record normalization and initialization appropriate to each band recipe.
 
 Keep canonical background chips. Express nodata and training eligibility in
-metadata, retaining excluded identities/reasons; avoid destructive filtering
-machinery where an explicit manifest selection suffices. The historical
-1024/512 geometry, 50% nodata cutoff, and positive-only training selection are
-reference policies to re-examine during the data audit, not unexplained new
-defaults. Use ignore index `-100` for unscored labels and padding.
+metadata, retaining excluded identities/reasons. The installed chipper uses
+a configurable 512-pixel chip size, stride 256 and maximum of 50% image nodata;
+omit payloads only above that limit and keep their manifest records. Count
+actual source-window pixels, excluding artificial padding. The supporting
+[Task 031 study](../tasks/031_chipping_bands_and_tiny_walkthrough.md#512-pixel-analysis-outcome-2026-10-27)
+uses the approved 512/256 fixed grid with retained partial edge chips.
+Historical 1024/512 geometry and positive-only training selection do not become
+new defaults. Use ignore index `-100` for unscored labels and padding.
+
+`chip_inputs.py` validates a flat recipe, optional exact-key identity CSV and
+cleaned headers; `chip.py` reads windows sequentially without cleaning or
+realigning labels. Stored labels map explicitly to 0/1/-100, with image nodata
+forcing -100. Label masks/nodata metadata cannot erase stored background.
+One native uint16 HWC NPZ collection supplies all spectral variants. `bands.py`
+and `chips.py` select channels in declared order and pad while loading.
+
+Chipping writes only `chips/`, `windows.csv`, `sources.json`, `recipe.json` and
+`summary.json` (complete status), publishing the fresh incomplete directory by
+rename. Window rows join source metadata by `source_key`; original TIFF identity,
+crop offsets and dimensions allow reconstruction and later grouping. Crops of
+one original must agree on CRS and their offset-adjusted grid. Input headers
+are checked once during planning. Nodata and
+valid-imagery ignored targets have separate window counts. Those counts overlap;
+unique source coverage must be reconstructed from retained windows when needed.
+There is no parent authentication, hashing, receipt or recovery step in chipping.
+The [quickstart](quickstart.md#chip-cleaned-imagery) owns the recipe and CSV schema.
 
 ## Splits and loading
 
@@ -198,6 +220,15 @@ The old chip grid omits some trailing edge strips and has true-size undersized
 chips. Preserve its behavior for the legacy reference. New unlabeled mapping
 should cover the full intended valid source footprint; specify and test edge
 windows in its own task rather than claiming old artifacts cover every pixel.
+
+Training chips use a fixed regular grid without shifting trailing windows
+inward. Store partial edge chips at their true source size; pad bottom/right
+during loading with image fill 0 and label ignore -100, recording true extents
+and padding offsets. Sliding-window inference may shift its final windows inward
+to cover source edges with full-size inputs where possible. Training and inference grids
+need not match. Record actual inference offsets, avoid duplicate windows, and
+retain explicit padding/inversion for sources smaller than the input window.
+Apply the same image-only window rules during labeled scoring.
 
 ## Local verification
 

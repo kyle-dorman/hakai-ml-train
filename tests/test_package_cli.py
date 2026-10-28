@@ -117,7 +117,9 @@ def test_required_paths_never_discovers_a_file(
     assert "Missing option" in result.stderr
 
 
-@pytest.mark.parametrize("argument", ["--help", "--version", "check-paths", "organize"])
+@pytest.mark.parametrize(
+    "argument", ["--help", "--version", "check-paths", "organize", "chip"]
+)
 def test_module_entry_is_lightweight_in_real_process(
     tmp_path: Path, argument: str
 ) -> None:
@@ -142,7 +144,7 @@ runpy.run_module('kelpseg', run_name='__main__')
     environment = dict(os.environ)
     environment.pop("PYTHONPATH", None)
     arguments = [argument]
-    if argument == "organize":
+    if argument in ("organize", "chip"):
         arguments += ["--help"]
     if argument == "check-paths":
         roots = tmp_path / "roots"
@@ -163,7 +165,7 @@ runpy.run_module('kelpseg', run_name='__main__')
         assert "check-paths" in result.stdout
     elif argument == "--version":
         assert result.stdout.strip() == f"kelpseg {version('kelpseg')}"
-    elif argument == "organize":
+    elif argument in ("organize", "chip"):
         assert "--recipe" in result.stdout
     else:
         assert "Both roots are existing directories." in result.stdout

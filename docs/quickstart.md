@@ -1,8 +1,8 @@
 # Researcher quickstart
 
 The installed `kelpseg` command checks machine paths, organizes raw catalogs,
-checks ordinary image directories, and cleans imagery with optional paired
-labels into separate derived outputs. Training, prediction, and evaluation
+checks ordinary image directories, cleans imagery with optional paired labels,
+and chips cleaned TIFFs into one native-band collection. Training, prediction, and evaluation
 arrive in later tasks; see [the roadmap](todo.md). Retained legacy Planet code
 is development/reference material, outside the installed package.
 
@@ -452,7 +452,8 @@ references in the immutable organized parent.
 Use [Box recovery](box_backup.md#cleaned-cabc-v1) for the trusted manifest hash,
 fresh-directory fetch and byte verification. A restored release loads from its
 own `images/` and `labels/`; historical absolute source paths in provenance are
-not required. Chipping and the tiny walkthrough remain Task 031.
+not required. Continue with [chipping](#chip-cleaned-imagery) and the
+[tiny walkthrough](#tiny-real-data-walkthrough) below.
 
 ## Follow the preparation code
 
@@ -476,20 +477,201 @@ Every preparation write needs a fresh output. Existing completed releases can
 still be checked with `verify_organized_release` or `verify_cleaned_release`
 without rebuilding a plan, repeating the command or rewriting them.
 
+## Chip cleaned imagery
+
+Use cleaned uint16 imagery with declared nodata 0, all-band-zero invalid pixels,
+and 3, 4 or 8 explicitly named bands. Optional labels must be single-band uint8
+on the exact same grid. Use `check`/`clean` above if these conditions are unmet;
+chipping never realigns labels or repeats cleaning. Source TIFFs stay unchanged.
+
+```bash
+uv run kelpseg chip --images /data/cleaned/images --labels /data/cleaned/labels --output /data/chips/coast-v1 --recipe configs/chip/planet8.toml --dry-run
+uv run kelpseg chip --images /data/cleaned/images --labels /data/cleaned/labels --output /data/chips/coast-v1 --recipe configs/chip/planet8.toml
+```
+
+Run the second command only if the preview succeeds. Omit `--labels` for wholly
+image-only data. The preview shows input paths/bytes, native band order, window
+count, settings and output. It reads headers only; retention and pixel values
+are checked during chipping. Progress shows the current source, retained/omitted
+windows and output bytes. Both final and sibling `.<name>.incomplete` paths must
+be absent, and the output parent must exist. A failure stops immediately and
+leaves incomplete work for inspection; the next attempt needs a fresh output.
+
+Copy `configs/chip/planet8.toml` to change ordinary settings:
+
+```toml
+schema_version = 1
+chip_size = 512
+stride = 256
+max_nodata_pct = 50
+source_band_names = ["coastal_blue", "blue", "green_i", "green", "yellow", "red", "rededge", "nir"]
+
+[label_mapping]
+0 = 0
+1 = 1
+2 = 0
+3 = -100
+4 = 0
+```
+
+The band order is the user-declared assumption for the current CA/BC collection;
+it is not independently established by every TIFF header. Contradictory explicit
+header descriptions fail. Other collections need their own band declarations
+and label mapping. Unknown settings, duplicate bands and invalid ranges fail.
+For native four-band or RGB imagery, declare its actual order and use that same
+order when loading; channel count alone never selects a physical band recipe.
+
+The grid starts at zero and advances by `stride`, stopping at the first window
+that reaches the end. An axis of length 513 yields starts 0/256 and widths
+512/257. Windows never shift inward. Chips keep their true sizes without stored
+padding. Nodata percentages use actual source pixels; exactly 50% is retained,
+above 50% is omitted. Background-only chips remain. Mapping is explicit: label
+1 is kelp, 0/2/4 background, and 3 ignore. Image nodata always forces target
+-100; valid label zero stays background even when TIFF metadata calls it nodata.
+
+Outputs are `chips/<source_key>/r<row>_c<col>.npz`, `windows.csv`, `sources.json`,
+`recipe.json`, and `summary.json`. The final directory appears after the entire
+run succeeds. NPZ files contain HWC `image` uint16 and optional HW `label` int8,
+with no pickle or normalization. Every candidate window has a CSV row, including
+omitted windows with an empty payload path. Source metadata plus local/original
+row/column and true dimensions determine spatial placement; the crop transform
+maps local coordinates to the CRS. Counts distinguish image nodata, mapped
+background/kelp/ignore and ignore over valid imagery. Window counts overlap and
+must not be interpreted as unique source coverage. No checksum, authentication
+catalog or transfer receipt is produced.
+
+For scientific identity, add `--metadata /data/identity.csv`. The optional UTF-8
+CSV uses these columns (only `source_key` is required; omit or leave other
+columns blank for unknown values):
+
+```text
+source_key,source_id,original_tiff,dataset_id,release_id,region,acquisition_date,row_offset,col_offset,original_height,original_width
+```
+
+`source_key` is the exact image path relative to `--images`, without `.tif` or
+`.tiff`; all selected images must join once, with no extra rows. `source_id` and
+`original_tiff` identify the original source, shared by all its crops. Dates use
+`YYYY-MM-DD`. Offsets are nonnegative pixels on that original TIFF; default zero.
+A nonzero offset requires the corresponding original dimension, and crops must
+fit within it. Original dimensions otherwise default to the selected TIFF size.
+Contradictory region/date/dimensions or geographic grids for one original
+identity fail; crop offsets must lead back to the same original grid. Without
+metadata, relative TIFF identity and grid remain known; region/date/dataset/
+release stay null. Do not split crops of one original TIFF across partitions.
+
+The same workflow and loading functions work in Python:
+
+```python
+from kelpseg.prepare.chip_inputs import build_chip_plan, load_chip_recipe
+from kelpseg.prepare.chip import chip_dataset
+from kelpseg.chips import load_chip
+
+recipe = load_chip_recipe("configs/chip/planet8.toml")
+plan = build_chip_plan("/data/cleaned/images", "/data/cleaned/labels",
+                       "/data/chips/coast-v1", recipe,
+                       metadata="/data/identity.csv")
+output = chip_dataset(plan)
+# Use a retained payload path from windows.csv:
+chip = load_chip(output / "chips/scene/r0_c0.npz",
+                 recipe.source_band_names, selection="rgbnir",
+                 chip_size=recipe.chip_size)
+```
+
+`selection="all"` keeps native order; `rgbnir` selects red/green/blue/NIR and
+`rgb` selects red/green/blue. Explicit ordered names or one-based indices also
+work. For the current eight-band recipe RGB+NIR indices are `[6, 4, 2, 8]`,
+RGB `[6, 4, 2]`. No spectral payload copies are needed. Label mapping happens
+only during chipping. Image validity is computed
+from all native bands before selection; a zero selected band alone is valid.
+Loading pads bottom/right with image zero and label -100, returning true height/
+width and `(top, bottom, left, right)` padding. The returned nodata mask marks
+native nodata only; artificial padding stays separate. Remove padding with
+`array[:true_height, :true_width]` before placing results on the source grid.
+
+## Tiny real-data walkthrough
+
+The reusable inputs contain nine small CA/BC crop pairs across three regions
+and three dates per region. They total 54,463,809 bytes including the identity
+CSV and selection note; eight crops are 768 square and one is 768 by 769.
+This example proves chipping/loading only. It will grow with later workflows.
+
+Set `data_root` to the same artifact root as your local path settings. Fetch
+once into a fresh directory (skip this step when that local input already exists):
+
+```bash
+(
+  set -e
+  data_root='/Volumes/x10pro/kelpseg'
+  tiny="$data_root/data/examples/tiny_ca_bc/v1"
+  test ! -e "$tiny"
+  mkdir -p "$(dirname "$tiny")"
+  rclone copy kelp-box:kelpseg/data/examples/tiny_ca_bc/v1 "$tiny" --immutable --size-only --ignore-checksum --transfers 1 --checkers 2
+)
+```
+
+The copy uses ordinary paths/sizes; it performs no checksum verification.
+Then work offline from those local inputs. Set a fresh `run` name for each
+repeat; do not reuse an existing final or incomplete output:
+
+```bash
+(
+  set -e
+  data_root='/Volumes/x10pro/kelpseg'
+  tiny="$data_root/data/examples/tiny_ca_bc/v1"
+  run="$data_root/examples/runs/my-tiny-chips-v1"
+  mkdir -p "$(dirname "$run")"
+  uv run kelpseg chip --images "$tiny/images" --labels "$tiny/labels" --metadata "$tiny/metadata.csv" --output "$run" --recipe configs/chip/planet8.toml --dry-run
+  uv run kelpseg chip --images "$tiny/images" --labels "$tiny/labels" --metadata "$tiny/metadata.csv" --output "$run" --recipe configs/chip/planet8.toml
+)
+```
+
+Expect 9 sources, 38 candidate windows, 38 retained payloads (including 21
+without kelp), and about 102 MB of generated output. The retained windows cover
+all 5,309,184 crop pixels, including 150,741 kelp pixels. There are 57,329 image
+nodata/ignored pixels and no uncovered crop pixels. These are bounded example
+results, not full-collection coverage or model performance.
+
+Inspect a partial-edge chip from that run. Set the last path component to the
+run name chosen above:
+
+```python
+import csv
+import json
+from kelpseg.paths import load_paths
+from kelpseg.chips import load_chip
+
+run = load_paths("paths.local.toml").data_root / "examples/runs/my-tiny-chips-v1"
+recipe = json.loads((run / "recipe.json").read_text())
+with (run / "windows.csv").open(newline="") as stream:
+    edge = next(row for row in csv.DictReader(stream)
+                if row["payload"] and int(row["width"]) == 257)
+for selection in ("all", "rgbnir", "rgb"):
+    chip = load_chip(run / edge["payload"], recipe["source_band_names"], selection)
+    print(selection, chip["image"].shape, chip["padding"])
+    h, w = chip["true_height"], chip["true_width"]
+    true_image = chip["image"][:h, :w]  # 512 x 257, ready for source placement
+    assert chip["padding"] == (0, 0, 0, 255)
+    assert (chip["image"][:, w:] == 0).all()
+    assert (chip["label"][:, w:] == -100).all()
+```
+
+Expected shapes are `(512, 512, 8)`, `(512, 512, 4)`, `(512, 512, 3)`. Crop
+metadata retains original TIFF IDs/windows; future split assignments must group
+by original source, not by crop or chip. Keep inputs closed and outputs separate.
+
 ## Later workflows and outputs
 
 The selected future training style is
 `uv run kelpseg train --recipe <recipe-file>`. It is not available yet.
-Band/chip selection, training, prediction, scoring, LORO, and
+Training, prediction, scoring, LORO, and
 adding a region will gain copyable recipes here when implemented. Most settings
 will live in those recipes, with a few explicit command options.
 
 Later run-producing commands will use `<runs_root>/<run_id>/`, with resolved
 settings/input identities at the root and `checkpoints/`, `metrics/`, and
 `figures/` underneath. This is an agreed layout, not an implemented run manager.
-The reusable real-data walkthrough begins after Box and cleaned-data
-establishment in Task 031. Current automated fixtures use temporary synthetic
-data, requiring no Box/W&B login, GPU, model weights, or research-data download.
+The reusable real-data walkthrough above covers Task 031. Current automated
+fixtures use temporary synthetic data, requiring no Box/W&B login, GPU, model weights, or research-data download.
 
 See [data and artifacts](data_artifacts.md) for storage/backup rules and
 [experiments](experiments.md) for model, checkpoint, and run identity rules.

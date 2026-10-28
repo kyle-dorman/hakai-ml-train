@@ -21,9 +21,13 @@ and final evidence-marker authentication. Task 030A's independent
 [organized publication](../tasks/030a_build_and_publish_organized.md#outcome-2026-10-27)
 is also complete; its immutable parent remains unchanged.
 
-Task 031 planning is running separately, using the verified cleaned release and
-[Box recovery recipe](box_backup.md#cleaned-cabc-v1). This closeout stops after
-Tasks 030A/030B.
+[Task 031 is complete](../tasks/031_chipping_bands_and_tiny_walkthrough.md#outcome-2026-10-27):
+installed chipping, 8/4/3-band loading and the nine-crop real walkthrough passed.
+The follow-up correctness/simplicity review also passed; details remain in its
+[review outcome](../tasks/031_chipping_bands_and_tiny_walkthrough.md#follow-up-review-outcome-2026-10-27).
+Next action: when requested, scope Task 032 for full chip production and external
+temporal/LORO assignments using the practical identity/window schema. No Task 032
+implementation has started.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -45,7 +49,7 @@ provenance contract lives in [data_artifacts.md](data_artifacts.md#planned-raw-i
 
 ## Ordered roadmap
 
-Tasks through 030B are complete. Remaining later rows are ordered scope slots, not permission
+Tasks through 031 are complete. Remaining later rows are ordered scope slots, not permission
 to execute multiple tasks in one window. Create and refine each contract when
 selected; split further if needed.
 
@@ -60,7 +64,7 @@ selected; split further if needed.
 | [029B](../tasks/029b_clean_organized_sources.md) | Two-tier check and shared cleanup → variant 3 — complete | Direct directories, optional labels/catalogs; reused logic/tests; image nodata 0, label ignore 3; optional QA masks |
 | [030A](../tasks/030a_build_and_publish_organized.md) | Build and publish organized intermediate 2 — complete | 369 pairs/418 companions; all 1,163 Box checksums, bounded restore and final evidence marker verified |
 | [030B](../tasks/030b_build_and_publish_cleaned.md) | Build and publish cleaned intermediate 3 — complete | All 369 pairs/12 regions; full cleaned QA, 747 Box checksums, bounded restore and final evidence marker verified |
-| 031 | Simplify chipping/band selection and start the tiny walkthrough | After Box and cleaned release: small real-data example, source identity, edge windows, nodata, and 8/RGB+NIR/RGB inputs |
+| [031](../tasks/031_chipping_bands_and_tiny_walkthrough.md) | Simplify chipping/band selection and start the tiny walkthrough — complete | Configurable 512/256/50, native bands, partial-edge loading; nine-crop Box fetch/offline smoke and focused checks pass |
 | 032 | Produce chip releases and collection-aware external split assignments | Any declared dataset/region/combination; exact release references, temporal/LORO groups, renamed-duplicate checks and fixed test scopes; Box verification |
 | 033 | Simple baseline recipes and portable saved models | Ordinary recipe values; local update/validation/save/load/resume for 8/4/3 bands; weights plus prediction settings |
 | 034 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |

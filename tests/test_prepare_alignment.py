@@ -10,7 +10,6 @@ from rasterio.enums import Resampling
 from rasterio.transform import from_origin
 from rasterio.warp import transform_bounds
 from rasterio.windows import Window
-from repair_planet8b_nodata_metadata import _label_audit
 
 from kelpseg.prepare.alignment import (
     aligned_label,
@@ -64,23 +63,14 @@ def test_package_alignment_matches_legacy_exact_expected_grid(tmp_path):
         np.testing.assert_array_equal(result, historical.read(1))
     assert result.tolist() == [[3, 3, 3, 3], [3, 3, 1, 3], [3, 1, 0, 3], [3, 3, 3, 3]]
     assert int((~coverage).sum()) == old.outside_source_label_pixels == 12
-    legacy_audit = _label_audit(
-        image_path=image_path,
-        label_path=legacy_path,
-        dataset="ca",
-        nodata_values=(0,) * 8,
-    )
-    counts = audit_label_block(original_nodata, result)
-    for new, previous in (
-        ("total", "total_pixel_count"),
-        ("image_nodata", "image_nodata_pixel_count"),
-        ("tp", "true_positive_count"),
-        ("fp", "false_positive_count"),
-        ("fn", "false_negative_count"),
-        ("tn", "true_negative_count"),
-    ):
-        assert counts[new] == legacy_audit[previous]
-    assert counts["tp"] + counts["fp"] + counts["fn"] + counts["tn"] == counts["total"]
+    assert audit_label_block(original_nodata, result) == {
+        "total": 16,
+        "image_nodata": 1,
+        "tp": 1,
+        "fp": 12,
+        "fn": 0,
+        "tn": 3,
+    }
 
 
 @pytest.mark.parametrize(

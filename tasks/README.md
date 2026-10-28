@@ -58,6 +58,7 @@ are authorized by Task 024.
 | [029B](029b_clean_organized_sources.md) | Local implementation/fixtures | Complete | All installed preparation one-pass, redundant work/recovery removed; 344 tests; [current outcome](029b_clean_organized_sources.md#preparation-wide-simplification-outcome-2026-10-27); next Task 030A |
 | [030A](030a_build_and_publish_organized.md) | Local production/Box | Complete | Immutable 369-pair local parent; all 1,163 Box checksums, 90.7 MB bounded restore and final evidence marker verified; 030B also complete |
 | [030B](030b_build_and_publish_cleaned.md) | Local production/Box | Complete | 369 aligned pairs/12 regions; full QA, 747 Box checksums, 108.3 MB bounded restore and final marker verified; next existing Task 031 planning |
+| [031](031_chipping_bands_and_tiny_walkthrough.md) | Local implementation/smoke | Complete | Installed 512/256/50 chipper, native 8/4/3 selection, partial-edge loading and nine-crop Box fetch/offline walkthrough; correctness/simplicity review passed; next Task 032 |
 
 ## Historical queue: Tasks 000–023
 

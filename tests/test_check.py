@@ -392,3 +392,18 @@ def test_unsupported_headers_skip_pixels_and_later_sources(example, monkeypatch)
     assert len(result.sources) == 1
     assert result.scanned_image_pixels == result.scanned_label_pixels == 0
     assert "remaining sources skipped after failure" in result.skipped_checks
+
+
+@pytest.mark.parametrize("first_name", ["red", "blue"])
+def test_partial_band_descriptions_cannot_contradict_declared_order(
+    example, first_name
+):
+    images, labels, recipe = example
+    with rasterio.open(images / "new-coast.tif", "r+") as image:
+        image.set_band_description(1, first_name)
+    recipe = replace(recipe, band_names=("red", "green", "blue"))
+    result = check_inputs(images, labels, recipe)
+    assert any(issue.code == "band_names" for issue in result.issues) == (
+        first_name != "red"
+    )
+    assert any("physical band" in unknown for unknown in result.unknowns)

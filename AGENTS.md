@@ -37,6 +37,14 @@ full task contracts when selected; split them further when needed.
   messages for researchers with limited Python/ML experience. The current
   one-pass cleaner is an upper bound on file complexity, not a target to grow
   toward. Prefer smaller files that each do one clear job.
+- Keep validation focused on ordinary input mistakes and scientific correctness:
+  settings, identity joins, spatial alignment, and initial overwrite refusal.
+  Assume inputs stay unchanged and steps run sequentially. Do not add guards
+  for hypothetical mid-run edits, concurrent writers, or outputs appearing
+  during execution. Trust earlier validated steps instead of repeating payload
+  audits downstream. Do not add tests solely for these hypothetical defenses.
+  Add extra protection only for an explicitly requested requirement or a
+  demonstrated problem in normal supported use.
 - Run steps in a plain sequence. If a step fails, stop; do not run the next step.
   Restart, resume, recovery and reuse of partial work are out of scope unless
   the user explicitly requests them. An agent-written task contract alone does

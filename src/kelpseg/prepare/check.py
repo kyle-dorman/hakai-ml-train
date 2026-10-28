@@ -539,13 +539,16 @@ def _check_image_header(image, pair, recipe, issues, unknowns):
         logger.info(
             "Band identity: %s has no established physical band names", pair.key
         )
-    elif recipe.band_names and tuple(names) != recipe.band_names:
-        _add_issue(
-            issues,
-            "band_names",
-            pair.image,
-            f"Header band names {names} differ from expected {recipe.band_names}.",
-        )
+    if recipe.band_names:
+        for name, expected in zip(names, recipe.band_names, strict=False):
+            if name and not name.lower().startswith("band_") and name != expected:
+                _add_issue(
+                    issues,
+                    "band_names",
+                    pair.image,
+                    f"Header band names {names} differ from expected {recipe.band_names}.",
+                )
+                break
 
     # A missing source declaration may use only the recipe's explicit fallback.
     # Cleaned data must declare zero; they never inherit a source fallback.

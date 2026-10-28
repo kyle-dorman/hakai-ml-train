@@ -7,7 +7,8 @@ and adaptation to new regions.
 
 The installed `kelpseg` package currently provides help/version and read-only
 machine-path checks, byte-preserving raw organization from explicit catalogs,
-quick/full directory checks, and shared cleanup with optional labels. Preparation
+quick/full directory checks, shared cleanup, and native-band chipping with optional
+labels. The chip loader selects 8/4/3 bands and pads partial edges. Preparation
 runs once into a fresh output and stops on failure, with no restart support. Training
 and prediction commands arrive in later tasks. Retained legacy Planet code/tests
 support the ongoing rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
@@ -77,8 +78,9 @@ preserves source bytes, while cleanup records explicit transformations. The
 scoped audit is complete; existing repaired datasets remain historical evidence.
 See [docs/data_artifacts.md](docs/data_artifacts.md) for variant/provenance rules
 and [docs/cleanup_provenance.md](docs/cleanup_provenance.md) for established facts
-and remaining evidence limits. The preparation commands are implemented and bounded-smoke verified; full
-organized/cleaned release materialization and publication remain later tasks.
+and remaining evidence limits. The organized and cleaned CA/BC releases are
+complete. Chipping has a bounded real-data walkthrough; full chip production
+and splits remain Task 032.
 
 The first spectral comparison is interpreted as 8 bands, RGB+NIR, and RGB from
 the same acquisitions. Start with the working SegFormer recipe; a possible RGB
