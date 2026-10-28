@@ -15,12 +15,15 @@ Preparation code is grouped in `kelpseg.prepare` with clearly commented small
 functions and default phase/file/count progress logs.
 Later workflows retain legacy code until their replacements; originals remain immutable.
 
-Current active task: none.
+Task 030B is [complete](../tasks/030b_build_and_publish_cleaned.md#outcome-2026-10-27):
+all 369 cleaned pairs passed full QA, exact Box checksums, bounded restoration
+and final evidence-marker authentication. Task 030A's independent
+[organized publication](../tasks/030a_build_and_publish_organized.md#outcome-2026-10-27)
+is also complete; its immutable parent remains unchanged.
 
-Next action: when requested, select Task 030A, beginning with
-[Task 029B's current handoff](../tasks/029b_clean_organized_sources.md#preparation-wide-simplification-outcome-2026-10-27).
-It owns the full organized build, source QA and verified Box publication;
-execution has not started. Full cleaned publication remains Task 030B.
+Task 031 planning is running separately, using the verified cleaned release and
+[Box recovery recipe](box_backup.md#cleaned-cabc-v1). This closeout stops after
+Tasks 030A/030B.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -42,7 +45,7 @@ provenance contract lives in [data_artifacts.md](data_artifacts.md#planned-raw-i
 
 ## Ordered roadmap
 
-Tasks through 029B are complete; Task 030A is next. Remaining later rows are ordered scope slots, not permission
+Tasks through 030B are complete. Remaining later rows are ordered scope slots, not permission
 to execute multiple tasks in one window. Create and refine each contract when
 selected; split further if needed.
 
@@ -55,8 +58,8 @@ selected; split further if needed.
 | [028](../tasks/028_package_guide_and_first_removal.md) | Installable uv package, researcher guide, and first removal pass — complete | Installed Typer/path checks; wheel/sdist isolation; 139 CPU tests; guide and bounded removal |
 | [029A](../tasks/029a_organize_raw_sources.md) | Implement raw variant 1 → organized intermediate 2 — complete | One organizer for independent datasets; complete 369-pair metadata plan; bounded byte-preserving smoke, companion/alias and restart checks |
 | [029B](../tasks/029b_clean_organized_sources.md) | Two-tier check and shared cleanup → variant 3 — complete | Direct directories, optional labels/catalogs; reused logic/tests; image nodata 0, label ignore 3; optional QA masks |
-| 030A | Build and publish organized intermediate 2 — pending | Full 369-pair membership, unchanged bytes/companions, source QA, verified Box checksums and bounded restore |
-| 030B | Build and publish cleaned intermediate 3 | Separate unsplit release, recorded transformations and parent hashes, QA, and verified Box copy |
+| [030A](../tasks/030a_build_and_publish_organized.md) | Build and publish organized intermediate 2 — complete | 369 pairs/418 companions; all 1,163 Box checksums, bounded restore and final evidence marker verified |
+| [030B](../tasks/030b_build_and_publish_cleaned.md) | Build and publish cleaned intermediate 3 — complete | All 369 pairs/12 regions; full cleaned QA, 747 Box checksums, bounded restore and final evidence marker verified |
 | 031 | Simplify chipping/band selection and start the tiny walkthrough | After Box and cleaned release: small real-data example, source identity, edge windows, nodata, and 8/RGB+NIR/RGB inputs |
 | 032 | Produce chip releases and collection-aware external split assignments | Any declared dataset/region/combination; exact release references, temporal/LORO groups, renamed-duplicate checks and fixed test scopes; Box verification |
 | 033 | Simple baseline recipes and portable saved models | Ordinary recipe values; local update/validation/save/load/resume for 8/4/3 bands; weights plus prediction settings |

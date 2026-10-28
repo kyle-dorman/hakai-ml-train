@@ -40,7 +40,11 @@ alias first. Task 027 verified copies while preserving this variant-1 boundary.
 
 ## Box project organization and upload verification
 
-Use the verified project root `kelp-box:kelpseg` and its [recorded folder identity](box_backup.md). The following layout reserves locations for future work; only the Task 027 payload and transfer paths have been populated:
+Use the verified project root `kelp-box:kelpseg` and its [recorded folder identity](box_backup.md).
+Task 027 populated the raw/reference/audit paths; Task 030A verified the organized
+`data/2_organized/ca_bc/v1` release and its separate transfer evidence. Task 030B
+verified `data/3_cleaned/ca_bc/v1` and its own evidence. Other locations below
+are reserved until their owning tasks publish them:
 
 ```text
 kelpseg/
@@ -57,6 +61,8 @@ kelpseg/
   audits/task026_originals_v1/
   runs/                        # later: experiments/models/results
   transfers/task027_raw_reference_audit_v1/  # receipts, checks, completion
+  transfers/task030a_organized_ca_bc_v1/     # organized QA, checks, completion
+  transfers/task030b_cleaned_ca_bc_v1/       # cleaned QA, checks, completion
 ```
 
 Create only needed folders as work arrives. Keep versioned dataset payloads at
@@ -326,13 +332,33 @@ current input catalog from the named Task 026 metadata and Task 027 trusted
 archive catalog. It does not read source payloads. Other datasets supply the
 same tables directly.
 
-The full 369-pair metadata plan is reconciled. Task 029A permits only a separate
-two-pair smoke dataset; it does not create or publish the full `ca_bc/v1`
-organized release. Task 030A owns full member hashing/materialization, production
-QA and verified Box copy. Shared cleanup is implemented; Task 030B owns the
-full cleaned build/publication. Source grids may differ, companions retain
-original internal strings, and internal-TIFF header
-records do not establish unknown physical band or mask semantics.
+The full unsplit `ca_bc/v1` organized release is verified locally at
+`/Volumes/x10pro/kelpseg/data/2_organized/ca_bc/v1` and on Box at the same project
+relative path: 369 pairs, 418 companions, 3,919 aliases, 1,163 total files and
+28,568,499,959 bytes. Root manifest SHA-256:
+`435e1fbc30d413f9941c3bcb56be074df9e2e863e564479b05fca04c87c817a8`.
+[Task 030A's outcome](../tasks/030a_build_and_publish_organized.md#outcome-2026-10-27)
+owns the complete identity and QA/transfer evidence; [Box recovery](box_backup.md#restore-the-organized-cabc-release)
+owns the fetch/check recipe. All primary pixels decoded; 34 grid mismatches,
+355 label nodata declarations and 326 paired nodata findings remain preserved
+in the immutable parent; Task 030B repaired its separate cleaned output. Companion
+internal strings stay unchanged, and internal-TIFF headers do not establish
+unknown physical band or mask semantics.
+
+The full unsplit cleaned `ca_bc/v1` is verified locally at
+`/Volumes/x10pro/kelpseg/data/3_cleaned/ca_bc/v1` and on Box at the same project
+relative path: 369 aligned pairs/12 regions, 747 files / 18,662,320,805 bytes.
+Its authenticated root manifest SHA-256 is
+`43815a8a7e412d0f0ed021c813c6c3b4f3a9a532a4fcbb3f9624a91bbdd5ba61`,
+derived from the organized parent identity above. All output pixels passed full
+cleaned QA; exact remote inventory/checksums and a bounded three-pair restore
+passed. All 418 companions remain inactive hashed parent references, with exact
+source/region/alias/asset snapshots; they are not copied active output payloads.
+Labels retain categories 0–4, image nodata 0/label ignore 3, and the approved
+outside-annotation exclusion. Source absolute paths are operational provenance;
+restored images/labels load independently. [Task 030B](../tasks/030b_build_and_publish_cleaned.md#outcome-2026-10-27)
+owns detailed evidence and limits; [Box recovery](box_backup.md#cleaned-cabc-v1)
+owns trusted completion/catalog identities and the fresh-directory recipe.
 
 Published release payloads are immutable and include completion hashes over
 all payload/control files. The organizer's portable plan identity covers

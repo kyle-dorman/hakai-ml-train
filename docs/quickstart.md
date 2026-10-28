@@ -100,14 +100,20 @@ unsplit release with stable names. Source grids, classes, nodata and band order
 stay unchanged. A valid plan checks declarations and member listings; it does
 not establish verified member bytes until copying succeeds.
 
+For a first build into a fresh destination, preview before copying. The current
+CA/BC `v1` is already closed, so this recipe now refuses that existing output;
+fetch the published release below or select a fresh release ID for a new build.
+
 ```bash
 uv run kelpseg organize --recipe configs/organize/ca_bc.toml --paths paths.local.toml --dry-run
 ```
 
-The current CA/BC recipe needs the reconstructed external input catalog. Its
-369-pair plan is reconciled; full materialization and Box publication belong to
-Task 030A. The metadata-only reconstruction is reproducible from the existing
-Task 026/027 evidence:
+The current CA/BC recipe uses the existing reconstructed external input catalog.
+Task 030A built and verified the full 369-pair organized release; use the
+[Box recovery recipe](box_backup.md#restore-the-organized-cabc-release) to fetch
+it into a fresh directory. Do not rerun organization against the closed release.
+The metadata-only catalog reconstruction is reproducible from Task 026/027
+evidence:
 
 ```python
 from pathlib import Path
@@ -374,8 +380,10 @@ normal Python logging.
 An optional `--parent /data/2_organized/coast/v1` verifies an existing organized
 release and carries its supplied identities/crosswalks into cleanup provenance.
 It is unnecessary for ordinary directories. Production releases keep exact
-variant-2 parent identities; full CA/BC materialization and Box publication
-remain Tasks 030A/030B.
+variant-2 parent identities. The CA/BC parent is
+`/Volumes/x10pro/kelpseg/data/2_organized/ca_bc/v1`; its authenticated release
+identity and fetch/check recipe are in [Box recovery](box_backup.md#restore-the-organized-cabc-release).
+Task 030B completed the separate full cleaned release; see the production recipe below.
 
 Cleanup must finish in one run. It writes directly into a fresh sibling
 `.<output-name>.incomplete` directory, then renames that directory to the final
@@ -419,6 +427,32 @@ For image-only use pass `None` for labels. These plain functions return typed va
 exit codes. Source-aware nodata and nearest-alignment functions are shared with
 the retained correctness coverage. See [Task 029B](../tasks/029b_clean_organized_sources.md)
 for the migration map and bounded verification evidence.
+
+## Full CA/BC cleaned release
+
+Task 030B used the following commands on all 369 pairs after authenticating the
+organized parent's local-ready handoff. These commands are implemented; `v1`
+is now closed, so do not rerun into it. For a new production attempt, choose a
+fresh final/staging name and keep separate evidence.
+
+```bash
+organized_root='/Volumes/x10pro/kelpseg/data/2_organized/ca_bc/v1'
+cleaned_root='/Volumes/x10pro/kelpseg/data/3_cleaned/ca_bc/v1'
+uv run --frozen --no-sync kelpseg clean --images "$organized_root/images" --labels "$organized_root/labels" --parent "$organized_root" --output "$cleaned_root" --recipe configs/clean/planet8.toml --dry-run
+uv run --frozen --no-sync kelpseg clean --images "$organized_root/images" --labels "$organized_root/labels" --parent "$organized_root" --output "$cleaned_root" --recipe configs/clean/planet8.toml
+```
+
+Run the second step only after the preview succeeds. The cleaner performs full
+source and output QA automatically. Production retained eight uint16 bands and
+categories 0–4, image nodata 0/label ignore 3, and all parent identities. Its
+747-file release includes 369 aligned pairs and compact provenance/QA, with no
+active original sidecars. All 418 companion associations remain inactive
+references in the immutable organized parent.
+
+Use [Box recovery](box_backup.md#cleaned-cabc-v1) for the trusted manifest hash,
+fresh-directory fetch and byte verification. A restored release loads from its
+own `images/` and `labels/`; historical absolute source paths in provenance are
+not required. Chipping and the tiny walkthrough remain Task 031.
 
 ## Follow the preparation code
 
