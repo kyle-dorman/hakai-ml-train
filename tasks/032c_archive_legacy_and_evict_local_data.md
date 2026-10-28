@@ -150,23 +150,24 @@ written. The deletion phase may now proceed for the exact roots above.
 ## Outcome (2026-10-28)
 
 The user-approved plan and pre-deletion checkpoint above were written before
-execution. All 16 listed deletion roots were removed in a plain sequential
-operation, with no deletion outside that list. Empty organized parent directories
-were removed after their only release was evicted.
+execution. All 16 primary deletion roots and the two separately pre-documented
+organized-smoke addendum roots were removed in plain sequential operations.
+No deletion occurred outside those two explicit lists. Empty organized parent
+directories were removed after all local organized copies were evicted.
 
 ### Measured local results
 
 - Historical archive: `/Volumes/x10pro/kelpseg/history/legacy_pre_rebuild_v1/`,
-  **911 files / 33,991,103 bytes**, including README, preserved original relative
+  **938 files / 34,123,571 bytes**, including README, preserved original relative
   paths, bootstrap source/test snapshots and a copy of the finished catalog.
-  All 910 copied files passed individual size and direct byte-equality checks
+  All 937 copied files passed individual size and direct byte-equality checks
   before source deletion. The 31 pre-repair label TIFFs total 1,753,657 bytes.
-- Deleted: **14,137 files / 409,973,307,501 logical bytes**. This includes the
+- Deleted: **14,177 files / 410,017,227,683 logical bytes**. This includes the
   raw ZIPs, organized v1, superseded datasets, old ZIP/TAR/part duplicates,
   obsolete one-epoch local checkpoints, and generated smoke/restore/example
-  copies. The exact per-root counts/sizes are the pre-execution table above.
+  copies. The exact per-root counts/sizes are the main and addendum pre-execution tables.
 - Observed filesystem free bytes increased from **542,697,906,176** before
-  archiving to **952,694,804,480** after deletion: **409,996,898,304 bytes**
+  archiving to **952,718,057,472** after all deletions: **410,020,151,296 bytes**
   (about 410.0 GB). Logical deleted sizes and observed filesystem free-space
   changes are separate measurements; the archive remains allocated locally.
 - Current cleaned imagery, canonical chips, split/collection controls, tiny
@@ -227,3 +228,32 @@ analyses/normalization decisions. Do not restore raw or organized data merely
 to train. For future reconstruction use the retained catalog and documented Box
 fetch recipe; do not recreate the retired historical bootstrap or resurrect old
 dataset layouts. Stop this cleanup task here.
+
+## Pre-execution addendum: remaining organized smoke copies
+
+Recorded **2026-10-28T11:17:56-07:00**
+before this additional deletion. Final inspection found two older organized
+smoke datasets outside the production-v1 deletion target. They are also within
+the user's authorized obsolete-local/organized-copy cleanup:
+
+| Additional project-relative target | Files | Logical bytes |
+|---|---:|---:|
+| `data/2_organized/task029a_smoke_ca_bc/` | 25 | 21,965,646 |
+| `data/2_organized/task029b_prepare_review/` | 15 | 21,954,536 |
+
+First copy their non-raster/control files into the same history archive, preserving
+relative paths and excluding old lock files. Verify direct bytes and sizes, then
+remove only these two directories and the now-empty `data/2_organized/` parent.
+Keep every cleaned/chip/analysis/reference root unchanged. No Box operation.
+The main cleanup is already committed as `336b25c`; concurrent Task 033 planning
+was preserved in its separate commit. This addendum does not change that work.
+
+### Addendum completion
+
+Both additional organized smoke copies were removed after archiving and direct
+byte-checking **27 control files / 132,468 bytes**. The additional deletion was
+**40 files / 43,920,182 logical bytes**. `data/2_organized/` is now absent.
+Final combined archive/deletion/free-space totals are reported in the outcome
+above; the main-phase pre-deletion checkpoint remains an unchanged historical
+observation. All retained current/evidence roots remain present. No Box command
+or further pipeline change was made.
