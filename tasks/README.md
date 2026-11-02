@@ -68,10 +68,10 @@ are authorized by Task 024.
 | [032A.1](032a_1_nonoverlapping_chip_evaluation.md) | Local selection/tiny smoke | Complete | Disjoint existing-chip validation/test; overlap exclusions and geometric coverage verified; next 032B |
 | [032B](032b_produce_and_publish_chip_release.md) | Local production/Box | Complete | 26,573 canonical chips; both variants/ten folds; portable declaration, Box path/size checks, bounded restore and offline tiny v2 pass; next Task 033 |
 | [032C](032c_archive_legacy_and_evict_local_data.md) | Local archive/code/data cleanup | Complete | Prewritten plan; 34 MB historical archive; bootstrap retired; about 410 GB reclaimed; current data/evidence retained and Box untouched |
-| [033](033_baseline_training_and_portable_models.md) | Shared planning | Split into 033A–033G | Exact shared decisions/reference; current user instruction is documentation only |
-| [033A](033a_individual_augmentation_previews.md) | Local preview implementation | Planned first | Individual legacy/channel-shift/band-dropout strength sweeps; no stacking or training |
-| [033B](033b_review_augmentation_settings.md) | User review/docs | Planned | Select strengths/probabilities/fill from isolated previews; combinations only after review |
-| [033C](033c_simplify_pixel_statistics.md) | Local NumPy utility | Planned | Simplify into prepare/ and reproduce capped statistics |
+| [033](033_baseline_training_and_portable_models.md) | Shared planning | Split into 033A–033G | Exact normalization and approved augmentation policy; remaining children planned |
+| [033A](033a_individual_augmentation_previews.md) | Local preview implementation | Complete | Wider stock native sweeps and coarse count/size modes; next 033B review |
+| [033B](033b_review_augmentation_settings.md) | User review/combined preview | Complete | Combined outputs approved; final native recipe and quality pass complete; next 033C |
+| [033C](033c_simplify_pixel_statistics.md) | Local NumPy utility | Next, not started | Simplify into prepare/ and reproduce capped statistics |
 | [033D](033d_model_and_training_inputs.md) | Local model/input checks | Planned | Manifest tensors, shared preprocessing and bounded 8/4/3 real-model updates |
 | [033E](033e_training_validation_and_ema.md) | Local training/validation | Planned | Strict recipes, EMA, validation selection, local records and saved states |
 | [033F](033f_portable_models_and_resume.md) | Local bundle/recovery | Planned | Portable image-array model loading and completed-epoch resume |

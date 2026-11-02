@@ -11,6 +11,10 @@ quick/full directory checks, shared cleanup, native-band chipping with optional
 labels, and source-level baseline/LORO split manifests. The chip loader selects
 8/4/3 bands and pads partial edges. Window selection keeps overlap for training;
 chip validation/test selection is disjoint and reports geometric coverage gaps.
+Exploratory Python examples preview real Albumentations classes on training
+examples, with exact capped normalization and separately labeled backgrounds;
+see the [isolated previews](docs/quickstart.md#preview-individual-augmentations)
+and [combined pipeline preview](docs/quickstart.md#preview-the-combined-augmentation-pipeline).
 Preparation runs once into a fresh output and stops on failure, with no restart
 support. Training and prediction commands arrive in later tasks. Retained legacy Planet code/tests
 support the ongoing rebuild; unrelated applications have been removed. Historical Tasks 000–023 and

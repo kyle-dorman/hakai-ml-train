@@ -566,6 +566,8 @@ name = "kelpseg"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "albumentations" },
+    { name = "matplotlib" },
     { name = "numpy" },
     { name = "rasterio" },
     { name = "typer" },
@@ -579,11 +581,9 @@ dev = [
     { name = "uv-build" },
 ]
 legacy = [
-    { name = "albumentations" },
     { name = "huggingface-hub" },
     { name = "jsonargparse", extra = ["signatures"] },
     { name = "lightning" },
-    { name = "matplotlib" },
     { name = "numpy" },
     { name = "opencv-python-headless" },
     { name = "pyyaml" },
@@ -598,6 +598,8 @@ legacy = [
 
 [package.metadata]
 requires-dist = [
+    { name = "albumentations", specifier = "==2.0.8" },
+    { name = "matplotlib", specifier = ">=3.10.5,<4" },
     { name = "numpy", specifier = ">=2,<3" },
     { name = "rasterio", specifier = ">=1.4,<2" },
     { name = "typer", specifier = ">=0.25.1,<0.26" },
@@ -611,11 +613,9 @@ dev = [
     { name = "uv-build", specifier = ">=0.12.12,<0.13" },
 ]
 legacy = [
-    { name = "albumentations", specifier = ">=2.0.8" },
     { name = "huggingface-hub", specifier = ">=1.4.1" },
     { name = "jsonargparse", extras = ["signatures"], specifier = ">=4.49,<5" },
     { name = "lightning", specifier = ">=2.5.1,<2.6.2" },
-    { name = "matplotlib", specifier = ">=3.10.5" },
     { name = "numpy", specifier = ">=2,<3" },
     { name = "opencv-python-headless", specifier = ">=4.13.0.92" },
     { name = "pyyaml", specifier = ">=6,<7" },

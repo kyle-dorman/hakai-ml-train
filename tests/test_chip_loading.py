@@ -90,6 +90,10 @@ def test_partial_edge_padding_round_trip_and_native_nodata(tmp_path, selection):
     assert loaded["nodata_mask"].sum() == 1
     assert loaded["nodata_mask"][0, 0]
     assert not loaded["nodata_mask"][0, 1]
+    assert loaded["valid_mask"][0, 1]
+    assert not loaded["valid_mask"][0, 0]
+    assert not loaded["valid_mask"][height:].any()
+    assert not loaded["valid_mask"][:, width:].any()
 
     # Restore the true crop at its source offset with no padding contribution.
     source = np.zeros((800, 800, loaded["image"].shape[-1]), dtype=np.uint16)

@@ -38,9 +38,11 @@ the primary baseline.
 26,573 canonical chips, both variants and ten folds are published on Box with
 portable controls. Exact path/size comparisons, the bounded restore and fetched
 tiny-v2 offline walkthrough pass. Task 033 is now split into seven bounded
-contracts. Its first implementation step, when explicitly selected, is
-[033A's individual augmentation previews](../tasks/033a_individual_augmentation_previews.md).
-The current instruction is documentation only; no Task 033 implementation starts.
+contracts. [Task 033A](../tasks/033a_individual_augmentation_previews.md) and
+[033B](../tasks/033b_review_augmentation_settings.md) are complete: the user
+approved the stock D4 + SomeOf(2) pipeline, the final native recipe is saved,
+and the readability review and focused checks pass. **033C is next and
+unstarted**; no model training has started.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -91,9 +93,9 @@ selected; split further if needed.
 | [032B](../tasks/032b_produce_and_publish_chip_release.md) | Produce full chips/assignments and publish to Box — complete | 26,573 canonical payloads; both variants/ten folds; Box path/size comparisons, bounded restore and fetched tiny-v2 offline checks |
 | [032C](../tasks/032c_archive_legacy_and_evict_local_data.md) | Archive historical controls, retire bootstrap and evict obsolete local copies — complete | Prewritten plan; 34 MB historical archive; about 410 GB reclaimed; current data/evidence retained and Box untouched |
 | [033](../tasks/033_baseline_training_and_portable_models.md) | Shared baseline decisions and split plan | Exact 5000-capped normalization and family routing; no umbrella implementation |
-| [033A](../tasks/033a_individual_augmentation_previews.md) | Individual augmentation previews — planned first | Legacy transforms plus small channel shifts/band dropout; isolated strengths only; no stacking or training |
-| [033B](../tasks/033b_review_augmentation_settings.md) | Review and select augmentation settings — planned | User reviews isolated outputs before strengths/probabilities and requested combination checks |
-| [033C](../tasks/033c_simplify_pixel_statistics.md) | Simplify pixel statistics — planned | Small NumPy prepare/ utility reproduces selected capped reference |
+| [033A](../tasks/033a_individual_augmentation_previews.md) | Individual augmentation previews — complete | Stock native sweeps through defaults; separate coarse size/count modes; no stacking or training |
+| [033B](../tasks/033b_review_augmentation_settings.md) | Review and select augmentation settings — complete | Combined outputs approved; final native recipe, readable viewers and package checks pass |
+| [033C](../tasks/033c_simplify_pixel_statistics.md) | Simplify pixel statistics — next, not started | Small NumPy prepare/ utility reproduces selected capped reference |
 | [033D](../tasks/033d_model_and_training_inputs.md) | Model and training inputs — planned | Shared preprocessing, kelp-only tensors, real B3 update and loss/confusion checks |
 | [033E](../tasks/033e_training_validation_and_ema.md) | Training, validation and EMA — planned | Flat recipes, equal epochs, validation-only selection, local records and saved states |
 | [033F](../tasks/033f_portable_models_and_resume.md) | Portable models and resume — planned | Copied bundle and completed-epoch recovery verified independently |

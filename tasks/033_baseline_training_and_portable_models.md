@@ -1,8 +1,8 @@
 # Task 033: Baseline training plan and shared decisions
 
-Status: Split planning complete — 2026-10-28. Implementation has not started.
-The user's latest instruction authorizes documentation only: do not build the
-preview tool, generate previews, run data analyses or begin training yet.
+Status: Shared decisions updated 2026-11-02. Task 033A uses verified stock
+Albumentations previews; 033A/033B are complete with the user-approved recipe.
+033C–033G remain unstarted.
 Task 032B's publication/restore prerequisite is satisfied. Task 032C is separate.
 
 ## Abstract and route
@@ -13,9 +13,10 @@ implementation and acceptance. Read the entry route, this file, and only the
 selected child plus its routed owner docs. Select one child per window, record
 its outcome and exact next action, update the queue, and stop.
 
-The first implementation task, when explicitly selected, is **033A: individual
-augmentation previews**. Its production parameters remain open. Do not make
-preview implementation depend on the later model/training runner.
+**033A: individual augmentation previews** and **033B: recipe selection and
+combined previews** are complete. The user approved the stock augmentation
+policy; later tasks consume that saved recipe. Preview implementation remains
+independent of the later model/training runner.
 
 ## Ordered tasks
 
@@ -29,7 +30,7 @@ preview implementation depend on the later model/training runner.
 | [033F](033f_portable_models_and_resume.md) | Self-contained model bundle and completed-epoch resume; no tiled inference |
 | [033G](033g_tiny_walkthrough_and_handoff.md) | Installed fresh-directory tiny walkthrough, production previews and Task 034 handoff |
 
-All seven are planned, not started. Do not treat this table as permission to
+033A/033B are complete; 033C is next and unstarted. Do not treat this table as permission to
 execute several tasks together. Each later child may be refined when selected
 without reopening settled scientific/data decisions.
 
@@ -101,30 +102,88 @@ older proposals.
 
 ## Selected augmentation-preview scope
 
-Limit this work to the familiar legacy operations plus the two additions:
+The user's 2026-11-02 direction is to use **stock Albumentations 2.0.8** and
+its actual parameter meanings. The earlier custom implementations are replaced.
+The exploratory Python example is separate from the installed preparation CLI;
+its literal native constructors live in `src/kelpseg/augmentation_trials.py`.
 
-- Square rotations/reflections, applied jointly to images, labels and masks.
-- Legacy-style additive brightness, with explicit scale and no incidental 4000 cap.
-- Spatial coarse dropout, with ignored targets under erased holes.
-- Small independent channel shifts, keyed by physical band name.
-- Band dropout: initially preview one selected band at a time, named explicitly.
+- `D4`: square symmetries applied jointly to images, labels and validity.
+- `RandomBrightnessContrast`: separate fixed brightness and gain/contrast
+  sweeps. Stock contrast multiplies by `1 + contrast_limit`; it is not the old
+  per-band-mean transform, and the duplicate gain implementation is removed.
+- `GaussianBlur`, `GaussNoise` and Gaussian-method `Sharpen`: actual library
+  kernels, native sigma/std/alpha parameters and seeded library sampling.
+- `CoarseDropout`: isolated size and count sweeps, zero image fill, -100 mask
+  fill. Compare 1/2/4/8/16 holes at side 0.25, and sides 0.05 through 0.5 at
+  four holes; these are exploratory values, not selected production maxima.
+- `AdditiveNoise`: independent uniform offsets constant within each native band.
+- `ChannelDropout`: full red/NIR diagnostic drops with zero fill. Custom partial
+  fades and speculative mean-fill previews are removed.
 
-Skip smooth illumination/plasma fields, Gaussian noise/blur, fog/haze,
-misregistration, posterization, synthetic rain, RGB hue/Planckian jitter and
-per-image power/percentile normalization in this task family. The estuary code
-is read-only inspiration; do not copy its framework or repair that project.
+A small adapter converts native uint16 to float32 / 65535, calls the real class,
+restores raw units and invalid fill, then applies the existing final 5000 model
+cap/normalization. It never pre-caps at 5000. Stock pixel kernels clip to their
+unit domain where implemented, including raw-zero lower clipping; stock blur
+sees zero nodata/padding and can affect neighboring valid pixels. No custom
+mask-normalized replacement is used. Validity is preserved through an int8 mask
+target, with -100 holes becoming invalid; augmented zeros never redefine nodata.
 
-Preview operations **individually** at identity and multiple strengths first.
-Do not stack operations or choose training probabilities/ranges in 033A.
-Band dropout preserves labels and original validity, unlike spatial dropout;
-it must never remove every selected channel. Compare raw-zero and neutral
-normalized-zero fill before choosing the rule. Keep native-band draws explicit
-across spectral views; show when a dropped band is absent from a view rather
-than silently drawing a different corruption.
+Keep the same 16 training examples and raw 0–2000 display ceiling. Show exact
+native constructor and realized parameters, seed and pinned library version.
+Only named D4 elements or red/NIR diagnostic channels override the stock
+sampler's parameters; their actual application functions remain unchanged.
 
-## Planning outcome and next action
+### Limits selected after isolated review
+
+The user selected these limits after viewing the wider stock sweeps. They
+supersede the earlier proposed maxima and the exploratory gallery endpoints.
+
+| Operation | Selected limit |
+|---|---|
+| Additive brightness | `brightness_limit=(-0.0025, 0.005)`; keep the original range |
+| Gaussian blur | Sigma **0.5–1.5 pixels**, `blur_limit=0` |
+| Gaussian noise | Standard deviation **0–0.002** in the unit float domain; independent pixel/channel noise, mean zero |
+| Independent channel shifts | Uniform offsets within **-0.01 to +0.01** per band |
+| Coarse dropout | **1–4 holes**, independently sampled height/width fractions **0.05–0.25**; image fill zero, mask fill -100 |
+| Channel dropout | Drop **one band** when selected, chosen uniformly from the model's selected spectral bands; zero fill |
+
+Gain uses multipliers **0.8–1.2** (`contrast_limit=(-0.2, 0.2)`, brightness
+zero). Gaussian-method Sharpen uses **alpha 0–1**, kernel size 5 and sigma 1.
+The user approved these remaining ranges, including ordinary uniform library
+sampling. The configured extra-operation order is brightness, gain, blur, noise,
+Sharpen, coarse dropout, channel shifts, channel dropout. The selected composition is **D4(p=1),
+then SomeOf(n=2, replace=False, p=1)** over the additional operations. Set each
+child's `p=1` so both selected operations run. Stock SomeOf selects uniformly
+without replacement and applies selections in configured list order; it does
+not shuffle their execution order. D4's eight symmetries include identity.
+
+Channel shifts use stock uniform noise constant within each band. Only model-
+input bands are eligible for channel dropout; the current native-eight-band
+preview can drop any one of its eight bands. The future 4/3-band loader must
+restrict eligibility to its selected inputs while preserving physical identity.
+Blur starts at 0.5 because zero sigma is not a valid GaussianBlur identity in
+this pinned release.
+
+The user approved the combined outputs and these ranges. The final recipe is
+saved as [native Albumentations JSON](../configs/augment/baseline.json), generated
+from the readable [stock factory](../src/kelpseg/augmentation_pipeline.py) and
+checked for exact serialization parity. The factory remains the implementation
+used by previews and later training; do not hand-maintain a second schema.
+The wider isolated gallery remains exploratory and does not change this policy.
+No model training was performed.
+Skip smooth illumination, haze, misregistration, posterization, synthetic rain,
+RGB hue/Planckian jitter and per-image power/percentile normalization.
+
+## Historical planning outcome
 
 Only documentation changed: narrowed scope, split contracts, preserved exact
 constants and archived earlier evidence. No code, dependencies, data, previews
-or training were executed. Next action, when the user selects implementation:
-start 033A only. After all seven children close, select Task 034 in a new window.
+or training were executed. At that point the next action was explicit selection of 033A.
+
+## Current next action
+
+033A/033B are complete: isolated and combined outputs were inspected, the user
+approved the policy, and the final recipe is saved. Next, separately select
+[033C](033c_simplify_pixel_statistics.md) to simplify and reproduce the pixel
+statistics reference. No 033C implementation is included in this handoff.
+After all seven children close, select Task 034 in a new window.

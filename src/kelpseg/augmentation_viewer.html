@@ -1,0 +1,1208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kelpseg · Augmentation review</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #182b30;
+        --muted: #586b6f;
+        --line: #d9e2df;
+        --paper: #f3f6f3;
+        --green: #175e50;
+        --soft: #e6efea;
+        --amber: #72501c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        font-size: 15px;
+        line-height: 1.45;
+      }
+      button,
+      select {
+        font: inherit;
+      }
+      button,
+      a,
+      select {
+        touch-action: manipulation;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:focus-visible,
+      a:focus-visible,
+      select:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid #2a8c77;
+        outline-offset: 3px;
+      }
+      button:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+      a {
+        color: var(--green);
+      }
+      .shell {
+        max-width: 1520px;
+        margin: 0 auto;
+        padding: 22px 32px 36px;
+      }
+      .masthead {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 19px;
+      }
+      .brand {
+        font-size: 12px;
+        font-weight: 750;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--green);
+      }
+      h1 {
+        font-size: 27px;
+        letter-spacing: -0.035em;
+        line-height: 1.15;
+        margin: 5px 0 4px;
+      }
+      p {
+        margin: 0;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .trial-note {
+        font-size: 12px;
+        color: var(--amber);
+        background: #f5ebd5;
+        border: 1px solid #e9d8b6;
+        padding: 6px 10px;
+        border-radius: 5px;
+        white-space: nowrap;
+      }
+      .family-tabs {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 15px;
+      }
+      .family-tabs button,
+      .segmented button,
+      .strengths button {
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 8px 13px;
+        color: var(--muted);
+        background: transparent;
+      }
+      .family-tabs button {
+        font-weight: 650;
+      }
+      .family-tabs button:hover,
+      .strengths button:hover,
+      .segmented button:hover {
+        background: #e8eeea;
+      }
+      .family-tabs button[aria-pressed="true"],
+      .segmented button[aria-pressed="true"],
+      .strengths button[aria-pressed="true"] {
+        color: var(--green);
+        background: var(--soft);
+        border-color: #abc7bb;
+      }
+      .toolbar {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 0 12px;
+        flex-wrap: wrap;
+      }
+      .example-heading {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      #example-counter {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--green);
+      }
+      #sample-category {
+        font-size: 11px;
+        font-weight: 750;
+        border: 1px solid var(--line);
+        padding: 3px 7px;
+        border-radius: 4px;
+      }
+      .background #sample-category {
+        color: var(--amber);
+        background: #f5ebd5;
+        border-color: #e9d8b6;
+      }
+      #sample-description {
+        font-size: 17px;
+        font-weight: 650;
+        margin-top: 3px;
+      }
+      .navigation {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .nav-button,
+      .zoom-button,
+      .close-button {
+        border: 1px solid #becdc5;
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+        padding: 8px 12px;
+      }
+      .navigation select,
+      .band-control select {
+        padding: 8px 27px 8px 10px;
+        border: 1px solid #becdc5;
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+        max-width: 330px;
+      }
+      .band-control {
+        display: flex;
+        gap: 9px;
+        align-items: center;
+        font-size: 13px;
+        margin: 12px 0 0;
+      }
+      .band-control[hidden] {
+        display: none;
+      }
+      .strength-row {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 0 0 15px;
+      }
+      .field-label {
+        font-size: 11px;
+        letter-spacing: 0.07em;
+        font-weight: 750;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .strengths {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+      .strengths button {
+        background: #fff;
+        border-color: var(--line);
+        font-size: 13px;
+        padding: 7px 11px;
+      }
+      .display-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+        flex-wrap: wrap;
+      }
+      .segmented {
+        display: flex;
+        gap: 3px;
+        flex-wrap: wrap;
+      }
+      .segmented button {
+        font-size: 13px;
+        padding: 6px 10px;
+      }
+      .display-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .closeup-toggle {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .closeup-toggle input {
+        accent-color: var(--green);
+        width: 16px;
+        height: 16px;
+      }
+      .zoom-button {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+      .comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .image-card {
+        min-width: 0;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        overflow: hidden;
+      }
+      .card-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 13px;
+        border-bottom: 1px solid var(--line);
+        min-height: 46px;
+      }
+      .card-heading strong {
+        font-size: 13px;
+      }
+      .card-subtitle {
+        font-size: 12px;
+        color: var(--muted);
+        text-align: right;
+        white-space: pre-line;
+      }
+      .image-stage {
+        aspect-ratio: 1;
+        position: relative;
+        background: #080e11;
+        overflow: hidden;
+        cursor: zoom-in;
+      }
+      .image-stage canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+      }
+      .image-caption {
+        font-size: 12px;
+        padding: 9px 13px;
+        color: var(--muted);
+        min-height: 36px;
+      }
+      .explainer {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 12px 0 15px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .legend {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        flex-wrap: wrap;
+      }
+      .swatch {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 2px;
+        margin-right: 5px;
+      }
+      .swatch.kelp {
+        background: #d6d600;
+      }
+      .swatch.ignore {
+        background: #702469;
+      }
+      .details {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 12px 15px;
+        margin-top: 1px;
+      }
+      .details summary {
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 650;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 14px;
+      }
+      .detail-grid h2 {
+        font-size: 12px;
+        margin: 0 0 6px;
+      }
+      .detail-grid pre {
+        font-size: 11px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        background: #f5f7f5;
+        border-radius: 4px;
+        padding: 10px;
+        margin: 0;
+      }
+      .detail-links {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        margin-top: 12px;
+      }
+      .source-line {
+        overflow-wrap: anywhere;
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 12px;
+      }
+      #status {
+        font-size: 12px;
+        color: var(--muted);
+        min-height: 18px;
+        margin-top: 8px;
+      }
+      #error {
+        padding: 12px;
+        background: #fff0eb;
+        color: #8a321b;
+        border: 1px solid #e4b7a9;
+        border-radius: 6px;
+        margin-bottom: 10px;
+      }
+      .keyboard-hint {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      dialog {
+        border: 1px solid #708c80;
+        border-radius: 10px;
+        padding: 18px;
+        background: var(--paper);
+        width: min(98vw, 1900px);
+        max-width: none;
+        max-height: 97vh;
+        overflow: auto;
+      }
+      dialog::backdrop {
+        background: #081511db;
+      }
+      .dialog-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+      .dialog-heading h2 {
+        font-size: 18px;
+        margin: 0;
+      }
+      .dialog-heading p {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      dialog .comparison {
+        gap: 18px;
+      }
+      dialog .image-stage {
+        cursor: default;
+      }
+      dialog .image-caption {
+        display: none;
+      }
+      .close-button {
+        font-size: 13px;
+      }
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+      @media (min-width: 1160px) {
+        .comparison {
+          grid-template-columns: minmax(512px, 1fr) minmax(512px, 1fr);
+        }
+      }
+      @media (max-width: 800px) {
+        .shell {
+          padding: 18px 14px 28px;
+        }
+        .masthead {
+          align-items: flex-start;
+        }
+        .trial-note {
+          white-space: normal;
+          max-width: 150px;
+        }
+        .comparison {
+          gap: 10px;
+        }
+        .card-heading {
+          padding: 8px;
+          align-items: flex-start;
+          min-height: 62px;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .card-subtitle {
+          text-align: left;
+        }
+        .navigation {
+          width: 100%;
+        }
+        .navigation select {
+          flex: 1;
+          max-width: none;
+          min-width: 0;
+        }
+        .toolbar {
+          gap: 10px;
+        }
+        .detail-grid {
+          grid-template-columns: 1fr;
+        }
+        .explainer {
+          flex-direction: column;
+          gap: 6px;
+        }
+        .family-tabs {
+          gap: 3px;
+        }
+        .family-tabs button {
+          padding: 7px 9px;
+          font-size: 13px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+        .keyboard-hint {
+          display: none;
+        }
+      }
+      @media (max-width: 480px) {
+        .comparison {
+          grid-template-columns: 1fr;
+        }
+        .card-heading {
+          min-height: 0;
+          flex-direction: row;
+          align-items: center;
+        }
+        .display-actions {
+          width: 100%;
+          justify-content: space-between;
+        }
+        .image-caption {
+          min-height: 0;
+        }
+        .masthead {
+          gap: 10px;
+        }
+        .trial-note {
+          font-size: 10px;
+        }
+      }
+      .strength-row > .strengths {
+        flex: 1 1 220px;
+        min-width: 0;
+        max-width: 100%;
+      }
+      .strengths select {
+        width: 100%;
+        max-width: 720px;
+        min-width: 0;
+        padding: 8px 30px 8px 10px;
+        border: 1px solid #becdc5;
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+        text-overflow: ellipsis;
+      }
+      .coarse-control {
+        flex-wrap: wrap;
+      }
+      .coarse-control select {
+        min-width: 0;
+        max-width: 100%;
+        flex: 0 1 330px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell" id="app">
+      <header class="masthead">
+        <div>
+          <div class="brand">Kelpseg / training imagery</div>
+          <h1>Augmentation review</h1>
+          <p class="muted">
+            Explore one stock Albumentations transform, then flip through the
+            same training examples.
+          </p>
+          <p
+            id="backend-label"
+            class="muted"
+            style="font-size: 11px; margin-top: 5px"
+          ></p>
+        </div>
+        <span class="trial-note">Stock transforms · exploratory trials</span>
+      </header>
+      <nav
+        class="family-tabs"
+        aria-label="Augmentation type"
+        id="family-tabs"
+      ></nav>
+      <div class="band-control" id="band-control" hidden>
+        <label for="band-select">Band to drop</label>
+        <select id="band-select"></select>
+      </div>
+      <div class="band-control coarse-control" id="coarse-control" hidden>
+        <label for="coarse-mode-select">Compare</label>
+        <select id="coarse-mode-select">
+          <option value="size">Sizes · 4 holes</option>
+          <option value="count">Counts · side 0.25</option>
+        </select>
+      </div>
+      <section class="toolbar" aria-label="Training example navigation">
+        <div>
+          <div class="example-heading">
+            <span id="example-counter" aria-live="polite"></span>
+            <span id="sample-category"></span>
+          </div>
+          <p id="sample-description"></p>
+        </div>
+        <div class="navigation">
+          <button
+            class="nav-button"
+            id="previous-example"
+            aria-label="Previous example"
+          >
+            ←
+          </button>
+          <label class="visually-hidden" for="example-select">
+            Choose example
+          </label>
+          <select id="example-select"></select>
+          <button
+            class="nav-button"
+            id="next-example"
+            aria-label="Next example"
+          >
+            →
+          </button>
+        </div>
+      </section>
+      <section class="strength-row" aria-label="Trial setting">
+        <span class="field-label">Setting</span>
+        <div id="strengths" class="strengths"></div>
+      </section>
+      <p
+        id="family-explanation"
+        class="muted"
+        style="font-size: 13px; margin: -4px 0 14px; max-width: 1050px"
+      ></p>
+      <div class="display-row">
+        <div
+          class="segmented"
+          id="view-controls"
+          aria-label="Display type"
+        ></div>
+        <div class="display-actions">
+          <label class="closeup-toggle">
+            <input type="checkbox" id="closeup" />
+            Kelp close-up
+          </label>
+          <button class="zoom-button" id="open-zoom">
+            Enlarge comparison ↗
+          </button>
+        </div>
+      </div>
+      <div id="error" role="alert" hidden></div>
+      <section
+        class="comparison"
+        aria-label="Original and augmented comparison"
+      >
+        <article class="image-card">
+          <div class="card-heading">
+            <strong>Original</strong>
+            <span class="card-subtitle">
+              Same preprocessing, no augmentation
+            </span>
+          </div>
+          <div class="image-stage" id="original-stage">
+            <canvas
+              id="original-canvas"
+              aria-label="Original training image"
+            ></canvas>
+          </div>
+          <div class="image-caption" id="original-caption"></div>
+        </article>
+        <article class="image-card">
+          <div class="card-heading">
+            <strong id="trial-heading">Trial</strong>
+            <span class="card-subtitle" id="trial-description"></span>
+          </div>
+          <div class="image-stage" id="trial-stage">
+            <canvas
+              id="trial-canvas"
+              aria-label="Augmented training image"
+            ></canvas>
+          </div>
+          <div class="image-caption" id="trial-caption"></div>
+        </article>
+      </section>
+      <div class="explainer">
+        <div class="legend" id="view-note"></div>
+        <span>
+          Display: raw 0–2000 (visual only). Model input cap remains 5000.
+        </span>
+        <span class="keyboard-hint">
+          ← → examples · click an image to enlarge
+        </span>
+      </div>
+      <details class="details">
+        <summary>Parameters, pixel counts &amp; display method</summary>
+        <p class="source-line" id="source-line"></p>
+        <div class="detail-grid">
+          <section>
+            <h2>Realized trial parameters</h2>
+            <pre id="parameter-detail"></pre>
+          </section>
+          <section>
+            <h2>Original → trial counts</h2>
+            <pre id="metric-detail"></pre>
+          </section>
+        </div>
+        <p class="source-line">
+          Display: raw 0–2000 (visual only). Model input cap remains 5000.
+          Native uint16 imagery is scaled to float32 by dividing by 65535,
+          without a 5000 pre-cap. Stock pixel transforms apply their native 0–1
+          clipping, including the raw-zero lower bound. Values are converted
+          back to raw units before the final model cap and fixed normalization.
+          Original invalid image fill is restored after photometric transforms;
+          stock spatial filters still see zero nodata/padding near boundaries.
+          Labels: yellow kelp, purple ignored or unavailable support. Background
+          controls are diagnostics only. These wide isolated sweeps are
+          exploratory; the approved recipe is reviewed in the separate combined
+          pipeline viewer.
+        </p>
+        <div class="detail-links">
+          <a id="sheet-link" target="_blank" rel="noopener">
+            Full contact sheet
+          </a>
+          <a id="parameter-link" target="_blank" rel="noopener">
+            Complete parameter record
+          </a>
+        </div>
+      </details>
+      <p id="status" aria-live="polite"></p>
+    </main>
+    <dialog id="zoom-dialog" aria-labelledby="zoom-title">
+      <div class="dialog-heading">
+        <div>
+          <h2 id="zoom-title" aria-live="polite">Enlarged comparison</h2>
+          <p>
+            ← → flips examples · nearest-neighbor display preserves source
+            pixels · Escape closes
+          </p>
+        </div>
+        <div class="navigation">
+          <button
+            class="nav-button"
+            id="zoom-previous-example"
+            aria-label="Previous example in enlarged view"
+          >
+            ←
+          </button>
+          <button
+            class="nav-button"
+            id="zoom-next-example"
+            aria-label="Next example in enlarged view"
+          >
+            →
+          </button>
+          <button class="close-button" id="close-zoom">Close ×</button>
+        </div>
+      </div>
+      <div class="display-row">
+        <div
+          class="segmented"
+          id="zoom-view-controls"
+          aria-label="Enlarged display type"
+        ></div>
+        <label class="closeup-toggle">
+          <input type="checkbox" id="zoom-closeup" />
+          Kelp close-up
+        </label>
+      </div>
+      <div class="comparison">
+        <article class="image-card">
+          <div class="card-heading"><strong>Original</strong></div>
+          <div class="image-stage">
+            <canvas
+              id="zoom-original-canvas"
+              aria-label="Enlarged original image"
+            ></canvas>
+          </div>
+        </article>
+        <article class="image-card">
+          <div class="card-heading">
+            <strong id="zoom-trial-heading">Trial</strong>
+          </div>
+          <div class="image-stage">
+            <canvas
+              id="zoom-trial-canvas"
+              aria-label="Enlarged augmented image"
+            ></canvas>
+          </div>
+        </article>
+      </div>
+    </dialog>
+    <!-- The gallery writer replaces this literal offline data placeholder. -->
+    <!-- prettier-ignore -->
+    <script type="application/json" id="gallery-data">__GALLERY_DATA__</script>
+    <script>
+      "use strict";
+      const gallery = JSON.parse(
+        document.getElementById("gallery-data").textContent,
+      );
+      const samples = gallery.samples;
+      const familyChoices = [
+        ["square_symmetry", "D4 rotations/reflections"],
+        ["brightness", "Brightness"],
+        ["gain", "Gain"],
+        ["blur", "Gaussian blur"],
+        ["noise", "Gaussian noise"],
+        ["sharpness", "Sharpness"],
+        ["spatial_dropout", "Spatial dropout"],
+        ["channel_shifts", "Channel shifts"],
+        ["band_dropout", "Band dropout"],
+      ];
+      const familyExplanations = {
+        square_symmetry:
+          "D4: the eight exact square rotations/reflections, applied jointly to imagery, labels and masks without interpolation.",
+        brightness:
+          "RandomBrightnessContrast with contrast_limit=0. Native brightness_limit controls additive beta in the scaled 0–1 input units; stock clipping applies.",
+        gain: "RandomBrightnessContrast with brightness_limit=0. Native contrast_limit controls the shared multiplier alpha = 1 + delta; stock clipping applies.",
+        blur: "GaussianBlur with native blur_limit and sigma_limit. Stock filtering includes zero nodata/padding near boundaries; the original invalid image fill is restored afterward. No custom masked kernel.",
+        noise:
+          "GaussNoise with native std_range and mean_range in scaled 0–1 units. The saved constructor arguments and realized parameters specify the independent noise trial.",
+        sharpness:
+          "Sharpen with method='gaussian'. Native alpha controls blending; Gaussian settings and actual parameters are shown below. These are exploratory stock settings.",
+        spatial_dropout:
+          "CoarseDropout isolates one choice at a time: vary side fraction 0.05–0.5 with 4 holes, or vary 1–16 holes with side fraction 0.25. Stock image fill is zero and mask fill is -100 under holes.",
+        channel_shifts:
+          "AdditiveNoise with uniform noise and spatial_mode='constant': a constant additive offset per channel, using native noise parameters and stock clipping.",
+        band_dropout:
+          "ChannelDropout: fully erase the selected red or NIR band with raw-zero fill. Original labels and native validity are preserved; no fractional fades or mean fill.",
+      };
+      const viewChoices = [
+        ["rgb", "RGB · no labels"],
+        ["false_color", "NIR false color · no labels"],
+        ["labels", "Label overlay"],
+        ["affected_band", "Affected band · no labels"],
+      ];
+      const nativeBands = ["red", "nir"];
+      const ui = {
+        sample: 0,
+        family: "brightness",
+        band: "nir",
+        coarseMode: "size",
+        setting: 0,
+        view: "false_color",
+        cleanView: "false_color",
+        closeup: false,
+      };
+      let requestNumber = 0;
+      let lastImages = null;
+      const byId = (id) => document.getElementById(id);
+      const text = (id, value) => {
+        byId(id).textContent = value;
+      };
+      const pretty = (value) => String(value).replaceAll("_", " ");
+      function familyRecord() {
+        let key = ui.family;
+        if (ui.family === "band_dropout") key = `band_dropout_${ui.band}`;
+        if (ui.family === "spatial_dropout" && ui.coarseMode === "count")
+          key = "spatial_dropout_count";
+        return samples[ui.sample].families.find((item) => item.family === key);
+      }
+      function labelViewName() {
+        return ui.cleanView === "false_color"
+          ? "Labels on NIR false color"
+          : "Labels on RGB";
+      }
+      function settingLabel(state) {
+        return state.title.split("\n")[0];
+      }
+      function chooseInitialSetting() {
+        const states = familyRecord().states;
+        const preferred = states.findIndex((state) => state.preview_default);
+        if (preferred >= 0) {
+          ui.setting = preferred;
+          return;
+        }
+        const index = states.findIndex(
+          (state, index) =>
+            index > 0 && !state.title.toLowerCase().includes("identity"),
+        );
+        ui.setting = index > 0 ? index : Math.min(1, states.length - 1);
+      }
+      function createToggleButton(label, selected, action) {
+        const node = document.createElement("button");
+        node.type = "button";
+        node.textContent = label;
+        node.setAttribute("aria-pressed", String(selected));
+        node.addEventListener("click", action);
+        return node;
+      }
+      function fillControls() {
+        const tabs = byId("family-tabs");
+        tabs.replaceChildren();
+        for (const [key, label] of familyChoices)
+          tabs.append(
+            createToggleButton(label, ui.family === key, () => {
+              ui.family = key;
+              chooseInitialSetting();
+              render();
+            }),
+          );
+        byId("band-control").hidden = ui.family !== "band_dropout";
+        byId("band-select").value = ui.band;
+        byId("coarse-control").hidden = ui.family !== "spatial_dropout";
+        byId("coarse-mode-select").value = ui.coarseMode;
+        const family = familyRecord();
+        text(
+          "family-explanation",
+          `${familyExplanations[ui.family]} Wide sweeps are exploratory trials, not selected production ranges.`,
+        );
+        ui.setting = Math.min(ui.setting, family.states.length - 1);
+        const strengths = byId("strengths");
+        strengths.replaceChildren();
+        if (family.states.length - 1 > 6) {
+          const select = document.createElement("select");
+          select.id = "strength-select";
+          select.setAttribute("aria-label", "Trial setting");
+          family.states.forEach((state, index) => {
+            if (index) {
+              const option = document.createElement("option");
+              option.value = String(index);
+              option.textContent = settingLabel(state);
+              select.append(option);
+            }
+          });
+          select.value = String(ui.setting);
+          select.addEventListener("change", (event) => {
+            ui.setting = Number(event.target.value);
+            render();
+          });
+          strengths.append(select);
+        } else
+          family.states.forEach((state, index) => {
+            if (index)
+              strengths.append(
+                createToggleButton(
+                  settingLabel(state),
+                  ui.setting === index,
+                  () => {
+                    ui.setting = index;
+                    render();
+                  },
+                ),
+              );
+          });
+        const state = family.states[ui.setting];
+        if (!state.assets[ui.view]) ui.view = "rgb";
+        for (const id of ["view-controls", "zoom-view-controls"]) {
+          const views = byId(id);
+          views.replaceChildren();
+          for (const [key, label] of viewChoices)
+            if (state.assets[key])
+              views.append(
+                createToggleButton(
+                  key === "labels" ? labelViewName() : label,
+                  ui.view === key,
+                  () => {
+                    if (key === "rgb" || key === "false_color")
+                      ui.cleanView = key;
+                    ui.view = key;
+                    render();
+                  },
+                ),
+              );
+        }
+      }
+      function paint(canvas, image, crop) {
+        const area = crop || [0, 0, image.naturalHeight, image.naturalWidth];
+        const [top, left, bottom, right] = area;
+        canvas.width = right - left;
+        canvas.height = bottom - top;
+        const context = canvas.getContext("2d");
+        context.imageSmoothingEnabled = false;
+        context.drawImage(
+          image,
+          left,
+          top,
+          right - left,
+          bottom - top,
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        );
+      }
+      function repaint() {
+        if (!lastImages) return;
+        const [original, trial] = lastImages;
+        const states = familyRecord().states;
+        const originalCrop = ui.closeup ? states[0].closeup : null;
+        const trialCrop = ui.closeup ? states[ui.setting].closeup : null;
+        paint(byId("original-canvas"), original, originalCrop);
+        paint(byId("trial-canvas"), trial, trialCrop);
+        if (byId("zoom-dialog").open) {
+          paint(byId("zoom-original-canvas"), original, originalCrop);
+          paint(byId("zoom-trial-canvas"), trial, trialCrop);
+        }
+      }
+      function loadImage(source) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () =>
+            reject(new Error(`Could not open preview image: ${source}`));
+          image.src = source;
+        });
+      }
+      function counts(original, trial) {
+        return [
+          ["Valid image pixels", "valid_pixels"],
+          ["Kelp target pixels", "foreground_pixels"],
+          ["Scoreable target pixels", "scoreable_pixels"],
+          ["Ignored target pixels", "ignored_pixels"],
+          ["Raw values below zero", "below_zero_values"],
+          ["Raw values above 5000", "above_cap_values"],
+        ]
+          .map(
+            ([label, key]) =>
+              `${label}: ${Number(original[key]).toLocaleString()} → ${Number(trial[key]).toLocaleString()}`,
+          )
+          .join("\n");
+      }
+      async function render() {
+        const request = ++requestNumber;
+        fillControls();
+        const sample = samples[ui.sample];
+        const family = familyRecord();
+        const original = family.states[0];
+        const trial = family.states[ui.setting];
+        byId("app").classList.toggle("background", sample.background_control);
+        text("example-counter", `Example ${ui.sample + 1} / ${samples.length}`);
+        text(
+          "sample-category",
+          sample.background_control
+            ? "BACKGROUND CONTROL · DIAGNOSTIC ONLY"
+            : "POSITIVE TRAINING WINDOW",
+        );
+        text(
+          "sample-description",
+          `Region ${sample.window.region} · ${sample.window.acquisition_date}`,
+        );
+        byId("example-select").value = String(ui.sample);
+        byId("previous-example").disabled = ui.sample === 0;
+        byId("next-example").disabled = ui.sample === samples.length - 1;
+        byId("zoom-previous-example").disabled = ui.sample === 0;
+        byId("zoom-next-example").disabled = ui.sample === samples.length - 1;
+        byId("closeup").checked = ui.closeup;
+        byId("zoom-closeup").checked = ui.closeup;
+        text(
+          "trial-heading",
+          familyChoices.find(([key]) => key === ui.family)[1],
+        );
+        text("trial-description", settingLabel(trial));
+        const unchanged = trial.title
+          .split("\n")
+          .filter((line) => line.includes("unchanged"))
+          .join(" · ");
+        const currentView =
+          ui.view === "labels"
+            ? labelViewName()
+            : viewChoices.find(([key]) => key === ui.view)[1];
+        text(
+          "original-caption",
+          `${currentView}${ui.closeup ? " · kelp close-up" : " · full window"}`,
+        );
+        text(
+          "trial-caption",
+          unchanged ||
+            "Isolated operation; same raw 0–2000 display in both images.",
+        );
+        const note = byId("view-note");
+        note.replaceChildren();
+        if (ui.view === "labels") {
+          for (const [kind, label] of [
+            ["kelp", "Kelp target"],
+            ["ignore", "Ignored / unavailable support"],
+          ]) {
+            const span = document.createElement("span"),
+              swatch = document.createElement("span");
+            swatch.className = `swatch ${kind}`;
+            span.append(swatch, document.createTextNode(label));
+            note.append(span);
+          }
+        } else
+          text(
+            "view-note",
+            ui.view === "affected_band"
+              ? `${pretty(ui.band)} only · raw 0–2000 grayscale display`
+              : ui.view === "false_color"
+                ? "False color = NIR / red / green · raw 0–2000 display"
+                : "RGB = red / green / blue · raw 0–2000 display",
+          );
+        text(
+          "source-line",
+          `${sample.window.source_key} · window row ${sample.window.row}, column ${sample.window.col} · ${pretty(sample.window.sample_reason || "")}`,
+        );
+        text("parameter-detail", JSON.stringify(trial.parameters, null, 2));
+        text("metric-detail", counts(original.metrics, trial.metrics));
+        byId("sheet-link").href = family.panel;
+        byId("parameter-link").href =
+          sample.parameters || `${sample.preview_name}/parameters.json`;
+        text(
+          "zoom-title",
+          `${ui.sample + 1} / ${samples.length} · Region ${sample.window.region} · ${currentView}`,
+        );
+        text("zoom-trial-heading", settingLabel(trial));
+        byId("error").hidden = true;
+        text("status", "Loading comparison…");
+        try {
+          const assetView =
+            ui.view === "labels" && ui.cleanView === "false_color"
+              ? "false_color_labels"
+              : ui.view;
+          const loaded = await Promise.all([
+            loadImage(original.assets[assetView]),
+            loadImage(trial.assets[assetView]),
+          ]);
+          if (request !== requestNumber) return;
+          lastImages = loaded;
+          repaint();
+          text("status", "");
+        } catch (error) {
+          if (request !== requestNumber) return;
+          byId("error").hidden = false;
+          text(
+            "error",
+            `${error.message}. Keep index.html beside its generated image folders.`,
+          );
+          text("status", "");
+        }
+      }
+      function moveExample(offset) {
+        const index = Math.max(
+          0,
+          Math.min(samples.length - 1, ui.sample + offset),
+        );
+        if (index !== ui.sample) {
+          ui.sample = index;
+          render();
+        }
+      }
+      for (const band of nativeBands) {
+        const option = document.createElement("option");
+        option.value = band;
+        option.textContent = pretty(band);
+        byId("band-select").append(option);
+      }
+      samples.forEach((sample, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = `${String(index + 1).padStart(2, "0")} · ${sample.background_control ? "Background" : "Region " + sample.window.region} · ${sample.window.acquisition_date}`;
+        byId("example-select").append(option);
+      });
+      byId("band-select").addEventListener("change", (event) => {
+        ui.band = event.target.value;
+        render();
+      });
+      byId("coarse-mode-select").addEventListener("change", (event) => {
+        ui.coarseMode = event.target.value;
+        chooseInitialSetting();
+        render();
+      });
+      byId("example-select").addEventListener("change", (event) => {
+        ui.sample = Number(event.target.value);
+        render();
+      });
+      byId("previous-example").addEventListener("click", () => moveExample(-1));
+      byId("next-example").addEventListener("click", () => moveExample(1));
+      byId("zoom-previous-example").addEventListener("click", () =>
+        moveExample(-1),
+      );
+      byId("zoom-next-example").addEventListener("click", () => moveExample(1));
+      byId("closeup").addEventListener("change", (event) => {
+        ui.closeup = event.target.checked;
+        render();
+      });
+      byId("zoom-closeup").addEventListener("change", (event) => {
+        ui.closeup = event.target.checked;
+        render();
+      });
+      function openZoom() {
+        byId("zoom-dialog").showModal();
+        repaint();
+      }
+      byId("open-zoom").addEventListener("click", openZoom);
+      byId("original-stage").addEventListener("click", openZoom);
+      byId("trial-stage").addEventListener("click", openZoom);
+      byId("close-zoom").addEventListener("click", () =>
+        byId("zoom-dialog").close(),
+      );
+      document.addEventListener("keydown", (event) => {
+        if (
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey ||
+          ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)
+        )
+          return;
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          moveExample(event.key === "ArrowLeft" ? -1 : 1);
+        }
+      });
+      text(
+        "backend-label",
+        `Albumentations ${gallery.albumentations_version || "version not recorded"}`,
+      );
+      chooseInitialSetting();
+      render();
+    </script>
+  </body>
+</html>

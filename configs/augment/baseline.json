@@ -1,0 +1,137 @@
+{
+  "__version__": "2.0.8",
+  "transform": {
+    "__class_fullname__": "Compose",
+    "p": 1.0,
+    "transforms": [
+      {
+        "__class_fullname__": "D4",
+        "p": 1.0
+      },
+      {
+        "__class_fullname__": "SomeOf",
+        "p": 1,
+        "transforms": [
+          {
+            "__class_fullname__": "RandomBrightnessContrast",
+            "p": 1.0,
+            "brightness_by_max": true,
+            "brightness_limit": [
+              -0.0025,
+              0.005
+            ],
+            "contrast_limit": [
+              0.0,
+              0.0
+            ],
+            "ensure_safe_range": false
+          },
+          {
+            "__class_fullname__": "RandomBrightnessContrast",
+            "p": 1.0,
+            "brightness_by_max": true,
+            "brightness_limit": [
+              0.0,
+              0.0
+            ],
+            "contrast_limit": [
+              -0.2,
+              0.2
+            ],
+            "ensure_safe_range": false
+          },
+          {
+            "__class_fullname__": "GaussianBlur",
+            "p": 1.0,
+            "blur_limit": [
+              0,
+              0
+            ],
+            "sigma_limit": [
+              0.5,
+              1.5
+            ]
+          },
+          {
+            "__class_fullname__": "GaussNoise",
+            "p": 1.0,
+            "mean_range": [
+              0.0,
+              0.0
+            ],
+            "noise_scale_factor": 1.0,
+            "per_channel": true,
+            "std_range": [
+              0.0,
+              0.002
+            ]
+          },
+          {
+            "__class_fullname__": "Sharpen",
+            "p": 1.0,
+            "alpha": [
+              0.0,
+              1.0
+            ],
+            "kernel_size": 5,
+            "lightness": [
+              0.5,
+              1.0
+            ],
+            "method": "gaussian",
+            "sigma": 1.0
+          },
+          {
+            "__class_fullname__": "CoarseDropout",
+            "p": 1.0,
+            "fill": 0.0,
+            "fill_mask": -100.0,
+            "hole_height_range": [
+              0.05,
+              0.25
+            ],
+            "hole_width_range": [
+              0.05,
+              0.25
+            ],
+            "num_holes_range": [
+              1,
+              4
+            ]
+          },
+          {
+            "__class_fullname__": "AdditiveNoise",
+            "p": 1.0,
+            "approximation": 1.0,
+            "noise_params": {
+              "noise_type": "uniform",
+              "ranges": [
+                [
+                  -0.01,
+                  0.01
+                ]
+              ]
+            },
+            "noise_type": "uniform",
+            "spatial_mode": "constant"
+          },
+          {
+            "__class_fullname__": "ChannelDropout",
+            "p": 1.0,
+            "channel_drop_range": [
+              1,
+              1
+            ],
+            "fill": 0.0
+          }
+        ],
+        "n": 2,
+        "replace": false
+      }
+    ],
+    "bbox_params": null,
+    "keypoint_params": null,
+    "additional_targets": {},
+    "is_check_shapes": true
+  }
+}

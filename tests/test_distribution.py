@@ -83,6 +83,11 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             assert "kelpseg/paths.py" in names
             assert "kelpseg/bands.py" in names
             assert "kelpseg/chips.py" in names
+            assert "kelpseg/augmentation_viewer.html" in names
+            assert "kelpseg/pipeline_viewer.html" in names
+            assert "kelpseg/augmentation_pipeline.py" in names
+            assert "kelpseg/augmentations.py" in names
+            assert "kelpseg/augmentation_photometric.py" not in names
             assert "kelpseg/cli/split.py" in names
             for module in (
                 "organize",
@@ -122,6 +127,37 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
 
         unrelated = tmp_path / f"unrelated-{index}"
         unrelated.mkdir()
+        # A stock transform and its raw-unit adapter must work from runtime
+        # dependencies alone, outside the temporary legacy environment.
+        run(
+            python,
+            "-I",
+            "-c",
+            "import sys, numpy as np, albumentations as A; "
+            "from kelpseg.augmentations import apply_augmentation; "
+            "from kelpseg.augmentation_pipeline import build_training_augmentation; "
+            "image=np.full((5,5,8),100,dtype=np.uint16); image[0]=0; "
+            "valid=np.any(image!=0,axis=-1); "
+            "label=np.zeros((5,5),dtype=np.int8); label[~valid]=-100; "
+            "transform=A.GaussianBlur(blur_limit=0,sigma_limit=(1,1),p=1); "
+            "result,targets,support,metadata=apply_augmentation(transform,image,label,valid,seed=33); "
+            "reference=A.GaussianBlur(blur_limit=0,sigma_limit=(1,1),p=1); "
+            "reference.set_random_seed(33); "
+            "expected=reference(image=image.astype(np.float32)/65535)['image']*65535; "
+            "expected[~valid]=0; "
+            "np.testing.assert_array_equal(result,expected); "
+            "np.testing.assert_array_equal(targets,label); "
+            "np.testing.assert_array_equal(support,valid); "
+            "assert metadata['class']=='GaussianBlur'; "
+            "assert not result[~valid].any(); "
+            "pipeline=build_training_augmentation(seed=33); "
+            "combined,_,_,trace=apply_augmentation(pipeline,image,label,valid,seed=33); "
+            "assert combined.shape==image.shape and len(trace['applied'])==3; "
+            "from importlib.resources import files; "
+            "assert files('kelpseg').joinpath('pipeline_viewer.html').is_file(); "
+            "assert not any(name in sys.modules for name in ('lightning','wandb','kelpseg.models','src.models'))",
+            cwd=unrelated,
+        )
         probe = run(
             python,
             "-I",

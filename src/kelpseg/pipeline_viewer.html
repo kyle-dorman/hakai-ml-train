@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kelpseg · Combined pipeline review</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #182b30;
+        --muted: #586b6f;
+        --line: #d9e2df;
+        --paper: #f3f6f3;
+        --green: #175e50;
+        --soft: #e6efea;
+        --amber: #72501c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font:
+          15px/1.45 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      button,
+      select {
+        font: inherit;
+        touch-action: manipulation;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+      button:focus-visible,
+      select:focus-visible,
+      a:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid #2a8c77;
+        outline-offset: 3px;
+      }
+      a {
+        color: var(--green);
+      }
+      p {
+        margin: 0;
+      }
+      .shell {
+        max-width: 1260px;
+        margin: auto;
+        padding: 20px 28px 34px;
+      }
+      .masthead {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: flex-start;
+        margin-bottom: 18px;
+      }
+      .brand {
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--green);
+      }
+      h1 {
+        font-size: 27px;
+        line-height: 1.2;
+        letter-spacing: -0.035em;
+        margin: 5px 0;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .backend {
+        font-size: 11px;
+        margin-top: 4px;
+      }
+      .review-note {
+        font-size: 12px;
+        color: var(--amber);
+        background: #f5ebd5;
+        border: 1px solid #e9d8b6;
+        padding: 6px 10px;
+        border-radius: 5px;
+        white-space: nowrap;
+      }
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+        border-top: 1px solid var(--line);
+        padding-top: 15px;
+      }
+      .example-heading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      #example-counter {
+        font-size: 13px;
+        font-weight: 750;
+        color: var(--green);
+      }
+      #sample-category {
+        font-size: 10px;
+        font-weight: 750;
+        border: 1px solid var(--line);
+        padding: 3px 6px;
+        border-radius: 4px;
+      }
+      .background #sample-category {
+        color: var(--amber);
+        background: #f5ebd5;
+        border-color: #e9d8b6;
+      }
+      #sample-description {
+        font-size: 17px;
+        font-weight: 650;
+        margin-top: 3px;
+      }
+      .navigation {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+      }
+      .plain-button,
+      select {
+        border: 1px solid #becdc5;
+        background: #fff;
+        color: var(--ink);
+        border-radius: 6px;
+        padding: 7px 10px;
+      }
+      select {
+        min-width: 0;
+        max-width: 100%;
+        text-overflow: ellipsis;
+      }
+      .navigation select {
+        max-width: 325px;
+      }
+      .draw-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 13px 0;
+      }
+      .draw-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .field-label {
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .small-note {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .trace {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .trace-step {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 9px 12px;
+        min-width: 0;
+      }
+      .trace-heading {
+        font-size: 12px;
+        font-weight: 750;
+      }
+      .trace-class {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 1px;
+      }
+      .trace-parameters {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+        overflow-wrap: anywhere;
+      }
+      .trace-number {
+        color: var(--green);
+        padding-right: 7px;
+      }
+      .display-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        border-top: 1px solid var(--line);
+        padding: 11px 0;
+      }
+      .segmented {
+        display: flex;
+        gap: 3px;
+        flex-wrap: wrap;
+      }
+      .segmented button {
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 6px 9px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .segmented button:hover {
+        background: #e8eeea;
+      }
+      .segmented button[aria-pressed="true"] {
+        color: var(--green);
+        background: var(--soft);
+        border-color: #abc7bb;
+      }
+      .display-actions {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+      .closeup-toggle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .closeup-toggle input {
+        accent-color: var(--green);
+        width: 16px;
+        height: 16px;
+      }
+      .zoom-button {
+        font-size: 12px;
+      }
+      .reference-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding-bottom: 10px;
+      }
+      .reference-row .segmented button {
+        font-size: 12px;
+      }
+      .comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .image-card {
+        min-width: 0;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        overflow: hidden;
+      }
+      .card-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        min-height: 44px;
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+      }
+      .card-heading span {
+        color: var(--muted);
+        font-size: 11px;
+        text-align: right;
+      }
+      .image-stage {
+        aspect-ratio: 1;
+        background: #080e11;
+        overflow: hidden;
+        cursor: zoom-in;
+      }
+      .image-stage canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+      }
+      .image-caption {
+        font-size: 11px;
+        color: var(--muted);
+        padding: 8px 12px;
+        min-height: 33px;
+      }
+      .explainer {
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+        flex-wrap: wrap;
+        padding: 11px 0;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .legend {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .swatch {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 2px;
+        margin-right: 5px;
+      }
+      .kelp {
+        background: #d6d600;
+      }
+      .ignore {
+        background: #702469;
+      }
+      .details {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 12px 14px;
+        margin-top: 2px;
+      }
+      .details summary {
+        font-size: 13px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      .source-line {
+        font-size: 12px;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+        margin-top: 12px;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 13px;
+      }
+      .detail-grid h2 {
+        font-size: 12px;
+        margin: 0 0 6px;
+      }
+      .detail-grid pre {
+        background: #f5f7f5;
+        border-radius: 4px;
+        padding: 10px;
+        font-size: 11px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin: 0;
+      }
+      .detail-links {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+        font-size: 12px;
+      }
+      #status {
+        font-size: 12px;
+        color: var(--muted);
+        min-height: 18px;
+        margin-top: 8px;
+      }
+      #error {
+        background: #fff0eb;
+        color: #8a321b;
+        border: 1px solid #e4b7a9;
+        border-radius: 6px;
+        padding: 11px;
+        margin-bottom: 10px;
+      }
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+      dialog {
+        width: min(98vw, 1900px);
+        max-width: none;
+        max-height: 97vh;
+        overflow: auto;
+        border: 1px solid #708c80;
+        border-radius: 10px;
+        background: var(--paper);
+        padding: 17px;
+      }
+      dialog::backdrop {
+        background: #081511db;
+      }
+      .dialog-heading {
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .dialog-heading h2 {
+        font-size: 18px;
+        margin: 0;
+      }
+      .dialog-heading p {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      dialog .image-stage {
+        cursor: default;
+      }
+      .dialog-toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 11px;
+      }
+      @media (min-width: 1160px) {
+        .comparison {
+          grid-template-columns: minmax(512px, 1fr) minmax(512px, 1fr);
+        }
+      }
+      @media (max-width: 800px) {
+        .shell {
+          padding: 17px 14px 28px;
+        }
+        .masthead {
+          gap: 12px;
+        }
+        .review-note {
+          white-space: normal;
+          max-width: 145px;
+          font-size: 11px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+        .toolbar > .navigation {
+          width: 100%;
+        }
+        .navigation select {
+          flex: 1;
+          max-width: none;
+        }
+        .trace {
+          grid-template-columns: 1fr;
+        }
+        .trace-step {
+          padding: 7px 10px;
+        }
+        .comparison {
+          gap: 10px;
+        }
+        .card-heading {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+          min-height: 60px;
+          padding: 8px;
+        }
+        .card-heading span {
+          text-align: left;
+        }
+        .detail-grid {
+          grid-template-columns: 1fr;
+        }
+        .dialog-heading {
+          align-items: flex-start;
+        }
+        .dialog-heading .navigation {
+          flex-wrap: wrap;
+        }
+      }
+      @media (max-width: 480px) {
+        .comparison {
+          grid-template-columns: 1fr;
+        }
+        .card-heading {
+          flex-direction: row;
+          align-items: center;
+          min-height: 0;
+        }
+        .display-actions {
+          width: 100%;
+          justify-content: space-between;
+        }
+        .draw-controls {
+          width: 100%;
+        }
+        .draw-controls select {
+          flex: 1;
+        }
+        .dialog-heading {
+          flex-direction: column;
+        }
+        .dialog-heading .navigation {
+          width: 100%;
+        }
+        .review-note {
+          max-width: 120px;
+        }
+        .reference-row {
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell" id="app">
+      <header class="masthead">
+        <div>
+          <div class="brand">Kelpseg / training imagery</div>
+          <h1>Combined pipeline review</h1>
+          <p class="muted">
+            Compare the same geometry before and after two sampled operations.
+          </p>
+          <p id="backend-label" class="muted backend"></p>
+        </div>
+        <span class="review-note">Approved recipe · preview</span>
+      </header>
+      <section class="toolbar" aria-label="Training example navigation">
+        <div>
+          <div class="example-heading">
+            <span id="example-counter" aria-live="polite"></span>
+            <span id="sample-category"></span>
+          </div>
+          <p id="sample-description"></p>
+        </div>
+        <div class="navigation">
+          <button
+            class="plain-button"
+            id="previous-example"
+            aria-label="Previous example"
+          >
+            ←
+          </button>
+          <label for="example-select" class="visually-hidden">
+            Choose example
+          </label>
+          <select id="example-select"></select>
+          <button
+            class="plain-button"
+            id="next-example"
+            aria-label="Next example"
+          >
+            →
+          </button>
+        </div>
+      </section>
+      <section class="draw-row" aria-label="Deterministic pipeline draws">
+        <div class="draw-controls">
+          <label class="field-label" for="draw-select">Draw</label>
+          <select id="draw-select"></select>
+          <button class="plain-button" id="next-draw">Next draw ↻</button>
+        </div>
+        <span class="small-note">
+          Keep the draw number while flipping examples · seeds differ by example
+        </span>
+      </section>
+      <section
+        class="trace"
+        id="pipeline-trace"
+        aria-label="Actual applied operation order"
+      ></section>
+      <div class="display-row">
+        <div
+          class="segmented"
+          id="view-controls"
+          aria-label="Display type"
+        ></div>
+        <div class="display-actions">
+          <label class="closeup-toggle">
+            <input type="checkbox" id="closeup" />
+            Kelp close-up
+          </label>
+          <button class="plain-button zoom-button" id="open-zoom">
+            Enlarge comparison ↗
+          </button>
+        </div>
+      </div>
+      <div class="reference-row">
+        <span class="field-label">Left reference</span>
+        <div
+          class="segmented"
+          id="reference-controls"
+          aria-label="Left reference"
+        ></div>
+        <span class="small-note" id="reference-note"></span>
+      </div>
+      <div id="error" role="alert" hidden></div>
+      <section
+        class="comparison"
+        aria-label="Reference and combined pipeline comparison"
+      >
+        <article class="image-card">
+          <div class="card-heading">
+            <strong id="reference-heading">D4 only</strong>
+            <span id="reference-description"></span>
+          </div>
+          <div class="image-stage" id="reference-stage">
+            <canvas
+              id="reference-canvas"
+              aria-label="Reference training image"
+            ></canvas>
+          </div>
+          <div class="image-caption" id="reference-caption"></div>
+        </article>
+        <article class="image-card">
+          <div class="card-heading">
+            <strong>Full pipeline</strong>
+            <span>D4 + two sampled operations</span>
+          </div>
+          <div class="image-stage" id="pipeline-stage">
+            <canvas
+              id="pipeline-canvas"
+              aria-label="Combined augmentation image"
+            ></canvas>
+          </div>
+          <div class="image-caption" id="pipeline-caption"></div>
+        </article>
+      </section>
+      <div class="explainer">
+        <div class="legend" id="view-note"></div>
+        <span>Display: raw 0–2000 only · model input cap: 5000</span>
+        <span>← → examples · click an image to enlarge</span>
+      </div>
+      <details class="details">
+        <summary>Exact parameters, counts &amp; display method</summary>
+        <p id="source-line" class="source-line"></p>
+        <div class="detail-grid">
+          <section>
+            <h2>Saved pipeline parameters</h2>
+            <pre id="parameter-detail"></pre>
+          </section>
+          <section>
+            <h2>Left reference → full pipeline</h2>
+            <pre id="metric-detail"></pre>
+          </section>
+          <section style="grid-column: 1/-1">
+            <h2>Saved pipeline recipe</h2>
+            <pre id="recipe-detail"></pre>
+          </section>
+        </div>
+        <p class="source-line">
+          Stock Albumentations receives float32 imagery scaled from native
+          uint16 by dividing by 65535. Stock clipping operates in 0–1 units;
+          output returns to raw units before the final 5000 cap and fixed
+          normalization. The 0–2000 color display is separate. D4 moves all
+          grids together. Original invalid image fill is restored after
+          photometric operations; spatial dropout ignores targets under its
+          holes. Background examples are diagnostic controls. This viewer shows
+          the approved recipe; no training run is performed.
+        </p>
+        <div class="detail-links">
+          <a id="parameter-link" target="_blank" rel="noopener">
+            Complete example record
+          </a>
+        </div>
+      </details>
+      <p id="status" aria-live="polite"></p>
+    </main>
+    <dialog id="zoom-dialog" aria-labelledby="zoom-title">
+      <div class="dialog-heading">
+        <div>
+          <h2 id="zoom-title" aria-live="polite">Enlarged comparison</h2>
+          <p>
+            ← → flips examples · Escape closes · saved draw and display stay
+            selected
+          </p>
+        </div>
+        <div class="navigation">
+          <button
+            class="plain-button"
+            id="zoom-previous-example"
+            aria-label="Previous example in enlarged view"
+          >
+            ←
+          </button>
+          <button
+            class="plain-button"
+            id="zoom-next-example"
+            aria-label="Next example in enlarged view"
+          >
+            →
+          </button>
+          <button class="plain-button" id="zoom-next-draw">Next draw ↻</button>
+          <button class="plain-button" id="close-zoom">Close ×</button>
+        </div>
+      </div>
+      <div class="dialog-toolbar">
+        <div
+          id="zoom-view-controls"
+          class="segmented"
+          aria-label="Enlarged display type"
+        ></div>
+        <label class="closeup-toggle">
+          <input type="checkbox" id="zoom-closeup" />
+          Kelp close-up
+        </label>
+      </div>
+      <div class="reference-row">
+        <span class="field-label">Left reference</span>
+        <div
+          class="segmented"
+          id="zoom-reference-controls"
+          aria-label="Enlarged left reference"
+        ></div>
+      </div>
+      <div class="comparison">
+        <article class="image-card">
+          <div class="card-heading">
+            <strong id="zoom-reference-heading">D4 only</strong>
+          </div>
+          <div class="image-stage">
+            <canvas
+              id="zoom-reference-canvas"
+              aria-label="Enlarged reference image"
+            ></canvas>
+          </div>
+        </article>
+        <article class="image-card">
+          <div class="card-heading">
+            <strong id="zoom-pipeline-heading">Full pipeline</strong>
+          </div>
+          <div class="image-stage">
+            <canvas
+              id="zoom-pipeline-canvas"
+              aria-label="Enlarged combined augmentation image"
+            ></canvas>
+          </div>
+        </article>
+      </div>
+    </dialog>
+    <!-- The gallery writer replaces this literal offline data placeholder. -->
+    <!-- prettier-ignore -->
+    <script type="application/json" id="gallery-data">__GALLERY_DATA__</script>
+    <script>
+      "use strict";
+      const gallery = JSON.parse(
+        document.getElementById("gallery-data").textContent,
+      );
+      const samples = gallery.samples;
+      const views = [
+        ["rgb", "RGB · no labels"],
+        ["false_color", "NIR false color · no labels"],
+        ["labels", "Label overlay"],
+      ];
+      const ui = {
+        sample: 0,
+        draw: 0,
+        reference: 1,
+        view: "false_color",
+        cleanView: "false_color",
+        closeup: false,
+      };
+      const byId = (id) => document.getElementById(id);
+      const text = (id, value) => {
+        byId(id).textContent = value;
+      };
+      let requestNumber = 0;
+      let lastImages = null;
+      function currentDraw() {
+        const sample = samples[ui.sample];
+        ui.draw = Math.min(ui.draw, sample.draws.length - 1);
+        const draw = sample.draws[ui.draw];
+        return {
+          sample,
+          draw,
+          reference: draw.states[ui.reference],
+          pipeline: draw.states[2],
+        };
+      }
+      function labelName() {
+        return ui.cleanView === "false_color"
+          ? "Labels on NIR false color"
+          : "Labels on RGB";
+      }
+      function createToggleButton(label, selected, action) {
+        const node = document.createElement("button");
+        node.type = "button";
+        node.textContent = label;
+        node.setAttribute("aria-pressed", String(selected));
+        node.addEventListener("click", action);
+        return node;
+      }
+      function formatParameterValue(value) {
+        if (typeof value === "number")
+          return Number.isInteger(value)
+            ? String(value)
+            : Number(value.toPrecision(5)).toString();
+        if (Array.isArray(value))
+          return value.length <= 4 &&
+            value.every((item) => typeof item !== "object")
+            ? value.map(formatParameterValue).join(", ")
+            : `${value.length} values`;
+        if (value && typeof value === "object") {
+          if (value.std !== undefined)
+            return `empirical std ${formatParameterValue(value.std)}`;
+          if (value.shape) return `shape ${value.shape.join("×")}`;
+          return Object.keys(value).join(", ");
+        }
+        return String(value);
+      }
+      function constructorSettings(
+        className,
+        node = gallery.pipeline_recipe.transform,
+      ) {
+        if ((node?.__class_fullname__ || "").split(".").pop() === className)
+          return node;
+        for (const child of node?.transforms || []) {
+          const match = constructorSettings(className, child);
+          if (match) return match;
+        }
+        return null;
+      }
+      function operationSummary(operation, names) {
+        const params = operation.parameters || {};
+        if (operation.class === "D4")
+          return `group_element = ${params.group_element ?? "see exact parameters"}`;
+        if (operation.class === "GaussianBlur") {
+          const configured = constructorSettings("GaussianBlur");
+          const kernel = params.kernel;
+          const taps = Array.isArray(kernel)
+            ? kernel.length
+            : kernel?.shape?.[0];
+          return (
+            [
+              configured?.sigma_limit
+                ? `configured sigma_limit = [${configured.sigma_limit.map(formatParameterValue).join(", ")}] px`
+                : null,
+              taps ? `realized kernel: ${taps} taps` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "See saved native parameters below"
+          );
+        }
+        if (operation.class === "GaussNoise") {
+          const configured = constructorSettings("GaussNoise");
+          const empirical = params.noise_map?.empirical_std;
+          return (
+            [
+              configured?.std_range
+                ? `configured std_range = [${configured.std_range.map(formatParameterValue).join(", ")}]`
+                : null,
+              empirical !== undefined
+                ? `empirical field SD = ${formatParameterValue(empirical)} before clipping`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "See saved native noise field parameters below"
+          );
+        }
+        const parts = [];
+        if (operation.dropped_bands?.length)
+          parts.push(`dropped: ${operation.dropped_bands.join(", ")}`);
+        for (const [key, value] of Object.entries(params)) {
+          if (key === "shape") continue;
+          if (key === "holes") {
+            parts.push(`${value.length} holes`);
+            continue;
+          }
+          if (key === "channels_to_drop") {
+            if (!operation.dropped_bands?.length)
+              parts.push(
+                `dropped: ${Array.from(value)
+                  .map((index) => names[index] ?? index)
+                  .join(", ")}`,
+              );
+            continue;
+          }
+          parts.push(`${key} = ${formatParameterValue(value)}`);
+          if (parts.length === 3) break;
+        }
+        return parts.join(" · ") || "See saved native parameters below";
+      }
+      function operationHeading(operation) {
+        const names = {
+          D4: "Rotations / reflections",
+          AdditiveNoise: "Channel shifts",
+          GaussNoise: "Gaussian noise",
+          GaussianBlur: "Gaussian blur",
+          Sharpen: "Sharpness",
+          CoarseDropout: "Spatial dropout",
+          ChannelDropout: "Band dropout",
+        };
+        if (operation.class !== "RandomBrightnessContrast")
+          return names[operation.class] || operation.class;
+        const { alpha, beta } = operation.parameters || {};
+        if (alpha === 1 && beta !== undefined && beta !== 0)
+          return "Brightness";
+        if (beta === 0 && alpha !== undefined && alpha !== 1) return "Gain";
+        return "Brightness / gain";
+      }
+      function showTrace(sample, pipeline) {
+        const params = pipeline.parameters;
+        const operations =
+          params.operation_trace ||
+          params.applied.map(([name, parameters]) => ({
+            class: name,
+            parameters,
+          }));
+        const names =
+          sample.band_names || gallery.normalization?.band_names || [];
+        const trace = byId("pipeline-trace");
+        trace.replaceChildren();
+        operations.forEach((operation, index) => {
+          const card = document.createElement("article");
+          card.className = "trace-step";
+          const heading = document.createElement("div");
+          heading.className = "trace-heading";
+          const number = document.createElement("span");
+          number.className = "trace-number";
+          number.textContent = String(index + 1);
+          heading.append(
+            number,
+            document.createTextNode(operationHeading(operation)),
+          );
+          const nativeClass = document.createElement("p");
+          nativeClass.className = "trace-class";
+          nativeClass.textContent = operation.class;
+          const summary = document.createElement("p");
+          summary.className = "trace-parameters";
+          summary.textContent = operationSummary(operation, names);
+          card.append(heading, nativeClass, summary);
+          trace.append(card);
+        });
+      }
+      function fillControls(sample, pipeline) {
+        const select = byId("draw-select");
+        select.replaceChildren();
+        sample.draws.forEach((item, index) => {
+          const option = document.createElement("option");
+          option.value = String(index);
+          option.textContent = `${index + 1} / ${sample.draws.length} · seed ${item.seed}`;
+          select.append(option);
+        });
+        select.value = String(ui.draw);
+        for (const id of ["reference-controls", "zoom-reference-controls"]) {
+          const control = byId(id);
+          control.replaceChildren();
+          for (const [index, label] of [
+            [1, "D4 only · aligned"],
+            [0, "Source original"],
+          ])
+            control.append(
+              createToggleButton(label, ui.reference === index, () => {
+                ui.reference = index;
+                render();
+              }),
+            );
+        }
+        for (const id of ["view-controls", "zoom-view-controls"]) {
+          const control = byId(id);
+          control.replaceChildren();
+          for (const [key, label] of views)
+            if (pipeline.assets[key])
+              control.append(
+                createToggleButton(
+                  key === "labels" ? labelName() : label,
+                  ui.view === key,
+                  () => {
+                    if (key !== "labels") ui.cleanView = key;
+                    ui.view = key;
+                    render();
+                  },
+                ),
+              );
+        }
+      }
+      function paint(canvas, image, crop) {
+        const [top, left, bottom, right] = crop || [
+          0,
+          0,
+          image.naturalHeight,
+          image.naturalWidth,
+        ];
+        canvas.width = right - left;
+        canvas.height = bottom - top;
+        const context = canvas.getContext("2d");
+        context.imageSmoothingEnabled = false;
+        context.drawImage(
+          image,
+          left,
+          top,
+          right - left,
+          bottom - top,
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        );
+      }
+      function repaint() {
+        if (!lastImages) return;
+        const { sample, reference, pipeline } = currentDraw();
+        const leftCrop = ui.closeup
+          ? reference.closeup || sample.closeup
+          : null;
+        const rightCrop = ui.closeup
+          ? pipeline.closeup || sample.closeup
+          : null;
+        paint(byId("reference-canvas"), lastImages[0], leftCrop);
+        paint(byId("pipeline-canvas"), lastImages[1], rightCrop);
+        if (byId("zoom-dialog").open) {
+          paint(byId("zoom-reference-canvas"), lastImages[0], leftCrop);
+          paint(byId("zoom-pipeline-canvas"), lastImages[1], rightCrop);
+        }
+      }
+      function loadImage(source) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () =>
+            reject(new Error(`Could not open image: ${source}`));
+          image.src = source;
+        });
+      }
+      function metricComparison(left, right) {
+        return [
+          ["Valid image pixels", "valid_pixels"],
+          ["Kelp target pixels", "foreground_pixels"],
+          ["Scoreable targets", "scoreable_pixels"],
+          ["Ignored targets", "ignored_pixels"],
+          ["Raw values below zero", "below_zero_values"],
+          ["Raw values above 5000", "above_cap_values"],
+        ]
+          .map(
+            ([label, key]) =>
+              `${label}: ${Number(left[key]).toLocaleString()} → ${Number(right[key]).toLocaleString()}`,
+          )
+          .join("\n");
+      }
+      async function render() {
+        const request = ++requestNumber;
+        const { sample, draw, reference, pipeline } = currentDraw();
+        fillControls(sample, pipeline);
+        showTrace(sample, pipeline);
+        const viewName =
+          ui.view === "labels"
+            ? labelName()
+            : views.find(([key]) => key === ui.view)[1];
+        const leftName = ui.reference === 1 ? "D4 only" : "Source original";
+        byId("app").classList.toggle("background", sample.background_control);
+        text("example-counter", `Example ${ui.sample + 1} / ${samples.length}`);
+        text(
+          "sample-category",
+          sample.background_control
+            ? "BACKGROUND CONTROL · DIAGNOSTIC ONLY"
+            : "POSITIVE TRAINING WINDOW",
+        );
+        text(
+          "sample-description",
+          `Region ${sample.window.region} · ${sample.window.acquisition_date}`,
+        );
+        byId("example-select").value = String(ui.sample);
+        for (const id of ["previous-example", "zoom-previous-example"])
+          byId(id).disabled = ui.sample === 0;
+        for (const id of ["next-example", "zoom-next-example"])
+          byId(id).disabled = ui.sample === samples.length - 1;
+        for (const id of ["closeup", "zoom-closeup"])
+          byId(id).checked = ui.closeup;
+        text("reference-heading", leftName);
+        text("zoom-reference-heading", leftName);
+        text(
+          "reference-description",
+          ui.reference === 1
+            ? "Same D4 draw; no extra operations"
+            : "Before D4 and extra operations",
+        );
+        text(
+          "reference-note",
+          ui.reference === 1
+            ? "Geometry matches the full pipeline."
+            : "Geometry may differ from the full pipeline.",
+        );
+        text(
+          "reference-caption",
+          `${viewName}${ui.closeup ? " · kelp close-up" : " · full window"}`,
+        );
+        text(
+          "pipeline-caption",
+          `Draw ${ui.draw + 1} / ${sample.draws.length} · seed ${draw.seed}`,
+        );
+        const note = byId("view-note");
+        note.replaceChildren();
+        if (ui.view === "labels") {
+          for (const [kind, label] of [
+            ["kelp", "Kelp target"],
+            ["ignore", "Ignored / unavailable support"],
+          ]) {
+            const item = document.createElement("span"),
+              swatch = document.createElement("span");
+            swatch.className = `swatch ${kind}`;
+            item.append(swatch, document.createTextNode(label));
+            note.append(item);
+          }
+        } else
+          text(
+            "view-note",
+            ui.view === "false_color"
+              ? "NIR / red / green · identical color display"
+              : "Red / green / blue · identical color display",
+          );
+        text(
+          "source-line",
+          `${sample.window.source_key} · row ${sample.window.row}, column ${sample.window.col}`,
+        );
+        text("parameter-detail", JSON.stringify(pipeline.parameters, null, 2));
+        text(
+          "metric-detail",
+          metricComparison(reference.metrics, pipeline.metrics),
+        );
+        byId("parameter-link").href =
+          sample.parameters || `${sample.preview_name}/parameters.json`;
+        text(
+          "zoom-title",
+          `Example ${ui.sample + 1} / ${samples.length} · draw ${ui.draw + 1} / ${sample.draws.length} · region ${sample.window.region}`,
+        );
+        text("zoom-pipeline-heading", `Full pipeline · seed ${draw.seed}`);
+        byId("error").hidden = true;
+        text("status", "Loading comparison…");
+        try {
+          const asset =
+            ui.view === "labels" && ui.cleanView === "false_color"
+              ? "false_color_labels"
+              : ui.view;
+          const loaded = await Promise.all([
+            loadImage(reference.assets[asset]),
+            loadImage(pipeline.assets[asset]),
+          ]);
+          if (request !== requestNumber) return;
+          lastImages = loaded;
+          repaint();
+          text("status", "");
+        } catch (error) {
+          if (request !== requestNumber) return;
+          byId("error").hidden = false;
+          text(
+            "error",
+            `${error.message}. Keep this page beside its generated image folders.`,
+          );
+          text("status", "");
+        }
+      }
+      function moveExample(offset) {
+        const next = Math.max(
+          0,
+          Math.min(samples.length - 1, ui.sample + offset),
+        );
+        if (next !== ui.sample) {
+          ui.sample = next;
+          render();
+        }
+      }
+      function nextDraw() {
+        ui.draw = (ui.draw + 1) % samples[ui.sample].draws.length;
+        render();
+      }
+      samples.forEach((sample, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = `${String(index + 1).padStart(2, "0")} · ${sample.background_control ? "Background" : "Region " + sample.window.region} · ${sample.window.acquisition_date}`;
+        byId("example-select").append(option);
+      });
+      byId("example-select").addEventListener("change", (event) => {
+        ui.sample = Number(event.target.value);
+        render();
+      });
+      byId("draw-select").addEventListener("change", (event) => {
+        ui.draw = Number(event.target.value);
+        render();
+      });
+      for (const id of ["previous-example", "zoom-previous-example"])
+        byId(id).addEventListener("click", () => moveExample(-1));
+      for (const id of ["next-example", "zoom-next-example"])
+        byId(id).addEventListener("click", () => moveExample(1));
+      for (const id of ["next-draw", "zoom-next-draw"])
+        byId(id).addEventListener("click", nextDraw);
+      for (const id of ["closeup", "zoom-closeup"])
+        byId(id).addEventListener("change", (event) => {
+          ui.closeup = event.target.checked;
+          render();
+        });
+      function openZoom() {
+        byId("zoom-dialog").showModal();
+        repaint();
+      }
+      for (const id of ["open-zoom", "reference-stage", "pipeline-stage"])
+        byId(id).addEventListener("click", openZoom);
+      byId("close-zoom").addEventListener("click", () =>
+        byId("zoom-dialog").close(),
+      );
+      document.addEventListener("keydown", (event) => {
+        if (
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey ||
+          ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)
+        )
+          return;
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          moveExample(event.key === "ArrowLeft" ? -1 : 1);
+        }
+      });
+      text(
+        "backend-label",
+        `Albumentations ${gallery.albumentations_version || "version not recorded"} · D4 + two sampled operations`,
+      );
+      text("recipe-detail", JSON.stringify(gallery.pipeline_recipe, null, 2));
+      render();
+    </script>
+  </body>
+</html>

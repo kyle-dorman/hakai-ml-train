@@ -18,7 +18,8 @@ def test_help_keeps_explicit_subcommand_and_no_future_commands() -> None:
     assert "check-paths" in result.stdout
     assert "organize" in result.stdout
     assert "split" in result.stdout
-    assert "train" not in result.stdout
+    assert "preview-augmentations" not in result.stdout
+    assert "train" not in {command.name for command in app.registered_commands}
     assert "--version" in result.stdout
     result = runner.invoke(app, ["check-paths", "--help"])
     assert result.exit_code == 0

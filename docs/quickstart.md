@@ -19,7 +19,7 @@ uv run kelpseg --version
 
 Normal checkout setup includes developer tools and dependencies needed by the
 retained Planet correctness tests. The installed package itself currently needs
-Typer, NumPy, and Rasterio (including their dependencies). Help/version do not
+Typer, NumPy, Rasterio, Albumentations and Matplotlib (including their dependencies). Help/version do not
 import the geospatial stack. Organization dry-run reads declarations only;
 check and clean dry-run inspect TIFF headers. Split dry-run reads metadata only.
 
@@ -764,6 +764,135 @@ in place of `uv run` in the commands below; install the locked environment
 before disconnecting. Choose fresh generated output names each time. No Box
 access is needed during the walkthrough. The
 [preserved v1 example](#preserved-v1-example) remains available separately.
+
+## Preview individual augmentations
+
+This is an exploratory Python example, separate from the installed preparation
+CLI. It uses the actual **Albumentations 2.0.8** classes and their native
+parameters; there is no custom augmentation math or separate parameter schema.
+
+Set `DATA_ROOT` and a fresh `OUTPUT` in
+[`examples/augmentation_previews.py`](../examples/augmentation_previews.py), then run:
+
+```bash
+uv run python examples/augmentation_previews.py
+```
+
+Open its `index.html` in a browser. Choose one operation, then flip the 16
+examples with the previous/next buttons or arrow keys while keeping the same
+setting. The large original/trial views support clean RGB, clean NIR false
+color, labels on either view and a kelp-boundary close-up, including in the
+expanded comparison. Longer sweeps use a native-value dropdown. Coarse dropout
+has separate size and hole-count selectors. The two labeled background controls
+are last.
+
+Read/edit the literal constructors in
+[`augmentation_trials.py`](../src/kelpseg/augmentation_trials.py) to change trial
+values. Equal range endpoints fix a library strength; the seed fixes its other
+random choices. Library validation owns the parameter rules. The viewer shows
+exact constructor arguments and realized parameters, plus the library version.
+
+| Preview | Actual implementation and parameter |
+|---|---|
+| Rotations/reflections | `D4`, fixed `group_element` for the eight square symmetries |
+| Additive brightness | `RandomBrightnessContrast`, `brightness_limit`, contrast zero |
+| Gain / contrast | `RandomBrightnessContrast`, `contrast_limit`, brightness zero; stock contrast is multiplication by `1 + contrast_limit` |
+| Blur | `GaussianBlur`, fixed `sigma_limit`, stock kernel; `NoOp` identity because sigma zero is invalid in this release |
+| Noise | `GaussNoise`, fixed `std_range`, independent pixel/channel noise |
+| Sharpening | `Sharpen(method="gaussian")`, native `alpha`, kernel size 5 and sigma 1 |
+| Spatial holes | `CoarseDropout`, separate count/size sweeps, image fill 0 and mask fill -100 |
+| Independent channel shifts | `AdditiveNoise`, uniform `noise_params.ranges` and `spatial_mode="constant"` |
+| Red or NIR dropout | `ChannelDropout`, full removal with fill 0; fixed diagnostic channel index |
+
+The old mean-centered contrast, custom masked blur/sharpness, partial channel
+fades and mean-fill previews were removed. Gain and stock contrast share one
+sweep because they duplicate each other. The user's
+[selected strength limits](../tasks/033_baseline_training_and_portable_models.md#limits-selected-after-isolated-review)
+and D4 plus `SomeOf(n=2)` composition are recorded separately from the wider
+trial sweeps. The user approved the combined preview and its final recipe.
+
+The wider exploratory sweeps retain earlier values and reach the library's
+default brightness limits **-0.2 to 0.2**, blur sigma **3 px**, noise standard
+deviation **0.44**, and uniform channel-shift amplitude **0.1**. Noise and
+brightness/shift values use the library's unit float domain. These endpoints
+can overwhelm this dark imagery; they are comparisons, not selected maxima.
+Coarse dropout compares **1/2/4/8/16 holes at side 0.25**, and **sides
+0.05/0.1/0.2/0.25/0.35/0.5 at four holes**. Side lengths are fractions of image
+height/width; holes may overlap. Each trial is one stock transform.
+
+[`augmentations.py`](../src/kelpseg/augmentations.py) contains the small data
+adapter only. It converts native uint16 imagery to **float32 / 65535**, calls
+the real class, restores raw units and zero invalid fill. It applies no model
+pre-cap. Stock pixel functions clip to their native **[0,1]** domain where
+implemented, including a raw-zero lower bound. Stock blur sees zero nodata and
+padding, so neighboring valid pixels can darken; there is no hidden
+validity-normalized replacement kernel. Labels and validity travel as mask
+targets; -100 under a spatial hole makes it invalid. Validity is detected before
+augmentation and never inferred again from augmented zero values.
+
+After augmentation, model preprocessing still uses the approved **5000 upper
+cap** and [exact fixed normalization](../tasks/033_baseline_training_and_portable_models.md#selected-training-normalization).
+The viewer alone clips colors to **raw 0–2000**, consistently across examples.
+The input scale, model cap and display ceiling have distinct purposes.
+
+The same 14 kelp-rich training windows and two background controls are selected
+from the canonical manifests before any arrays are opened. Positive examples
+have at least 10% labeled kelp in their true footprint; this is showcase
+sampling, not evaluation sampling or a new training eligibility rule. No
+validation/test payload is opened. Native bands are augmented before choosing
+RGB/NIR views, so their random draws stay consistent.
+
+Outputs include `selected_windows.csv`, library/version/domain metadata in
+`gallery.json`, per-window `parameters.json`, native-resolution view PNGs and
+optional contact sheets. Full-image noise fields are represented by shape and
+seed rather than copied into JSON. Source files remain unchanged. Existing
+outputs are refused before payload reads; choose a new directory for each run.
+
+## Preview the combined augmentation pipeline
+
+Set `DATA_ROOT` and a fresh `OUTPUT` in
+[`examples/augmentation_pipeline_preview.py`](../examples/augmentation_pipeline_preview.py),
+then run:
+
+```bash
+uv run python examples/augmentation_pipeline_preview.py
+```
+
+Open its `index.html`. Flip the same 16 training examples or use **Next draw**
+to inspect eight seeded pipeline draws for each example. The three cards above
+the images show the actual D4 element and two selected operations in execution
+order. The left image defaults to **D4 only**, so both sides share geometry;
+switch to **Source original** to include the rotation/reflection difference.
+Clean RGB/NIR, matching label overlays, paired kelp close-ups and enlarged
+comparison remain available. Two explicitly labeled background controls are
+diagnostics; the training eligibility rule is unchanged.
+
+The readable recipe is
+[`build_training_augmentation`](../src/kelpseg/augmentation_pipeline.py): stock
+`D4(p=1)` then `SomeOf(n=2, replace=False, p=1)`, with every child at `p=1`.
+Children are selected uniformly and execute in listed order: brightness, gain,
+blur, noise, Sharpen, coarse dropout, channel shifts, channel dropout. It uses
+the [approved native ranges](../tasks/033_baseline_training_and_portable_models.md#limits-selected-after-isolated-review).
+The final [native Albumentations recipe](../configs/augment/baseline.json) is a
+saved snapshot of that factory, verified by a focused parity check. It can be
+loaded directly with `albumentations.from_dict`; there is no custom parser.
+Channel dropout removes exactly one of the eight physical input bands in this
+preview. A later RGB/RGB+NIR training loader must restrict eligibility to that
+model's input bands. D4 includes the identity square symmetry.
+
+`pipeline.json` saves the stock serialized recipe. `gallery.json`, selected
+windows and per-example parameter records save the input/domain/normalization
+metadata, draw seeds, actual operations and support counts. Kernel/noise-map
+records reflect what the stock classes expose: the blur sigma range and actual
+kernel, and the noise std range plus explicitly empirical realized field std.
+Full noise arrays are not copied into JSON. The cap remains 5000 after the
+entire pipeline, using exact fixed normalization; display remains 0–2000.
+
+The preview constructs a seeded pipeline for each reproducible draw. Future
+training should create one pipeline and reuse it through the shared raw-data
+adapter. Its default `seed=None` advances the random state; explicit integer
+seeds are for replayable previews. This gallery runs no model and opens no held-out payloads.
+Existing outputs are refused; failed generation needs a fresh output.
 
 ## Tiny v2: split, chip and load locally
 

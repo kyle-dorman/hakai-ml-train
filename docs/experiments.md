@@ -69,13 +69,29 @@ EMA for validation and the selected portable model after averaging begins.
 Before the first averaging update, validate current weights. Augmentation
 parameters must be checked with previews from the same transforms used in
 training, including aligned masks and visible clipping/ignore behavior.
-The first pass is [033A's isolated strength previews](../tasks/033a_individual_augmentation_previews.md):
-legacy square symmetry, additive brightness and spatial dropout, plus small
-independent channel shifts and band dropout. Smooth illumination and the broader
-noise/blur/haze/misregistration catalog are excluded. Band dropout preserves
-labels/validity; spatial dropout ignores erased targets. Review isolated outputs
-with the user in 033B before choosing production settings or testing requested
-combinations. No implementation or preview generation is currently authorized.
+The first pass is [033A's isolated class previews](../tasks/033a_individual_augmentation_previews.md).
+The user's 2026-11-02 direction replaces custom augmentation math with pinned
+stock Albumentations 2.0.8, using actual native constructor parameters. Preview
+and later training must use those implementations and the same input-domain
+adapter; strengths must not be translated to another implementation afterward.
+The adapter uses native uint16 / 65535, stock operations, raw-unit restoration
+and the final 5000 model cap. Stock clipping and zero-nodata boundary effects
+are disclosed; there is no bespoke valid-weighted blur or mean-centered
+contrast. Labels/validity remain paired; spatial holes have ignored targets.
+
+The [selected ranges and composition](../tasks/033_baseline_training_and_portable_models.md#limits-selected-after-isolated-review)
+use D4(p=1) followed by SomeOf(n=2, replace=False, p=1); all eight children have
+p=1 and equal selection eligibility. Stock SomeOf executes selected operations
+in configured list order. Task 033B's combined preview uses this actual recipe,
+the same kelp-rich training examples, clean/labeled close-ups and 2000 display
+ceiling. The user approved those combined outputs and the final recipe is saved
+as [native Albumentations JSON](../configs/augment/baseline.json), checked against
+the readable Python factory. Later training must consume this approved policy.
+The native-eight-band preview drops exactly one eligible input band; later
+3/4-band training must restrict dropout to that model's selected bands and
+preserve physical identity. Reuse one seeded pipeline with advancing random
+state in training; fixed per-draw seeds in the viewer are for inspection.
+Smooth illumination, haze and misregistration remain excluded.
 
 ## Portable prediction model
 

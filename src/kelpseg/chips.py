@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from kelpseg.bands import resolve_band_indices
-from kelpseg.prepare.nodata import nodata_mask
+from kelpseg.preprocessing import native_validity
 
 
 def load_chip(
@@ -38,7 +38,8 @@ def load_chip(
         raise ValueError(f"{path}: image channels disagree with source_band_names.")
     if not 1 <= height <= chip_size or not 1 <= width <= chip_size:
         raise ValueError(f"{path}: true chip dimensions must be in 1..{chip_size}.")
-    invalid = nodata_mask(image, (0,) * channels, band_axis=-1)
+    valid = native_validity(image)
+    invalid = ~valid
     if label is not None and (label.dtype != np.int8 or label.shape != (height, width)):
         raise ValueError(f"{path}: label must be HW int8 matching the image.")
 
@@ -49,6 +50,7 @@ def load_chip(
         if label is not None:
             label = np.pad(label, ((0, bottom), (0, right)), constant_values=-100)
         invalid = np.pad(invalid, ((0, bottom), (0, right)), constant_values=False)
+        valid = np.pad(valid, ((0, bottom), (0, right)), constant_values=False)
     return {
         "image": image,
         "label": label,
@@ -56,5 +58,6 @@ def load_chip(
         "true_width": width,
         "padding": (0, bottom, 0, right),
         "nodata_mask": invalid,
+        "valid_mask": valid,
         "band_names": tuple(source_band_names[index] for index in indices),
     }

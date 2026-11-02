@@ -9,7 +9,8 @@ organization, quick/full directory checks, shared cleanup, and native-band
 chipping with optional labels, source-level baseline/LORO assignments and
 manifest-based window selection with overlapping training and disjoint chip
 validation/test. A NumPy loader selects bands and pads partial
-edges. Full CA/BC chips, split controls and tiny v2 are published on Box; see
+edges. Isolated and combined augmentation previews use exact stock Albumentations
+classes and capped normalization on training examples only. Full CA/BC chips, split controls and tiny v2 are published on Box; see
 the [restore recipe](quickstart.md#restore-and-use-the-full-cabc-chip-release). Preparation writes run once into a fresh output and stop on failure.
 Retained legacy Planet implementations support the ongoing replacement;
 model workflows arrive through later numbered tasks. Tasks 000–023 describe the
