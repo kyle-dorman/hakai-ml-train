@@ -52,6 +52,8 @@ def test_rgb_selector_unchanged_and_nir_recipe_explicit():
 
 def test_cpu_recipe_separates_bounded_float32_smoke():
     settings = load_settings(RECIPES / "tiny_cpu.toml")
+    assert settings.chips == "examples/runs/my-tiny-v2-01-chips"
+    assert settings.assignments == "examples/runs/my-tiny-v2-01-splits/assignments.csv"
     assert settings.accelerator == "cpu"
     assert settings.precision == "32-true"
     assert settings.num_workers == 0

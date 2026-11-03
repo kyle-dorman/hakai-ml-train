@@ -168,6 +168,65 @@ def test_fractional_batch_budget_matches_lightning():
         run._limited_batches(1, 0.5)
 
 
+@pytest.mark.parametrize("recipe", ("planet8", "planet4", "planet3", "planet_RGB"))
+@pytest.mark.parametrize("variant", ("base", "augmented"))
+def test_production_matrix_preview_is_metadata_only(
+    tmp_path, monkeypatch, recipe, variant
+):
+    """All eight recipes keep canonical backgrounds and never need payloads."""
+    _, paths = _inputs(tmp_path)
+    chips = tmp_path / "chips"
+    assignments_path = tmp_path / "assignments.csv"
+    with assignments_path.open() as stream:
+        assignments = list(csv.DictReader(stream))
+    # One optional BC source is training-only in the augmented variant.
+    for row in assignments:
+        if row["source_key"] == "2":
+            row["region"] = "012"
+    base = [dict(row, variant="base") for row in assignments]
+    base[2]["split"] = "unused"
+    with assignments_path.open("w") as stream:
+        writer = csv.DictWriter(stream, fieldnames=assignments[0])
+        writer.writeheader()
+        writer.writerows(assignments + base)
+    sources = json.loads((chips / "sources.json").read_text())
+    sources[2]["region"] = "012"
+    (chips / "sources.json").write_text(json.dumps(sources))
+    with (chips / "windows.csv").open() as stream:
+        windows = list(csv.DictReader(stream))
+    windows[1]["kelp_pixels"] = "0"
+    with (chips / "windows.csv").open("w") as stream:
+        writer = csv.DictWriter(stream, fieldnames=windows[0])
+        writer.writeheader()
+        writer.writerows(windows)
+    for payload in chips.glob("*.npz"):
+        payload.unlink()
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Production preview opened arrays or constructed a model")
+
+    monkeypatch.setattr(np, "load", forbidden)
+    monkeypatch.setattr(run, "TrainingModule", forbidden)
+    settings = replace(
+        load_settings(f"configs/train/{recipe}.toml"),
+        variant=variant,
+        chips="chips",
+        assignments="assignments.csv",
+    )
+    report = run.run_training(settings, paths, dry_run=True)
+    counts = report["counts"]
+    assert counts["canonical_windows"] == counts["canonical_retained_payloads"] == 6
+    assert counts["canonical_sources"] == 6
+    assert counts["training_candidates"] == (3 if variant == "augmented" else 2)
+    assert counts["training_eligible"] == (2 if variant == "augmented" else 1)
+    assert counts["training_excluded_zero_kelp"] == 1
+    assert counts["validation"] == 2
+    assert counts["test_metadata_only"] == 1
+    assert report["settings"]["band_names"] == settings.band_names
+    assert report["budget"]["epochs"] == 70
+    assert list(paths.runs_root.iterdir()) == []
+
+
 def test_recipe_only_cli_resolves_machine_paths_and_previews_auto_id(
     tmp_path, monkeypatch
 ):
@@ -187,8 +246,10 @@ def test_recipe_only_cli_resolves_machine_paths_and_previews_auto_id(
     text = Path("configs/train/tiny_cpu.toml").read_text()
     text = text.replace('name = "tiny_cpu"', 'name = "coast-check"')
     text = text.replace("../../paths.local.toml", "../machine.toml")
-    text = text.replace("data/chips/ca_bc/v1", "chips")
-    text = text.replace("data/splits/ca_bc/v1/assignments.csv", "assignments.csv")
+    text = text.replace("examples/runs/my-tiny-v2-01-chips", "chips")
+    text = text.replace(
+        "examples/runs/my-tiny-v2-01-splits/assignments.csv", "assignments.csv"
+    )
     recipe.write_text(text)
 
     def forbidden(*args, **kwargs):

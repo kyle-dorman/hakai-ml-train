@@ -97,7 +97,7 @@ and [docs/cleanup_provenance.md](docs/cleanup_provenance.md) for established fac
 and remaining evidence limits. The organized and cleaned CA/BC releases are
 complete. The native-band CA/BC chip release, both baseline variants and all ten
 LORO folds are published with portable controls; the 13-crop tiny v2 is available
-from Box for offline split/chip/load practice. See the
+from Box for offline split/chip/load and bounded training practice. See the
 [researcher guide](docs/quickstart.md#restore-and-use-the-full-cabc-chip-release).
 
 The local working set keeps cleaned imagery/chips and small controls/evidence.
@@ -105,8 +105,8 @@ Raw ZIPs and organized payloads can be restored from Box; obsolete local dataset
 were evicted after archiving their small historical records. See
 [storage policy](docs/data_artifacts.md#current-local-working-set).
 
-The first spectral comparison is interpreted as 8 bands, RGB+NIR, and RGB from
-the same acquisitions. Start with the working SegFormer recipe; a possible RGB
+The spectral comparison uses native 8 bands, RGB+NIR, NIR/red/green and RGB
+from the same acquisitions, each with and without the BC training regions. Start with the working SegFormer recipe; a possible RGB
 DINOv3 variant follows separately. New-region work compares direct transfer,
 kelp-checkpoint fine tuning, generic-pretrained fine tuning, and combined
 old/new training on fixed held-out test data.

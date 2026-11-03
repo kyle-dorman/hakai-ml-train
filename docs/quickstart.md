@@ -3,8 +3,9 @@
 The installed `kelpseg` command checks machine paths, organizes raw catalogs,
 checks ordinary image directories, cleans imagery with optional paired labels,
 chips cleaned TIFFs into one native-band collection, assigns source splits,
-and computes training-image pixel statistics.
-Training, prediction, and evaluation arrive in later tasks; see [the roadmap](todo.md). Retained legacy Planet code
+computes training-image pixel statistics, and trains/validates recipe-selected
+models with portable bundles and completed-epoch resume. Tiled prediction and
+scientific scoring remain later tasks; see [the roadmap](todo.md). Retained legacy Planet code
 is development/reference material, outside the installed package.
 
 ## Install
@@ -20,7 +21,8 @@ uv run kelpseg --version
 
 Normal checkout setup includes developer tools and dependencies needed by the
 retained Planet correctness tests. The installed package itself currently needs
-Typer, NumPy, Rasterio, Albumentations and Matplotlib (including their dependencies). Help/version do not
+Typer, NumPy, Rasterio, Albumentations, Matplotlib, Torch, Lightning,
+TorchMetrics and segmentation-models-pytorch (including their dependencies). Help/version do not
 import the geospatial stack. Organization dry-run reads declarations only;
 check and clean dry-run inspect TIFF headers. Split dry-run reads metadata only.
 
@@ -739,7 +741,8 @@ are preserved. No per-fold or per-band copies are needed.
 
 ## Tiny real-data walkthrough
 
-Use tiny v2 below to practice splitting, chipping and loading. It contains
+Use tiny v2 below to practice splitting, chipping, loading and the
+[installed training walkthrough](#tiny-v2-installed-training-walkthrough). It contains
 13 small CA/BC crop pairs across regions 002/003/012, including a 769-wide
 crop that exercises partial-edge padding. V2 preserves all nine v1 pairs and
 adds four 768-square crops for train/validation support. Inputs are about
@@ -1222,8 +1225,9 @@ normalization work. Dry-run IDs are previews, not reservations;
 a later fit gets its own ID. Unknown settings and empty validation produce
 errors. Fresh runs refuse existing output folders; explicit resume uses the saved run identity.
 
-For a bounded local smoke, copy `configs/train/tiny_cpu.toml` and set its
-`chips` and `assignments` to your tiny walkthrough outputs if desired. This
+For a bounded local smoke, copy `configs/train/tiny_cpu.toml`. Its `chips` and
+`assignments` default to the `my-tiny-v2-01` walkthrough outputs; change both
+if you chose another example name. This
 recipe uses NIR/red/green, float32 CPU, no weight download, two epochs, two
 training microbatches and one validation batch per epoch. It still uses the
 512 canvas and approved preprocessing; limited validation is smoke evidence
@@ -1345,11 +1349,168 @@ the saved run folder under the new `runs_root`. These path changes do not grant
 permission to change data identity. CPU equivalence is checked with bounded
 training; CUDA/mixed-precision equivalence remains a GPU-host check.
 
+## Tiny v2: installed training walkthrough
+
+First complete [tiny-v2 splitting/chipping](#tiny-v2-split-chip-and-load-locally).
+Use complete chip payloads, not an archived controls-only folder. You can keep
+the published tiny inputs and generate fresh chips without another Box fetch.
+The training steps below never read test payloads. Preparation itself reads
+the declared tiny source TIFFs to create the canonical collection.
+
+To rehearse outside the checkout, build a wheel and install only the locked
+runtime dependencies. Run this block from the repository, choosing a fresh
+absolute `work` directory:
+
+```bash
+(
+  set -e
+  work='/Volumes/x10pro/kelpseg/examples/my-installed-tiny-01'
+  test ! -e "$work"
+  mkdir -p "$work/runs"
+  uv build --out-dir "$work/distributions"
+  uv export --frozen --no-default-groups --no-emit-project --output-file "$work/runtime.txt"
+  uv venv --python 3.12 "$work/environment"
+  uv pip sync --python "$work/environment/bin/python" --require-hashes "$work/runtime.txt"
+  uv pip install --python "$work/environment/bin/python" --no-deps "$work"/distributions/*.whl
+  cp configs/train/tiny_cpu.toml "$work/tiny.toml"
+)
+```
+
+Create `paths.toml` inside that directory with your explicit machine roots:
+
+```toml
+[paths]
+data_root = "/Volumes/x10pro/kelpseg"
+runs_root = "/Volumes/x10pro/kelpseg/examples/my-installed-tiny-01/runs"
+```
+
+In the copied `tiny.toml`, set `paths_file = "paths.toml"`. Its default chip
+and assignment paths match `my-tiny-v2-01` from the preparation walkthrough.
+For another attempt, edit those two strings together. Keep the CPU settings,
+zero workers and two-epoch total schedule. No Python source edits are needed.
+
+```bash
+(
+  set -e
+  cd /Volumes/x10pro/kelpseg/examples/my-installed-tiny-01
+  ./environment/bin/kelpseg check-paths --paths "$PWD/paths.toml"
+  ./environment/bin/kelpseg pixel-stats --chips /Volumes/x10pro/kelpseg/examples/runs/my-tiny-v2-01-chips --assignments /Volumes/x10pro/kelpseg/examples/runs/my-tiny-v2-01-splits/assignments.csv --variant augmented --kelp-only --clip-value 5000 --output "$PWD/tiny-statistics.json"
+  ./environment/bin/kelpseg train --recipe "$PWD/tiny.toml" --dry-run
+  ./environment/bin/kelpseg train --recipe "$PWD/tiny.toml"
+)
+```
+
+Tiny statistics exercise the calculation; **do not replace the approved
+normalization constants** with them. Canonical tiny v2 retains 54 chips;
+the training selector keeps 3 of 8 candidate training windows for `base` and
+11 of 20 for `augmented`. Canonical backgrounds remain stored. Both variants
+have two disjoint validation windows. The smoke limits validation to one batch,
+so its metric is a plumbing check, not scientific performance or full coverage.
+
+The existing gallery sampler requires visibly kelp-rich showcase windows;
+**tiny v2 has none meeting those criteria**. Do not relax the criteria or change
+the approved transforms to force a gallery. Tiny-only users can inspect the
+[approved gallery](#preview-the-combined-augmentation-pipeline). To regenerate
+selected previews, use the full local training collection with the same
+installed environment (this optional step needs the full chip release):
+
+```bash
+(
+  set -e
+  cd /Volumes/x10pro/kelpseg/examples/my-installed-tiny-01
+  ./environment/bin/python - <<'PY'
+from pathlib import Path
+from kelpseg.paths import load_paths
+from kelpseg.augmentation_debug.preview import preview_augmentations
+from kelpseg.augmentation_debug.pipeline import preview_pipeline
+
+root = load_paths("paths.toml").data_root
+chips = root / "data/chips/ca_bc/v1"
+assignments = root / "data/splits/ca_bc/v1/assignments.csv"
+preview_augmentations(chips, assignments, "augmented",
+                      Path("isolated-previews"), positive_samples=1)
+preview_pipeline(chips, assignments, "augmented",
+                 Path("combined-previews"), positive_samples=1, draws=2)
+PY
+)
+```
+
+Each gallery includes one positive training example and two background
+controls. Open its `index.html`; these are diagnostics of the approved
+transforms, not a request to select new preprocessing.
+
+Use the printed run folder to [copy/load its model](#copy-and-use-a-portable-model).
+This example reads only the image member of one active training chip. Set `run`
+to the actual completed folder printed above; the Python needs no edits:
+
+```bash
+(
+  set -e
+  cd /Volumes/x10pro/kelpseg/examples/my-installed-tiny-01
+  run='/absolute/printed/run-folder'
+  test ! -e copied-model
+  cp -R "$run/model" copied-model
+  ./environment/bin/python - <<'PY'
+import json
+import numpy as np
+from kelpseg.paths import load_paths
+from kelpseg.training.settings import load_settings
+from kelpseg.prepare.splits import select_windows
+from kelpseg.model_bundle import load_model_bundle
+
+settings = load_settings("tiny.toml")
+root = load_paths("paths.toml").data_root
+chips = root / settings.chips
+rows = select_windows(chips, root / settings.assignments, variant=settings.variant)
+row = next(row for row in rows if row["split"] == "train" and row["payload"])
+with np.load(row["payload"]) as payload:
+    image = payload["image"]
+names = json.loads((chips / "recipe.json").read_text())["source_band_names"]
+model = load_model_bundle("copied-model")
+probabilities = model.predict_probabilities(image, names)
+assert probabilities.shape == image.shape[:2]
+print(probabilities.shape, "valid pixels:", np.isfinite(probabilities).sum())
+PY
+)
+```
+
+No labels are required; the returned array preserves true size and NaN nodata.
+For an interrupted run with a completed epoch, follow the
+[resume recipe](#resume-after-a-completed-epoch) with that run's `last.ckpt`.
+From the installed directory, use its executable for both resume commands:
+
+```bash
+./environment/bin/kelpseg train --recipe "$PWD/tiny.toml" --resume /absolute/run/checkpoints/last.ckpt --dry-run
+./environment/bin/kelpseg train --recipe "$PWD/tiny.toml" --resume /absolute/run/checkpoints/last.ckpt
+```
+
+A successfully completed two-epoch run cannot be extended by changing `epochs`:
+resume preserves the original total schedule and saved run identity.
+The Task 033G rehearsal deliberately interrupted after the first epoch and
+resumed the second; its external evidence is in the
+[task outcome](../tasks/033g_tiny_walkthrough_and_handoff.md#outcome-2026-11-03).
+
+For spectral checks, copy `tiny.toml` and replace `band_names`, `mean` and `std`
+together with the corresponding values from each of the four production
+recipes. Keep all bounded CPU settings. Set `variant` to `base` or `augmented`
+and use a distinct `name` for each case. Run sequentially; retain one
+representative model/resume pair and remove only redundant smoke checkpoints
+after reviewing their compact records. The shared model-smoke budget is 4 GiB.
+
+Production planning is **eight metadata-only previews**: `planet8`, `planet4`,
+`planet3` and `planet_RGB`, each with `base` and `augmented`. In copied production
+recipes set the explicit `paths_file` and variant, retain the full-data inputs,
+and invoke only `kelpseg train --recipe /absolute/recipe.toml --dry-run`.
+The preview reports canonical versus eligible counts and the equal-epoch update
+budget. It opens no image arrays and does not train or create a run folder.
+CUDA sizing and production execution remain separate GPU-host work.
+
 ## Later workflows and outputs
 
 Tiled/georeferenced prediction, scoring, LORO model comparisons and adding a
 region remain later tasks. The reusable walkthrough
-above covers chipping, loading and source splitting. Automated CPU fixtures
+above covers preparation, training/validation, portable image-array probabilities
+and completed-epoch resume. Automated CPU fixtures
 need no Box/W&B login, GPU or model-weight download.
 
 See [data and artifacts](data_artifacts.md) for storage/backup rules and

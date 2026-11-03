@@ -20,6 +20,12 @@ The checkout retains legacy Planet
 `src.*` modules, root `trainer.py`, `scripts/`, relevant configs, and focused tests until their
 replacements land. Unrelated application/model/export families are removed.
 The legacy recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
+The old evaluator still imports `src.models.smp` and its loss/optimizer helpers;
+the historical multi-run launcher still calls `trainer.py` and its configured
+data, scheduler and EMA classes. Array probabilities do not replace those
+source-raster/scoring and suite consumers. Retain these modules and their
+checkout dependencies until Tasks 034–036 replace the relevant consumers;
+new baseline work uses only the installed `kelpseg train` workflow.
 
 The package uses uv and `uv_build`. The completed replacement will have no
 `scripts/` directory, plugin framework, generic model zoo, or manual per-fold
@@ -84,7 +90,8 @@ means and sample standard deviations; overlap counts as repeated chip exposure.
 Labels, model preprocessing and artificial loading padding are not used.
 
 Runtime dependencies cover implemented workflows: Typer, NumPy, Rasterio,
-Albumentations, Matplotlib, Torch, TorchMetrics and segmentation-models-pytorch.
+Albumentations, Matplotlib, Torch, Lightning, TorchMetrics and
+segmentation-models-pytorch.
 Pixel-statistics computation imports NumPy and
 metadata helpers only; TIFF libraries are imported when TIFF workflows run.
 Checkout-only dependencies for retained code live in the default `legacy`

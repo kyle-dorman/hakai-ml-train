@@ -68,14 +68,14 @@ are authorized by Task 024.
 | [032A.1](032a_1_nonoverlapping_chip_evaluation.md) | Local selection/tiny smoke | Complete | Disjoint existing-chip validation/test; overlap exclusions and geometric coverage verified; next 032B |
 | [032B](032b_produce_and_publish_chip_release.md) | Local production/Box | Complete | 26,573 canonical chips; both variants/ten folds; portable declaration, Box path/size checks, bounded restore and offline tiny v2 pass; next Task 033 |
 | [032C](032c_archive_legacy_and_evict_local_data.md) | Local archive/code/data cleanup | Complete | Prewritten plan; 34 MB historical archive; bootstrap retired; about 410 GB reclaimed; current data/evidence retained and Box untouched |
-| [033](033_baseline_training_and_portable_models.md) | Shared planning | Split into 033A–033G | Exact normalization and approved augmentation policy; remaining children planned |
+| [033](033_baseline_training_and_portable_models.md) | Shared planning | Split into 033A–033G | Exact normalization and approved augmentation policy; all seven children complete |
 | [033A](033a_individual_augmentation_previews.md) | Local preview implementation | Complete | Wider stock native sweeps and coarse count/size modes; next 033B review |
 | [033B](033b_review_augmentation_settings.md) | User review/combined preview | Complete | Combined outputs approved; final recipe and grouped preview tools; 033C also complete |
 | [033C](033c_simplify_pixel_statistics.md) | Local NumPy utility | Complete | Installed NumPy command reproduces approved constants and exact chip/pixel scope; next 033D |
 | [033D](033d_model_and_training_inputs.md) | Local model/input checks | Complete | Shared manifest tensors, loss/confusion and sequential 8/4/3 B3 updates pass; next 033E |
 | [033E](033e_training_validation_and_ema.md) | Local training/validation | Complete | Lightning, four spectral recipes, update-101 EMA, native best/last checkpoints; next 033F |
 | [033F](033f_portable_models_and_resume.md) | Local bundle/recovery | Complete | Offline copied bundles and exact zero-worker completed-epoch resume; next 033G |
-| [033G](033g_tiny_walkthrough_and_handoff.md) | Installed rehearsal/docs | Next, not started | Tiny walkthrough, six full-data previews and Task 034 handoff |
+| [033G](033g_tiny_walkthrough_and_handoff.md) | Installed rehearsal/docs | Complete | Eight tiny CPU cases and metadata-only production previews; copied bundle/resume pair; next Task 034 |
 
 ## Historical queue: Tasks 000–023
 

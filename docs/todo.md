@@ -46,16 +46,19 @@ and the readability review and focused checks pass.
 the installed NumPy pixel-statistics command reproduces all eight approved
 normalization bands to floating-point precision. Augmentation preview/debug
 code is grouped under `kelpseg/augmentation_debug/`.
-[033D is complete](../tasks/033d_model_and_training_inputs.md#outcome-2026-11-02):
+[033D is complete](../tasks/033d_model_and_training_inputs.md#outcome--2026-11-02):
 manifest-selected inputs, shared preprocessing, one B3 model and loss/confusion
 helpers pass bounded 8/4/3 CPU updates. Inputs use a full Albumentations tensor
 pipeline and metrics use TorchMetrics. The added light affine step has
 [updated previews](quickstart.md#preview-the-combined-augmentation-pipeline)
-approved by the user. [033E is complete](../tasks/033e_training_validation_and_ema.md#outcome-2026-11-02):
+approved by the user. [033E is complete](../tasks/033e_training_validation_and_ema.md#outcome--2026-11-02):
 Lightning training/validation, explicit spectral recipes, delayed EMA and distinct
-best/last checkpoints pass bounded CPU checks. [033F is complete](../tasks/033f_portable_models_and_resume.md#outcome-2026-11-03):
+best/last checkpoints pass bounded CPU checks. [033F is complete](../tasks/033f_portable_models_and_resume.md#outcome--2026-11-03):
 copied bundles and zero-worker completed-epoch resume pass offline CPU checks.
-**033G is next and unstarted**. No production training ran.
+[033G is complete](../tasks/033g_tiny_walkthrough_and_handoff.md#outcome-2026-11-03):
+installed tiny CPU checks cover all eight recipe/variant cases, copied models and
+completed-epoch resume; eight production metadata previews pass. **Task 034 is
+next and unstarted**. No production training ran.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -112,7 +115,7 @@ selected; split further if needed.
 | [033D](../tasks/033d_model_and_training_inputs.md) | Model and training inputs — complete | Shared preprocessing, kelp-only tensors, real B3 update and loss/confusion checks |
 | [033E](../tasks/033e_training_validation_and_ema.md) | Training, validation and EMA — complete | Flat recipes, equal epochs, validation-only selection, local records and saved states |
 | [033F](../tasks/033f_portable_models_and_resume.md) | Portable models and resume — complete | Copied bundle and completed-epoch resume verified independently (zero workers) |
-| [033G](../tasks/033g_tiny_walkthrough_and_handoff.md) | Tiny walkthrough and handoff — next, not started | Installed fresh-directory rehearsal, all six production previews and Task 034 handoff |
+| [033G](../tasks/033g_tiny_walkthrough_and_handoff.md) | Tiny walkthrough and handoff — complete | Eight tiny CPU cases, installed distributions, copied bundle/resume pair and eight metadata-only previews; next 034 |
 | 034 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
 | 035 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics; region/date/year/month prevalence and errors; signed area bias and supported matched-footprint change checks; see experiments.md |
 | 036 | LORO runner and matching-TIFF comparisons | Ten 001–010 folds; paired with/without-011/012 CA/Baja results; temporal-consistency and later-date scopes reported separately; tiny suite checks |

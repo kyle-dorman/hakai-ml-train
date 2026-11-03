@@ -5,13 +5,13 @@ variant = "augmented"
 
 # Machine paths are relative to this recipe; chips/assignments use data_root.
 # Fixed with-BC normalization reference; preserve band order.
-# Bounded smoke only; set chips/assignments to your tiny collection if desired.
+# Bounded smoke on the quickstart tiny-v2 outputs; change both paths together.
 band_names = ["nir", "red", "green"]
 mean = [799.2215816851071, 451.3045100567385, 465.35795980452735]
 std = [994.5695551762033, 575.3320083210876, 459.22170495895057]
 clip_value = 5000
-chips = "data/chips/ca_bc/v1"
-assignments = "data/splits/ca_bc/v1/assignments.csv"
+chips = "examples/runs/my-tiny-v2-01-chips"
+assignments = "examples/runs/my-tiny-v2-01-splits/assignments.csv"
 epochs = 2
 warmup_epochs = 1
 seed = 42

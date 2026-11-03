@@ -1,10 +1,11 @@
 # Task 033: Baseline training plan and shared decisions
 
-Status: Shared decisions updated 2026-11-02. Task 033A uses verified stock
+Status: All seven children complete — 2026-11-03. Task 033A uses verified stock
 Albumentations previews; 033A/033B are complete with the user-approved recipe.
 033C reproduces the approved statistics; 033D implements model/input helpers
 and bounded updates. 033E implements Lightning training/validation and EMA;
-033F implements verified portable bundles and completed-epoch resume; 033G remains unstarted.
+033F implements verified portable bundles and completed-epoch resume; 033G
+completes the installed tiny walkthrough and Task 034 handoff.
 Task 032B's publication/restore prerequisite is satisfied. Task 032C is separate.
 
 ## Abstract and route
@@ -32,7 +33,7 @@ independent of the later model/training runner.
 | [033F](033f_portable_models_and_resume.md) | Self-contained model bundle and completed-epoch resume; no tiled inference |
 | [033G](033g_tiny_walkthrough_and_handoff.md) | Installed fresh-directory tiny walkthrough, production previews and Task 034 handoff |
 
-033A–033F are complete; 033G is next and unstarted. Do not treat this table as permission to
+033A–033G are complete. Do not treat this table as permission to
 execute several tasks together. Each later child may be refined when selected
 without reopening settled scientific/data decisions.
 
@@ -205,10 +206,11 @@ or training were executed. At that point the next action was explicit selection 
 
 ## Current next action
 
-033A–033F are complete: approved augmentation, reproduced normalization,
-manifest tensors, B3 model, Lightning training/validation, delayed EMA, copied
-portable bundles and completed-epoch resume passed bounded CPU checks.
-Select [033G](033g_tiny_walkthrough_and_handoff.md) in a new chat for the installed
-tiny walkthrough and Task 034 handoff. Exact resume requires zero data-loader
-workers; production/CUDA training remains unverified locally.
-After all seven children close, select Task 034 in a new window.
+033A–033G are complete. The [G outcome](033g_tiny_walkthrough_and_handoff.md#outcome-2026-11-03)
+records all eight tiny CPU cases, eight metadata-only production previews,
+installed package checks and the durable copied bundle/completed-epoch resume
+pair. Exact resume requires zero data-loader workers and the same total schedule;
+production/CUDA training remains unverified locally.
+Select Task 034 in a new chat for image-only tiled/georeferenced prediction,
+using G's explicit bundle/preprocessing handoff. No Task 034 implementation has
+started; scientific scoring remains Task 035.

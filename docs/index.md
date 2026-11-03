@@ -17,7 +17,10 @@ Installed Python helpers provide manifest-selected training/validation tensors,
 SegFormer B3 and loss/confusion functions. Retained legacy Planet implementations
 support the ongoing replacement. The installed `train` command provides Lightning
 training, validation, EMA, portable models and completed-epoch resume. Python
-bundle loading predicts supplied image arrays; tiled/georeferenced prediction arrives later. Tasks 000–023 describe the
+bundle loading predicts supplied image arrays; the
+[installed tiny walkthrough](quickstart.md#tiny-v2-installed-training-walkthrough)
+covers all four spectral recipes and both variants. Task 034 is next for
+tiled/georeferenced prediction. Tasks 000–023 describe the
 preceding completed PS8B study.
 
 ## Read by task
