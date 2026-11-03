@@ -70,7 +70,7 @@ are authorized by Task 024.
 | [032C](032c_archive_legacy_and_evict_local_data.md) | Local archive/code/data cleanup | Complete | Prewritten plan; 34 MB historical archive; bootstrap retired; about 410 GB reclaimed; current data/evidence retained and Box untouched |
 | [033](033_baseline_training_and_portable_models.md) | Shared planning | Split into 033A–033G | Exact normalization and approved augmentation policy; remaining children planned |
 | [033A](033a_individual_augmentation_previews.md) | Local preview implementation | Complete | Wider stock native sweeps and coarse count/size modes; next 033B review |
-| [033B](033b_review_augmentation_settings.md) | User review/combined preview | Complete | Combined outputs approved; final native recipe and quality pass complete; next 033C |
+| [033B](033b_review_augmentation_settings.md) | User review/combined preview | Complete | Combined outputs approved; final recipe and grouped preview tools; 033C also complete |
 | [033C](033c_simplify_pixel_statistics.md) | Local NumPy utility | Complete | Installed NumPy command reproduces approved constants and exact chip/pixel scope; next 033D |
 | [033D](033d_model_and_training_inputs.md) | Local model/input checks | Next, not started | Manifest tensors, shared preprocessing and bounded 8/4/3 real-model updates |
 | [033E](033e_training_validation_and_ema.md) | Local training/validation | Planned | Strict recipes, EMA, validation selection, local records and saved states |

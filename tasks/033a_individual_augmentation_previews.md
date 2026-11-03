@@ -23,12 +23,14 @@ transforms file is reference only; no estuary package dependency or edits.
 
 - `src/kelpseg/augmentations.py`: small raw-data adapter around actual stock
   Albumentations class calls; no project-written augmentation kernels.
-- `src/kelpseg/augmentation_trials.py`: readable literal native class settings,
+- `src/kelpseg/augmentation_debug/trials.py`: readable literal native class settings,
   fixed diagnostic parameters, class identity and realized-parameter recording.
-- `src/kelpseg/augmentation_preview.py` plus the sampler, display export,
+- `src/kelpseg/augmentation_debug/preview.py` plus the sampler, display export,
   contact sheets and offline HTML viewer. `examples/augmentation_previews.py`
   is the short Python entry point. There is no installed preview CLI or custom
   TOML settings schema. The guide documents actual use.
+- Preview-only helpers and HTML are grouped under `src/kelpseg/augmentation_debug/`;
+  the approved raw adapter and training factory remain outside that folder.
 - Training-only selected-window CSV, library/domain/version metadata, exact
   parameters and native PNG views outside Git. Existing sources are unchanged.
 

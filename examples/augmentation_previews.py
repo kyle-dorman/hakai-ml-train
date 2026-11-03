@@ -2,7 +2,7 @@
 
 Run from the repository: uv run python examples/augmentation_previews.py
 Edit the paths below for your machine and choose a fresh output for each run.
-Edit the literal native class settings in kelpseg/augmentation_trials.py.
+Edit the literal native class settings in kelpseg/augmentation_debug/trials.py.
 The shared raw-data adapter is kelpseg/augmentations.py; it changes no kernels.
 Review the approved combined policy with augmentation_pipeline_preview.py.
 """
@@ -10,7 +10,7 @@ Review the approved combined policy with augmentation_pipeline_preview.py.
 import logging
 from pathlib import Path
 
-from kelpseg.augmentation_preview import preview_augmentations
+from kelpseg.augmentation_debug.preview import preview_augmentations
 
 DATA_ROOT = Path("/Volumes/x10pro/kelpseg")
 OUTPUT = DATA_ROOT / "analyses" / "my-isolated-previews-01"

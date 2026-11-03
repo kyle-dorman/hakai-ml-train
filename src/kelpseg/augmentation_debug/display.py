@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 from matplotlib import image as mpl_image
 
-from kelpseg.augmentation_panels import label_overlay, spectral_view
+from kelpseg.augmentation_debug.panels import label_overlay, spectral_view
 
 
 def _save_view(path: Path, pixels: np.ndarray) -> None:

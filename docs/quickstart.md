@@ -826,6 +826,9 @@ The selected full-precision baseline values remain in the
 This is an exploratory Python example, separate from the installed preparation
 CLI. It uses the actual **Albumentations 2.0.8** classes and their native
 parameters; there is no custom augmentation math or separate parameter schema.
+The preview generators, display helpers, trial sweeps and HTML live together in
+[`kelpseg/augmentation_debug/`](../src/kelpseg/augmentation_debug/). The approved
+training factory and raw-data adapter stay outside that debug package.
 
 Set `DATA_ROOT` and a fresh `OUTPUT` in
 [`examples/augmentation_previews.py`](../examples/augmentation_previews.py), then run:
@@ -843,7 +846,7 @@ has separate size and hole-count selectors. The two labeled background controls
 are last.
 
 Read/edit the literal constructors in
-[`augmentation_trials.py`](../src/kelpseg/augmentation_trials.py) to change trial
+[`trials.py`](../src/kelpseg/augmentation_debug/trials.py) to change trial
 values. Equal range endpoints fix a library strength; the seed fixes its other
 random choices. Library validation owns the parameter rules. The viewer shows
 exact constructor arguments and realized parameters, plus the library version.

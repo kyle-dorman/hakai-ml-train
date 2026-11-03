@@ -1,6 +1,6 @@
 # Task 033B: Review and select augmentation settings
 
-Status: Complete - 2026-11-02. Combined outputs approved; final recipe saved and code quality checks passed.
+Status: Complete - 2026-11-02. Approved recipe and quality pass complete; preview/debug code grouped in its own folder.
 Depends on: Completed 033A gallery and numerical checks.
 
 ## Abstract
@@ -227,3 +227,43 @@ The isolated viewer retains all families, native-value selectors and coarse
 modes. Actual final screenshots were inspected and retained under each gallery's
 `review_screenshots/final_quality_pass/` with browser results. No review finding
 remains open. The approved data and native PNGs were unchanged.
+
+
+## Preview folder organization plan - 2026-11-02
+
+The user requested moving augmentation debugging/preview code out of the
+`kelpseg` root. Group the sampler, sweeps, display/panels, generators and both
+HTML templates under `src/kelpseg/augmentation_debug/`, using short module names.
+Move pipeline diagnostic states there too so the approved training factory
+has no dependency on debug metrics or preview modules. Keep the actual raw-data
+adapter and training factory in their current root modules.
+
+Update imports, resource locations, examples, current guide links and focused
+package checks. Preserve approved settings, generated image assets and all
+scientific behavior. This is a bounded organization follow-up, not Task 033D.
+
+
+## Preview folder organization outcome - 2026-11-02
+
+Grouped all preview-only code and both HTML templates in
+`src/kelpseg/augmentation_debug/`: `inputs.py`, `trials.py`, `panels.py`,
+`display.py`, `preview.py`, `pipeline.py` and the two viewer templates. Short
+module names avoid repeating the folder name. Added only a docstring package
+initializer; there are no compatibility shims or new abstractions.
+
+Moved `pipeline_states` from the training factory into the debug pipeline
+module. `augmentation_pipeline.py` now contains only the approved literal
+Albumentations factory; `augmentations.py` remains the shared raw-data adapter.
+The training factory imports no debug or plotting modules. Updated internal
+imports, example entry points, current guide/parent paths, tests and packaged
+HTML resource locations. Historical outcomes keep their recorded paths.
+
+All **74 focused augmentation/preview and installed wheel/sdist checks** pass,
+including exact approved-recipe snapshot parity and generated fixture pixels.
+Ruff format/check, pre-commit, file links and diff checks pass. This changes
+organization only: approved values, source data, rendered external galleries
+and normalization are unchanged. Existing HTML galleries are self-contained
+and remain usable; no regeneration was needed.
+
+The bounded follow-up is complete. Exact next action remains separate selection
+of 033D; no model, training or later-task implementation was started.

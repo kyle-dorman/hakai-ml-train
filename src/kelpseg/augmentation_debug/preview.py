@@ -7,15 +7,15 @@ from pathlib import Path
 
 import albumentations as A
 
-from kelpseg.augmentation_display import write_display_views, write_viewer
-from kelpseg.augmentation_inputs import select_preview_windows
-from kelpseg.augmentation_panels import (
+from kelpseg.augmentation_debug.display import write_display_views, write_viewer
+from kelpseg.augmentation_debug.inputs import select_preview_windows
+from kelpseg.augmentation_debug.panels import (
     DISPLAY_CEILING,
     closeup_window,
     display_limits,
     render_panel,
 )
-from kelpseg.augmentation_trials import individual_trials
+from kelpseg.augmentation_debug.trials import individual_trials
 from kelpseg.augmentations import NATIVE_SCALE
 from kelpseg.chips import load_chip
 from kelpseg.prepare.check import PreparationError
@@ -98,7 +98,7 @@ def preview_metadata(chips, assignments, variant, seed, positive_samples, limits
 def preview_augmentations(
     chips, assignments, variant, output, *, seed: int = 33, positive_samples: int = 14
 ) -> Path:
-    """Render actual stock classes; native trial settings live in augmentation_trials.py."""
+    """Render actual stock classes; native trial settings live in trials.py."""
     output = check_split_output(output)
     chips = Path(chips).expanduser().resolve()
     loaded = load_preview_samples(chips, assignments, variant, positive_samples, seed)
@@ -109,7 +109,7 @@ def preview_augmentations(
         chips, assignments, variant, seed, positive_samples, limits
     )
     metadata["trial_settings"] = (
-        "kelpseg/augmentation_trials.py: literal native library constructors"
+        "kelpseg/augmentation_debug/trials.py: literal native library constructors"
     )
     records = []
     for sample in loaded:

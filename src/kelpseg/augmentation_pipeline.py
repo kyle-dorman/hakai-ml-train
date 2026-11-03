@@ -1,19 +1,13 @@
-"""The selected stock pipeline and paired diagnostic views of its real draws."""
+"""The approved stock Albumentations training augmentation recipe."""
 
 import albumentations as A
-import numpy as np
-
-from kelpseg.augmentation_trials import value_metrics
-from kelpseg.augmentations import apply_augmentation
-from kelpseg.preprocessing import cap_raw
 
 
 def build_training_augmentation(seed: int = 33) -> A.Compose:
     """Always sample D4, then choose two distinct extras in the listed order.
 
     All eight pool entries are equally eligible; SomeOf samples without
-    replacement and applies chosen entries in pool order. The preview applies
-    this native-band pipeline before selecting spectral display views.
+    replacement and applies chosen entries in pool order.
     Reuse the returned Compose with apply_augmentation during training; its
     default seed=None lets successive calls advance the seeded random state.
     """
@@ -70,60 +64,3 @@ def build_training_augmentation(seed: int = 33) -> A.Compose:
         seed=seed,
         save_applied_params=True,
     )
-
-
-def pipeline_states(sample: dict, seed: int = 33) -> list[dict]:
-    """Return source, the same sampled D4 reference, and actual full output.
-
-    Every full draw records the real stock operation order and parameters;
-    source and D4 reference explain which changes came from geometry alone.
-    """
-    image, label, valid = sample["image"], sample["label"], sample["valid"]
-    names, crop = sample["band_names"], sample["closeup"]
-    full = apply_augmentation(
-        build_training_augmentation(seed), image, label, valid, seed
-    )
-    full_parameters = full[3]
-    group = full_parameters["applied"][0][1]["group_element"]
-    d4 = A.D4(p=1)
-    reference = apply_augmentation(
-        d4, image, label, valid, seed, {"group_element": group}
-    )
-    footprint = np.zeros(label.shape, dtype=np.uint8)
-    top, left, bottom, right = crop
-    footprint[top:bottom, left:right] = 1
-    moved = d4.apply_to_mask(footprint, group_element=group)
-    ys, xs = np.where(moved)
-    moved_crop = int(ys.min()), int(xs.min()), int(ys.max()) + 1, int(xs.max()) + 1
-
-    trace = []
-    for class_name, parameters in full_parameters["applied"]:
-        entry = {"class": class_name, "parameters": parameters}
-        if class_name == "ChannelDropout":
-            entry["dropped_bands"] = [
-                names[index] for index in parameters["channels_to_drop"]
-            ]
-        trace.append(entry)
-    full_parameters["operation_trace"] = trace
-
-    def state(title, result, closeup, *, identity=False):
-        raw, targets, support, parameters = result
-        return dict(
-            title=title,
-            parameters=parameters,
-            image=raw,
-            label=targets,
-            valid=support,
-            display=cap_raw(raw, support),
-            metrics=value_metrics(raw, targets, support, names),
-            closeup=closeup,
-            is_identity=identity,
-            preview_default=False,
-        )
-
-    original = apply_augmentation(A.NoOp(p=1), image, label, valid, seed)
-    return [
-        state("Source original", original, crop, identity=True),
-        state(f"D4 reference: {group}", reference, moved_crop, identity=group == "e"),
-        state("D4 + two sampled extras", full, moved_crop),
-    ]

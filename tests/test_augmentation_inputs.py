@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from kelpseg.augmentation_inputs import select_preview_windows
+from kelpseg.augmentation_debug.inputs import select_preview_windows
 
 
 def _row(
@@ -55,7 +55,7 @@ def metadata(tmp_path, monkeypatch):
         assert variant == "augmented"
         return rows
 
-    monkeypatch.setattr("kelpseg.augmentation_inputs.select_windows", select)
+    monkeypatch.setattr("kelpseg.augmentation_debug.inputs.select_windows", select)
     return tmp_path, rows
 
 

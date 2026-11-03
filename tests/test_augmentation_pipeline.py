@@ -7,7 +7,8 @@ import albumentations as A
 import numpy as np
 import pytest
 
-from kelpseg.augmentation_pipeline import build_training_augmentation, pipeline_states
+from kelpseg.augmentation_debug.pipeline import pipeline_states
+from kelpseg.augmentation_pipeline import build_training_augmentation
 from kelpseg.augmentations import NATIVE_SCALE, apply_augmentation
 from kelpseg.preprocessing import BAND_NAMES, cap_raw
 

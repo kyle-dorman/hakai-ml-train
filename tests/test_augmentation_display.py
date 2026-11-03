@@ -8,8 +8,12 @@ import numpy as np
 import pytest
 from matplotlib import image as mpl_image
 
-from kelpseg.augmentation_display import write_display_views, write_viewer
-from kelpseg.augmentation_panels import display_limits, label_overlay, spectral_view
+from kelpseg.augmentation_debug.display import write_display_views, write_viewer
+from kelpseg.augmentation_debug.panels import (
+    display_limits,
+    label_overlay,
+    spectral_view,
+)
 from kelpseg.augmentations import apply_augmentation
 from kelpseg.preprocessing import BAND_NAMES, CLIP_VALUE, MEAN, STD, cap_raw, normalize
 

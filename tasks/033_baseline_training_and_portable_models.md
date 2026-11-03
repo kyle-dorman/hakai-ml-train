@@ -109,7 +109,7 @@ older proposals.
 The user's 2026-11-02 direction is to use **stock Albumentations 2.0.8** and
 its actual parameter meanings. The earlier custom implementations are replaced.
 The exploratory Python example is separate from the installed preparation CLI;
-its literal native constructors live in `src/kelpseg/augmentation_trials.py`.
+its literal native constructors live in `src/kelpseg/augmentation_debug/trials.py`.
 
 - `D4`: square symmetries applied jointly to images, labels and validity.
 - `RandomBrightnessContrast`: separate fixed brightness and gain/contrast

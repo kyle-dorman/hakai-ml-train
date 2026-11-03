@@ -9,7 +9,7 @@ a model, open held-out payloads or launch training.
 import logging
 from pathlib import Path
 
-from kelpseg.pipeline_preview import preview_pipeline
+from kelpseg.augmentation_debug.pipeline import preview_pipeline
 
 DATA_ROOT = Path("/Volumes/x10pro/kelpseg")
 OUTPUT = DATA_ROOT / "analyses" / "my-pipeline-previews-01"

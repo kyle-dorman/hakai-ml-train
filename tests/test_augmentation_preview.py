@@ -10,9 +10,9 @@ import pytest
 from matplotlib import image as mpl_image
 from typer.testing import CliRunner
 
-from kelpseg.augmentation_panels import closeup_window, render_panel
-from kelpseg.augmentation_preview import preview_augmentations
-from kelpseg.augmentation_trials import individual_trials, value_metrics
+from kelpseg.augmentation_debug.panels import closeup_window, render_panel
+from kelpseg.augmentation_debug.preview import preview_augmentations
+from kelpseg.augmentation_debug.trials import individual_trials, value_metrics
 from kelpseg.cli import app
 from kelpseg.prepare.check import PreparationError
 from kelpseg.preprocessing import BAND_NAMES, CLIP_VALUE, native_validity
@@ -282,7 +282,7 @@ def gallery_inputs(tmp_path, monkeypatch):
         assert experiment == "baseline" and variant == "augmented"
         return rows
 
-    monkeypatch.setattr("kelpseg.augmentation_inputs.select_windows", selected)
+    monkeypatch.setattr("kelpseg.augmentation_debug.inputs.select_windows", selected)
     return chips, rows
 
 
@@ -310,7 +310,9 @@ def test_bounded_gallery_reads_training_only_and_writes_native_assets(
         else:
             mpl_image.imsave(path, np.zeros((2, 2, 3)))
 
-    monkeypatch.setattr("kelpseg.augmentation_preview.render_panel", bounded_render)
+    monkeypatch.setattr(
+        "kelpseg.augmentation_debug.preview.render_panel", bounded_render
+    )
     assert (
         preview_augmentations(
             chips, "assignments.csv", "augmented", output, seed=33, positive_samples=1
@@ -373,7 +375,7 @@ def test_existing_output_refused_before_payload_reads(
     def no_payload(*args, **kwargs):
         pytest.fail("Overwrite refusal must precede payload reads")
 
-    monkeypatch.setattr("kelpseg.augmentation_preview.load_chip", no_payload)
+    monkeypatch.setattr("kelpseg.augmentation_debug.preview.load_chip", no_payload)
     with pytest.raises(PreparationError, match="fresh directory"):
         preview_augmentations(
             chips, "assignments.csv", "augmented", output, positive_samples=1
@@ -427,7 +429,7 @@ class BlockModelWorkflows(importlib.abc.MetaPathFinder):
         if fullname.split('.')[0] in {'lightning','wandb','transformers','segmentation_models_pytorch'} or fullname.startswith(('kelpseg.models','src.models')):
             raise AssertionError('Unexpected model workflow import: ' + fullname)
 sys.meta_path.insert(0, BlockModelWorkflows())
-from kelpseg.augmentation_preview import preview_augmentations
+from kelpseg.augmentation_debug.preview import preview_augmentations
 assert callable(preview_augmentations)
 """
     process = subprocess.run(

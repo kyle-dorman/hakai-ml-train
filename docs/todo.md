@@ -44,8 +44,9 @@ approved the stock D4 + SomeOf(2) pipeline, the final native recipe is saved,
 and the readability review and focused checks pass.
 [033C is complete](../tasks/033c_simplify_pixel_statistics.md#outcome-2026-11-02):
 the installed NumPy pixel-statistics command reproduces all eight approved
-normalization bands to floating-point precision. **033D is next and unstarted**;
-no model training has started.
+normalization bands to floating-point precision. Augmentation preview/debug
+code is grouped under `kelpseg/augmentation_debug/`. **033D remains next and
+unstarted**; no model training has started.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in

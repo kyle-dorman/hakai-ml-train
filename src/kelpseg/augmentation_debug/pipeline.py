@@ -5,15 +5,76 @@ import logging
 from pathlib import Path
 
 import albumentations as A
+import numpy as np
 
-from kelpseg.augmentation_display import write_display_views, write_viewer
-from kelpseg.augmentation_panels import display_limits
-from kelpseg.augmentation_pipeline import build_training_augmentation, pipeline_states
-from kelpseg.augmentation_preview import load_preview_samples, preview_metadata
+from kelpseg.augmentation_debug.display import write_display_views, write_viewer
+from kelpseg.augmentation_debug.panels import display_limits
+from kelpseg.augmentation_debug.preview import load_preview_samples, preview_metadata
+from kelpseg.augmentation_debug.trials import value_metrics
+from kelpseg.augmentation_pipeline import build_training_augmentation
+from kelpseg.augmentations import apply_augmentation
 from kelpseg.prepare.chip import _write_json
 from kelpseg.prepare.splits import check_split_output
+from kelpseg.preprocessing import cap_raw
 
 logger = logging.getLogger(__name__)
+
+
+def pipeline_states(sample: dict, seed: int = 33) -> list[dict]:
+    """Return source, the same sampled D4 reference, and actual full output.
+
+    Every full draw records the real stock operation order and parameters;
+    source and D4 reference explain which changes came from geometry alone.
+    """
+    image, label, valid = sample["image"], sample["label"], sample["valid"]
+    names, crop = sample["band_names"], sample["closeup"]
+    full = apply_augmentation(
+        build_training_augmentation(seed), image, label, valid, seed
+    )
+    full_parameters = full[3]
+    group = full_parameters["applied"][0][1]["group_element"]
+    d4 = A.D4(p=1)
+    reference = apply_augmentation(
+        d4, image, label, valid, seed, {"group_element": group}
+    )
+    footprint = np.zeros(label.shape, dtype=np.uint8)
+    top, left, bottom, right = crop
+    footprint[top:bottom, left:right] = 1
+    moved = d4.apply_to_mask(footprint, group_element=group)
+    ys, xs = np.where(moved)
+    moved_crop = int(ys.min()), int(xs.min()), int(ys.max()) + 1, int(xs.max()) + 1
+
+    trace = []
+    for class_name, parameters in full_parameters["applied"]:
+        entry = {"class": class_name, "parameters": parameters}
+        if class_name == "ChannelDropout":
+            entry["dropped_bands"] = [
+                names[index] for index in parameters["channels_to_drop"]
+            ]
+        trace.append(entry)
+    full_parameters["operation_trace"] = trace
+
+    def state(title, result, closeup, *, identity=False):
+        raw, targets, support, parameters = result
+        return dict(
+            title=title,
+            parameters=parameters,
+            image=raw,
+            label=targets,
+            valid=support,
+            display=cap_raw(raw, support),
+            metrics=value_metrics(raw, targets, support, names),
+            closeup=closeup,
+            is_identity=identity,
+            preview_default=False,
+        )
+
+    original = apply_augmentation(A.NoOp(p=1), image, label, valid, seed)
+    return [
+        state("Source original", original, crop, identity=True),
+        state(f"D4 reference: {group}", reference, moved_crop, identity=group == "e"),
+        state("D4 + two sampled extras", full, moved_crop),
+    ]
 
 
 def preview_pipeline(

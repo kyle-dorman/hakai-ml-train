@@ -8,8 +8,8 @@ import numpy as np
 import pytest
 from matplotlib import image as mpl_image
 
-from kelpseg.augmentation_display import write_viewer
-from kelpseg.pipeline_preview import preview_pipeline
+from kelpseg.augmentation_debug.display import write_viewer
+from kelpseg.augmentation_debug.pipeline import preview_pipeline
 from kelpseg.prepare.check import PreparationError
 from kelpseg.preprocessing import BAND_NAMES, MEAN, STD
 
@@ -63,7 +63,7 @@ def pipeline_inputs(tmp_path, monkeypatch):
         assert experiment == "baseline" and variant == "augmented"
         return rows
 
-    monkeypatch.setattr("kelpseg.augmentation_inputs.select_windows", selected)
+    monkeypatch.setattr("kelpseg.augmentation_debug.inputs.select_windows", selected)
     return chips, rows
 
 
@@ -167,7 +167,9 @@ def test_existing_output_is_refused_before_payload_reads(tmp_path, monkeypatch):
     def no_load(*args, **kwargs):
         pytest.fail("Existing output must be refused before loading any payload")
 
-    monkeypatch.setattr("kelpseg.pipeline_preview.load_preview_samples", no_load)
+    monkeypatch.setattr(
+        "kelpseg.augmentation_debug.pipeline.load_preview_samples", no_load
+    )
     with pytest.raises(PreparationError, match="fresh directory"):
         preview_pipeline(tmp_path / "missing", "missing.csv", "augmented", output)
 
@@ -179,7 +181,9 @@ def test_invalid_draw_counts_fail_before_inputs_are_opened(
     def no_load(*args, **kwargs):
         pytest.fail("Invalid draw setting must be refused before inputs are opened")
 
-    monkeypatch.setattr("kelpseg.pipeline_preview.load_preview_samples", no_load)
+    monkeypatch.setattr(
+        "kelpseg.augmentation_debug.pipeline.load_preview_samples", no_load
+    )
     with pytest.raises(ValueError, match="draws must be an integer in 1..32"):
         preview_pipeline(
             tmp_path / "missing",

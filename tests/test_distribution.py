@@ -83,8 +83,18 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             assert "kelpseg/paths.py" in names
             assert "kelpseg/bands.py" in names
             assert "kelpseg/chips.py" in names
-            assert "kelpseg/augmentation_viewer.html" in names
-            assert "kelpseg/pipeline_viewer.html" in names
+            assert "kelpseg/augmentation_debug/augmentation_viewer.html" in names
+            assert "kelpseg/augmentation_debug/pipeline_viewer.html" in names
+            assert "kelpseg/augmentation_debug/__init__.py" in names
+            for module in (
+                "display",
+                "inputs",
+                "panels",
+                "preview",
+                "trials",
+                "pipeline",
+            ):
+                assert f"kelpseg/augmentation_debug/{module}.py" in names
             assert "kelpseg/augmentation_pipeline.py" in names
             assert "kelpseg/cli/pixel_stats.py" in names
             assert "kelpseg/augmentations.py" in names
@@ -156,7 +166,11 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             "combined,_,_,trace=apply_augmentation(pipeline,image,label,valid,seed=33); "
             "assert combined.shape==image.shape and len(trace['applied'])==3; "
             "from importlib.resources import files; "
-            "assert files('kelpseg').joinpath('pipeline_viewer.html').is_file(); "
+            "assert files('kelpseg.augmentation_debug').joinpath('pipeline_viewer.html').is_file(); "
+            "assert files('kelpseg.augmentation_debug').joinpath('augmentation_viewer.html').is_file(); "
+            "from kelpseg.augmentation_debug.pipeline import preview_pipeline; "
+            "from kelpseg.augmentation_debug.preview import preview_augmentations; "
+            "assert callable(preview_pipeline) and callable(preview_augmentations); "
             "assert not any(name in sys.modules for name in ('lightning','wandb','kelpseg.models','src.models'))",
             cwd=unrelated,
         )
