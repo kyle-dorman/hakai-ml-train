@@ -5,7 +5,7 @@ Albumentations previews; 033A/033B are complete with the user-approved recipe.
 033C reproduces the approved statistics; 033D implements model/input helpers
 and bounded updates. 033E implements Lightning training/validation and EMA;
 033F implements verified portable bundles and completed-epoch resume; 033G
-completes the installed tiny walkthrough and Task 034 handoff.
+completes the installed tiny walkthrough and Task 035 prediction handoff.
 Task 032B's publication/restore prerequisite is satisfied. Task 032C is separate.
 
 ## Abstract and route
@@ -31,7 +31,7 @@ independent of the later model/training runner.
 | [033D](033d_model_and_training_inputs.md) | Manifest tensors, preprocessing, SegFormer B3 and loss/confusion helpers; bounded update only |
 | [033E](033e_training_validation_and_ema.md) | Single-device training/validation, EMA, strict recipes and local records; no exact resume yet |
 | [033F](033f_portable_models_and_resume.md) | Self-contained model bundle and completed-epoch resume; no tiled inference |
-| [033G](033g_tiny_walkthrough_and_handoff.md) | Installed fresh-directory tiny walkthrough, production previews and Task 034 handoff |
+| [033G](033g_tiny_walkthrough_and_handoff.md) | Installed fresh-directory tiny walkthrough, production previews and Task 035 prediction handoff |
 
 033A–033G are complete. Do not treat this table as permission to
 execute several tasks together. Each later child may be refined when selected
@@ -100,7 +100,7 @@ This is a substantial change from Clay: its means are about 4.5–5.3 times larg
 Keep legacy checkpoints on their original preprocessing. The reference is shared
 between baseline variants with its with-BC origin explicit; it cannot be called
 training-only for a LORO fold whose held-out region contributed to these estimates.
-Later fold-specific normalization is resolved with Task 036.
+Later fold-specific normalization is resolved with Task 037.
 
 The full result is outside Git at
 `/Volumes/x10pro/kelpseg/analyses/task033_normalization_positive_with_bc_clip5000_v1/statistics.json`.
@@ -211,6 +211,8 @@ records all eight tiny CPU cases, eight metadata-only production previews,
 installed package checks and the durable copied bundle/completed-epoch resume
 pair. Exact resume requires zero data-loader workers and the same total schedule;
 production/CUDA training remains unverified locally.
-Select Task 034 in a new chat for image-only tiled/georeferenced prediction,
-using G's explicit bundle/preprocessing handoff. No Task 034 implementation has
-started; scientific scoring remains Task 035.
+Select [Task 034](034_gpu_machine_preparation_and_baseline_launch.md) for local
+GPU-machine preparation, followed by remote setup iteration and baseline launch.
+The previous 034–038 slots are now 035–039: G's bundle/preprocessing handoff
+belongs to image-only tiled prediction in 035; scientific scoring remains 036.
+No implementation of Task 034 or later work has started.

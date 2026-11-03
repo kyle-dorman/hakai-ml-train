@@ -147,7 +147,7 @@ This is a few manifests and ordinary folders, not a dataset-management service.
 The researcher guide gains a copyable "add a region" recipe as these stages
 arrive. Tasks 029A/029B implement extensible preparation; Task 032A supplies
 collection-aware assignments and Task 032B published the full release;
-Task 037 uses those prepared data for its four
+Task 038 uses those prepared data for its four
 new-region comparisons. None of that ingestion is executed by Task 027.
 
 ## Planned raw, intermediate, and cleaned releases

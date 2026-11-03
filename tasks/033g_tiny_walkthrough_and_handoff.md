@@ -3,6 +3,12 @@
 Status: Complete and approved for commit — 2026-11-03.
 Depends on: Completed 033A–033F with recorded outcomes.
 
+Current routing update — 2026-11-03: new
+[Task 034](034_gpu_machine_preparation_and_baseline_launch.md) owns GPU-machine
+preparation and baseline launch. The former 034–038 roadmap is now 035–039.
+Completed outcomes below retain their historical numbering; the operative
+prediction handoff below is updated to 035.
+
 ## Abstract
 
 Integrate the finished baseline workflow into a short fresh-directory researcher
@@ -70,9 +76,10 @@ bundle/preprocessing handoff. No production training, tiled inference or scoring
 Do not start another numbered task in this window. All planned commands/modules
 are future interfaces until this task implements and verifies them.
 
-## Task 034 handoff
+## Task 035 handoff
 
-Select and write the Task 034 contract in a new chat. Its scope is image-only
+After Task 034's local handoff, select and write the Task 035 contract in a new
+chat. Its scope is image-only
 tiled/georeferenced prediction from the copied `model/` bundle, not training or
 scientific scoring. Start with `kelpseg.model_bundle.load_model_bundle` and
 `PortableModel.predict_probabilities`; the latter already returns original-size
@@ -89,12 +96,12 @@ float32 HW probabilities from HWC native uint16 arrays up to 512×512.
   for offline fresh-directory checks. It is a randomly initialized bounded CPU
   smoke model, not a scientific baseline.
   The separate last checkpoint is training recovery state, not prediction input.
-- Keep label scoring, source confusion counts and scientific figures in 035;
-  LORO comparisons/fold-specific normalization remain 036. Retire legacy consumers
+- Keep label scoring, source confusion counts and scientific figures in 036;
+  LORO comparisons/fold-specific normalization remain 037. Retire legacy consumers
   only when their replacement workflow is present. CUDA/bf16, hardware sizing,
   optional live W&B and production fitting remain unverified locally.
 
-Task 034 has not been implemented or started here.
+Task 035 has not been implemented or started here.
 
 ## Outcome 2026-11-03
 

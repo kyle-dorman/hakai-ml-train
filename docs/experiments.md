@@ -108,7 +108,7 @@ Training exports the validation-selected `model/` bundle containing weights,
 architecture settings, band names/order, normalization, and prediction settings
 including threshold. The installed Python loader predicts supplied image arrays
 offline without labels or original recipe paths; tiled/georeferenced prediction
-remains Task 034.
+remains Task 035.
 Keep recipe/model identity and averaging semantics explicit. Verify that copying
 the bundle to a fresh directory is enough to predict supplied imagery with the
 installed package, without the old training registry, original config-directory
@@ -169,7 +169,7 @@ and evaluation coverage matched. Declare the sampling and training budget so
 extra BC data and extra optimization are distinguishable experiment choices;
 those recipe details are selected in the training task.
 
-Tasks 035/036 must add temporal-consistency reporting alongside pooled accuracy:
+Tasks 036/037 must add temporal-consistency reporting alongside pooled accuracy:
 
 - Retain per-source/date confusion counts, scoreable/covered area and labeled
   kelp prevalence; summarize by region, represented year and represented month.
@@ -205,3 +205,12 @@ fresh-directory small-data walkthrough must exercise Box fetch through the
 working pipeline. Local completion does not establish CUDA compatibility,
 mixed-precision behavior, throughput, or production memory requirements; check
 those on the selected GPU host before full experiments.
+
+[Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) owns the
+remote-first setup procedure with a small local checklist/bootstrap handoff, environment/data
+validation, hardware sizing, completed-epoch resume checks and initial baseline
+launch. It does not depend on tiled prediction or scoring. Later tasks can
+proceed locally while the baseline uses its fixed committed checkout, environment
+and recipe remotely; integrate setup fixes through separate commits rather than
+changing a running job. Task 039 reuses the setup procedure for the final
+researcher walkthrough and does not repeat the initial relocation/launch gate.

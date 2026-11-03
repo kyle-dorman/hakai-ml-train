@@ -19,14 +19,18 @@ support the ongoing replacement. The installed `train` command provides Lightnin
 training, validation, EMA, portable models and completed-epoch resume. Python
 bundle loading predicts supplied image arrays; the
 [installed tiny walkthrough](quickstart.md#tiny-v2-installed-training-walkthrough)
-covers all four spectral recipes and both variants. Task 034 is next for
-tiled/georeferenced prediction. Tasks 000–023 describe the
+covers all four spectral recipes and both variants.
+[Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) is in progress
+for remote-first GPU setup and baseline launch; tiled/georeferenced
+prediction follows in Task 035. Tasks 000–023 describe the
 preceding completed PS8B study.
 
 ## Read by task
 
 - [quickstart.md](quickstart.md): researcher setup, available commands, paths,
   output/errors, and reusable Python functions.
+- [gpu_setup.md](gpu_setup.md): remote-first Linux GPU setup checklist;
+  actual installation and CUDA validation remain pending.
 - [product.md](product.md): research scope, experiments, scientific boundaries.
 - [architecture.md](architecture.md): current-to-target pipeline, identity,
   splitting, prediction and metric contracts.

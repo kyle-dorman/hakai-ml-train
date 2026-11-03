@@ -31,7 +31,9 @@ starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
 ## Start here
 
 Use the [researcher quickstart](docs/quickstart.md) for installation, local
-settings, command output, and fixes for common errors. Development context is
+settings, command output, and fixes for common errors. For the external Linux
+GPU instance, follow the [GPU setup checklist](docs/gpu_setup.md); installation
+and GPU validation will be tested and refined on that machine. Development context is
 routed through [docs/index.md](docs/index.md) and [the roadmap](docs/todo.md).
 The legacy reference and provenance audit are complete;
 [Task 027](tasks/027_verify_box_and_back_up_raw_reference_audit.md) owns the

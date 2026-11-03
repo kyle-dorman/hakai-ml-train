@@ -24,7 +24,7 @@ The old evaluator still imports `src.models.smp` and its loss/optimizer helpers;
 the historical multi-run launcher still calls `trainer.py` and its configured
 data, scheduler and EMA classes. Array probabilities do not replace those
 source-raster/scoring and suite consumers. Retain these modules and their
-checkout dependencies until Tasks 034–036 replace the relevant consumers;
+checkout dependencies until Tasks 035–037 replace the relevant consumers;
 new baseline work uses only the installed `kelpseg train` workflow.
 
 The package uses uv and `uv_build`. The completed replacement will have no

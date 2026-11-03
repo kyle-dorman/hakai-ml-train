@@ -57,8 +57,11 @@ best/last checkpoints pass bounded CPU checks. [033F is complete](../tasks/033f_
 copied bundles and zero-worker completed-epoch resume pass offline CPU checks.
 [033G is complete](../tasks/033g_tiny_walkthrough_and_handoff.md#outcome-2026-11-03):
 installed tiny CPU checks cover all eight recipe/variant cases, copied models and
-completed-epoch resume; eight production metadata previews pass. **Task 034 is
-next and unstarted**. No production training ran.
+completed-epoch resume; eight production metadata previews pass.
+**[Task 034: GPU machine preparation and baseline launch](../tasks/034_gpu_machine_preparation_and_baseline_launch.md)
+is in progress.** The [entry checklist](gpu_setup.md) and bootstrap are drafted
+locally; install, test and refine them on the external GPU host. A baseline may train there while
+Task 035 proceeds locally. No production training has run.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -116,11 +119,12 @@ selected; split further if needed.
 | [033E](../tasks/033e_training_validation_and_ema.md) | Training, validation and EMA — complete | Flat recipes, equal epochs, validation-only selection, local records and saved states |
 | [033F](../tasks/033f_portable_models_and_resume.md) | Portable models and resume — complete | Copied bundle and completed-epoch resume verified independently (zero workers) |
 | [033G](../tasks/033g_tiny_walkthrough_and_handoff.md) | Tiny walkthrough and handoff — complete | Eight tiny CPU cases, installed distributions, copied bundle/resume pair and eight metadata-only previews; next 034 |
-| 034 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
-| 035 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics; region/date/year/month prevalence and errors; signed area bias and supported matched-footprint change checks; see experiments.md |
-| 036 | LORO runner and matching-TIFF comparisons | Ten 001–010 folds; paired with/without-011/012 CA/Baja results; temporal-consistency and later-date scopes reported separately; tiny suite checks |
-| 037 | New-region experiment recipes | Use prepared regional and combined collection versions; four cases, fixed test scopes, explicit initialization and reset/resume behavior |
-| 038 | Researcher handoff and relocation rehearsal | Another researcher follows short recipes; fresh-directory Box fetch through full workflow; production plans resolve; no scripts directory |
+| [034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) | GPU machine preparation and baseline launch — in progress | Local entry checklist/bootstrap; remote-first installation and CUDA/data/resume checks and one healthy baseline launch; local 035 can proceed while training runs |
+| 035 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
+| 036 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics; region/date/year/month prevalence and errors; signed area bias and supported matched-footprint change checks; see experiments.md |
+| 037 | LORO runner and matching-TIFF comparisons | Ten 001–010 folds; paired with/without-011/012 CA/Baja results; temporal-consistency and later-date scopes reported separately; tiny suite checks |
+| 038 | New-region experiment recipes | Use prepared regional and combined collection versions; four cases, fixed test scopes, explicit initialization and reset/resume behavior |
+| 039 | Final researcher handoff and complete-workflow rehearsal | Another researcher follows the finished preparation/train/predict/score/transfer recipes; reuse 034 setup; finish no-scripts cleanup; no repeated GPU bootstrap or first-launch gate |
 
 ## Usability acceptance across tasks
 
@@ -135,7 +139,7 @@ selected; split further if needed.
 - Begin the reusable tiny walkthrough in Task 031, after Task 027's verified
   Box setup and Task 030B's cleaned intermediate. Grow the same example through
   splitting, training smoke, prediction, and evaluation as those stages arrive.
-  Task 038 rehearses the finished example. Task 025's legacy capture and focused
+  Task 039 rehearses the finished example. Task 025's legacy capture and focused
   correctness fixtures are separate and retain their existing sequence.
 - Keep small synthetic fixtures and automated CPU checks independent of Box,
   W&B login, GPUs, and large downloads. Establish automation with Task 028 and
@@ -148,9 +152,10 @@ selected; split further if needed.
 - Before expensive work, show resolved inputs, band order, relevant counts,
   and output location; fail on unknown settings and explain how to fix invalid
   inputs. Retain useful technical details in logs.
-- Tasks 033–034 produce a model bundle with weights, architecture, band order,
-  normalization, and prediction settings. Verify fresh-directory prediction
-  without the old training registry or original config-directory paths.
+- Task 033 provides the model bundle with weights, architecture, band order,
+  normalization and prediction settings; Task 035 adds tiled prediction. Verify
+  fresh-directory prediction without the old training registry or original
+  config-directory paths.
 - Keep preparation code explicit and grouped in `kelpseg.prepare`. Standard
   logging shows phases, files, counts/bytes, resume decisions and long-running
   work by default in the CLI; avoid custom frameworks or clever shorthand.
@@ -160,9 +165,12 @@ selected; split further if needed.
   Keep Box as plain folders/manifests with documented rclone operations; do not
   build a custom storage service or synchronization framework.
 
-Task 038 is the local readiness gate, not a claim that CUDA behavior or
-production memory use can be validated on the Mac. Full training starts only
-on the selected GPU host after its hardware-specific checks.
+Task 034 owns the initial machine preparation, data staging, CUDA/bf16 checks,
+production sizing and baseline launch. Its checklist handoff can complete while
+remote checks remain pending; production starts only after those host checks
+pass. Task 039 owns final end-to-end researcher usability, not initial relocation
+or permission to start the baseline. Later local development uses a separate
+checkout from the fixed code/environment of the running experiment.
 
 ## Historical work
 

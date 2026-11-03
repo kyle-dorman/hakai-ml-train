@@ -1507,6 +1507,11 @@ CUDA sizing and production execution remain separate GPU-host work.
 
 ## Later workflows and outputs
 
+The [GPU setup checklist](gpu_setup.md) covers access, Linux bootstrap,
+authentication and Box data staging. [Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md)
+is in progress: test and refine installation and the GPU workflow on the remote
+host, then launch one baseline after its checks pass.
+
 Tiled/georeferenced prediction, scoring, LORO model comparisons and adding a
 region remain later tasks. The reusable walkthrough
 above covers preparation, training/validation, portable image-array probabilities
