@@ -65,10 +65,14 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
     )
     sdist_wheel = next(rebuilt.glob("*.whl"))
 
-    requirements = tmp_path / "runtime.txt"
+    # Frozen project sync caches artifact URLs, not necessarily index metadata.
+    # Keep those URLs so offline installation works on a fresh CI cache too.
+    requirements = tmp_path / "pylock.toml"
     run(
         uv,
         "export",
+        "--format",
+        "pylock.toml",
         "--frozen",
         "--no-default-groups",
         "--no-emit-project",

@@ -253,3 +253,37 @@ disposable test artifacts, not relocation dependencies. No Task 033G Box upload
 is required. Existing published datasets and tiny inputs support a fresh smoke
 on another machine after installing the committed package and updating machine
 paths. Local smoke artifacts remain untouched; no deletion or upload was performed.
+
+
+### CI follow-up — 2026-11-03
+
+The user requested repair of the failing GitHub Checks workflow. The observed
+[run](https://github.com/kyle-dorman/hakai-ml-train/actions/runs/41645083711)
+tested the earlier 033E commit `59557f6`: 612 passed and six failed. Five help
+assertions compared raw ANSI-colored output with literal option names; the
+distribution test exported pinned requirements that still needed registry-index
+metadata absent from the otherwise populated offline cache.
+
+`tests/test_package_cli.py` now compares option names after Click removes ANSI
+formatting. This preserves normal colored help and the existing lazy-import
+checks. `tests/test_distribution.py` exports the same frozen runtime dependency
+set as `pylock.toml`, preserving exact artifact URLs and hashes instead of
+requiring registry rediscovery. Hash checking, offline execution, isolated wheel
+and rebuilt-sdist installs remain enabled. CI already pins uv 0.12.12, which
+supports this export/install format; no runtime code, lockfile, dependency or
+workflow policy changed.
+
+The five help failures were reproduced locally with `NO_COLOR` unset,
+`TERM=xterm-256color`, `FORCE_COLOR=1` and `GITHUB_ACTIONS=true`; all 22 CLI tests
+pass after the fix under those same settings. An isolated cache with wheel
+artifacts but no simple-index metadata reproduces the requirements-file failure
+and installs all 68 runtime packages offline from the pylock export.
+
+Final follow-up validation: all **640 tests pass** with CI-like forced-color and
+offline settings (230.63 seconds). The 23 focused distribution/CLI checks also
+pass, and an independent complete wheel/sdist test passes with all simple-index
+cache directories excluded (211.92 seconds). Ruff format/check, all-file
+pre-commit and `git diff --check` pass. Existing dependency/Lightning warnings
+remain warnings. GitHub has not rerun these local fixes; remote success remains
+unverified until the changes are pushed and Checks completes. Task 034 remains
+unstarted.

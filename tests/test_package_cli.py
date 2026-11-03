@@ -5,6 +5,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 import pytest
+from click import unstyle
 from typer.testing import CliRunner
 
 from kelpseg.cli import app
@@ -21,10 +22,11 @@ def test_help_keeps_explicit_subcommand_and_no_future_commands() -> None:
     assert "pixel-stats" in result.stdout
     assert "preview-augmentations" not in result.stdout
     assert "train" in {command.name for command in app.registered_commands}
-    assert "--version" in result.stdout
+    # CI may color individual pieces of an option; compare the displayed text.
+    assert "--version" in unstyle(result.stdout)
     result = runner.invoke(app, ["check-paths", "--help"])
     assert result.exit_code == 0
-    assert "--paths" in result.stdout
+    assert "--paths" in unstyle(result.stdout)
 
 
 def test_version_uses_installed_distribution() -> None:
@@ -170,6 +172,6 @@ runpy.run_module('kelpseg', run_name='__main__')
     elif argument == "--version":
         assert result.stdout.strip() == f"kelpseg {version('kelpseg')}"
     elif argument in ("organize", "chip", "split", "train"):
-        assert "--recipe" in result.stdout
+        assert "--recipe" in unstyle(result.stdout)
     else:
         assert "Both roots are existing directories." in result.stdout
