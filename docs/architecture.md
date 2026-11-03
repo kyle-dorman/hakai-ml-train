@@ -12,9 +12,10 @@ loads kelp-positive training rows and representative validation; test rows stay
 metadata only. Shared preprocessing and the approved stock augmentation factory
 feed float32 tensors through an Albumentations Compose ending in Normalize
 and ToTensorV2. `training/loss.py` and `training/metrics.py` implement the
-selected objective and native TorchMetrics accumulation. Task 033E will use
-PyTorch Lightning Trainer/LightningModule and native callbacks/loggers rather
-than a custom epoch loop. That training interface is not implemented yet.
+selected objective and native TorchMetrics accumulation. Training uses
+PyTorch Lightning Trainer/LightningModule and native callbacks/loggers.
+Portable bundles support image-array probabilities; completed-epoch resume
+uses native Trainer checkpoints with explicit random/sampling state.
 The checkout retains legacy Planet
 `src.*` modules, root `trainer.py`, `scripts/`, relevant configs, and focused tests until their
 replacements land. Unrelated application/model/export families are removed.
@@ -59,9 +60,11 @@ functions. The one-time historical catalog bootstrap is retired; existing
 explicit catalog tables are normal organizer inputs. Keep these as explicit
 functions and ordinary loops;
 the CLI uses standard Python logging for progress, without a custom logging
-or orchestration layer. Later tasks add model workflow commands. The selected
-training command style is `uv run kelpseg train --recipe <recipe-file>`;
-it remains planned until the training task implements it. See
+or orchestration layer. Later tasks add model workflow commands. The installed
+training command is `uv run kelpseg train --recipe <recipe-file>`;
+`--resume <run/checkpoints/last.ckpt>` restores the same run from a completed
+epoch, with the same total budget and input identities. Exact resume requires
+zero loader workers; preparation remains one pass. See
 [quickstart.md](quickstart.md) for working setup and preparation recipes.
 
 The preparation surface is `organize`, `check`, shared `clean`, `chip`, `split`

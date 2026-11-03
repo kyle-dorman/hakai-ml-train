@@ -74,8 +74,8 @@ are authorized by Task 024.
 | [033C](033c_simplify_pixel_statistics.md) | Local NumPy utility | Complete | Installed NumPy command reproduces approved constants and exact chip/pixel scope; next 033D |
 | [033D](033d_model_and_training_inputs.md) | Local model/input checks | Complete | Shared manifest tensors, loss/confusion and sequential 8/4/3 B3 updates pass; next 033E |
 | [033E](033e_training_validation_and_ema.md) | Local training/validation | Complete | Lightning, four spectral recipes, update-101 EMA, native best/last checkpoints; next 033F |
-| [033F](033f_portable_models_and_resume.md) | Local bundle/recovery | Next, not started | Portable image-array model loading and completed-epoch resume |
-| [033G](033g_tiny_walkthrough_and_handoff.md) | Installed rehearsal/docs | Planned | Tiny walkthrough, six full-data previews and Task 034 handoff |
+| [033F](033f_portable_models_and_resume.md) | Local bundle/recovery | Complete | Offline copied bundles and exact zero-worker completed-epoch resume; next 033G |
+| [033G](033g_tiny_walkthrough_and_handoff.md) | Installed rehearsal/docs | Next, not started | Tiny walkthrough, six full-data previews and Task 034 handoff |
 
 ## Historical queue: Tasks 000–023
 

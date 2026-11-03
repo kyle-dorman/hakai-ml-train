@@ -104,13 +104,21 @@ Smooth illumination, haze and misregistration remain excluded.
 
 ## Portable prediction model
 
-Tasks 033–034 save a model bundle containing weights, architecture settings,
-band names/order, normalization, and prediction settings including threshold.
+Training exports the validation-selected `model/` bundle containing weights,
+architecture settings, band names/order, normalization, and prediction settings
+including threshold. The installed Python loader predicts supplied image arrays
+offline without labels or original recipe paths; tiled/georeferenced prediction
+remains Task 034.
 Keep recipe/model identity and averaging semantics explicit. Verify that copying
 the bundle to a fresh directory is enough to predict supplied imagery with the
 installed package, without the old training registry, original config-directory
-paths, or an online tracking service. Exact interrupted-run recovery may use
-its separate checkpoint with optimizer/scheduler/progress state.
+paths, or an online tracking service. Completed-epoch resume uses the separate `checkpoints/last.ckpt`, preserving
+the saved run identity and total schedule. The recipe and selected memberships
+must match; machine roots may relocate explicitly. Ordinary weights, optimizer,
+scheduler, progress, random/sampling state and EMA restore through native
+Lightning mechanisms. Exact resume requires zero loader workers from the start;
+older Task 033E checkpoints and partial-epoch recovery are unsupported.
+Bundle loading is model-only initialization and restores none of that training state.
 
 ## Legacy gut check
 

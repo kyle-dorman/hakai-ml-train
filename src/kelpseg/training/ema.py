@@ -1,5 +1,6 @@
 """Small guards around Lightning's native weight averaging lifecycle."""
 
+import torch
 from lightning.pytorch.callbacks import WeightAveraging
 from torch.optim.swa_utils import get_ema_avg_fn
 
@@ -43,4 +44,6 @@ class DelayedEMA(WeightAveraging):
             super().on_save_checkpoint(trainer, pl_module, checkpoint)
         else:
             checkpoint["current_model_state"] = checkpoint["state_dict"]
-            checkpoint["averaging_state"] = {"n_averaged": 0}
+            checkpoint["averaging_state"] = {
+                "n_averaged": torch.tensor(0, dtype=torch.long)
+            }

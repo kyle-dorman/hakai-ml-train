@@ -16,7 +16,8 @@ the [restore recipe](quickstart.md#restore-and-use-the-full-cabc-chip-release). 
 Installed Python helpers provide manifest-selected training/validation tensors,
 SegFormer B3 and loss/confusion functions. Retained legacy Planet implementations
 support the ongoing replacement. The installed `train` command provides Lightning
-training, validation, EMA and local checkpoints; prediction arrives later. Tasks 000–023 describe the
+training, validation, EMA, portable models and completed-epoch resume. Python
+bundle loading predicts supplied image arrays; tiled/georeferenced prediction arrives later. Tasks 000–023 describe the
 preceding completed PS8B study.
 
 ## Read by task

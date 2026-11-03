@@ -1220,7 +1220,7 @@ selects the assignment scope and is recorded separately from the descriptive
 name. This training stage supports `baseline`; LORO needs its later fold-specific
 normalization work. Dry-run IDs are previews, not reservations;
 a later fit gets its own ID. Unknown settings and empty validation produce
-errors, and existing output folders are never overwritten. No resume command exists yet.
+errors. Fresh runs refuse existing output folders; explicit resume uses the saved run identity.
 
 For a bounded local smoke, copy `configs/train/tiny_cpu.toml` and set its
 `chips` and `assignments` to your tiny walkthrough outputs if desired. This
@@ -1272,15 +1272,83 @@ Each run writes resolved settings and a run record under `<runs_root>/<run_id>`,
 CSV metrics under `metrics/`, and distinct best/last Lightning checkpoints under
 `checkpoints/`. The checkpoint `state_dict` contains validation weights;
 `current_model_state` retains ordinary weights separately from averaging state.
-These are local training checkpoints, not yet portable prediction bundles or
-verified exact-resume artifacts. Keep them outside Git. Local records work
-offline. `wandb = true` optionally adds native W&B logging to
+After fitting, `model/` contains the validation-selected portable model.
+Use `checkpoints/last.ckpt` for completed-epoch resume, and keep `best.ckpt`
+for the selected model; they serve different purposes. Keep these artifacts
+outside Git. Local records work offline. `wandb = true` optionally adds native W&B logging to
 `kdorman90-ucla/kelpseg` (install `wandb` in a runtime-only environment first).
+
+## Copy and use a portable model
+
+Copy the complete `model/` directory (`model.json` and `weights.pt`) anywhere
+with the installed package. It stores the architecture, ordered bands, cap,
+normalization, padding/nodata policy, threshold and selected current/EMA identity.
+No recipe, label, training registry, W&B connection or pretrained download is
+needed to load it:
+
+```python
+from kelpseg.model_bundle import load_model_bundle
+
+bundle = load_model_bundle("/path/to/copied/model")
+# image: uint16 H x W x native channels, raw units; declare every native channel.
+probabilities = bundle.predict_probabilities(image, source_band_names)
+```
+
+The returned float32 array has the image's original height and width, with NaN
+at native all-band-zero nodata. Supply an image no larger than 512 × 512;
+bottom/right padding is removed from the result. Native validity is determined
+before selecting model bands. This helper does not tile images, read labels,
+write georeferenced rasters or threshold probabilities. The saved threshold is .5.
+
+To export an existing selected training checkpoint separately:
+
+```python
+from kelpseg.model_bundle import export_model_bundle
+from kelpseg.training.settings import load_settings
+
+export_model_bundle(
+    "/path/to/run/checkpoints/best.ckpt",
+    "/path/to/new-model-directory",
+    load_settings("/path/to/recipe.toml"),
+    run_id="the-saved-run-id",
+)
+```
+
+Export refuses an existing destination. Loading a bundle restores model weights
+only; it does not resume training or restore an optimizer.
+
+## Resume after a completed epoch
+
+For runs started with the completed-epoch support, resume from the last saved
+epoch using the same recipe and **same total epoch budget**:
+
+```bash
+uv run kelpseg train --recipe /path/to/recipe.toml --resume /path/to/run/checkpoints/last.ckpt --dry-run
+uv run kelpseg train --recipe /path/to/recipe.toml --resume /path/to/run/checkpoints/last.ckpt
+```
+
+Resume writes a separate `metrics/resume-<UTC timestamp>/metrics.csv`, preserving
+earlier metrics; the run record points to the latest CSV.
+
+The command preserves the saved run ID, ordinary model weights, optimizer,
+scheduler, progress, random/sampling state and delayed EMA. Work after that
+completed epoch is discarded; there is no partial-epoch or mid-batch recovery.
+Use `last.ckpt`, not the validation-selected `best.ckpt`. Older Task 033E
+checkpoints lack the new resume state and cannot provide exact resume.
+
+Exact resume currently requires `num_workers = 0` from the start. Fresh runs
+still support the existing multiworker settings; their worker-local random
+streams are outside this resume guarantee. Changing the recipe, total schedule,
+bands or selected memberships fails before training. Machine roots may relocate:
+update `paths_file`, `chips` and `assignments` to the same copied data and retain
+the saved run folder under the new `runs_root`. These path changes do not grant
+permission to change data identity. CPU equivalence is checked with bounded
+training; CUDA/mixed-precision equivalence remains a GPU-host check.
 
 ## Later workflows and outputs
 
-Portable prediction bundles, exact resume, prediction, scoring, LORO model
-comparisons and adding a region remain later tasks. The reusable walkthrough
+Tiled/georeferenced prediction, scoring, LORO model comparisons and adding a
+region remain later tasks. The reusable walkthrough
 above covers chipping, loading and source splitting. Automated CPU fixtures
 need no Box/W&B login, GPU or model-weight download.
 

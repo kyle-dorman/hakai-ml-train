@@ -84,6 +84,8 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             assert "kelpseg/bands.py" in names
             assert "kelpseg/chips.py" in names
             assert "kelpseg/models.py" in names
+            assert "kelpseg/model_bundle.py" in names
+            assert "kelpseg/training/resume.py" in names
             for module in ("data", "loss", "metrics", "transforms"):
                 assert f"kelpseg/training/{module}.py" in names
             assert "kelpseg/augmentation_debug/augmentation_viewer.html" in names
@@ -142,6 +144,49 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
 
         unrelated = tmp_path / f"unrelated-{index}"
         unrelated.mkdir()
+        # A copied image-only bundle executes from installed runtime dependencies.
+        run(
+            python,
+            "-I",
+            "-c",
+            """
+from pathlib import Path
+import shutil
+from unittest.mock import patch
+import numpy as np
+import torch
+from kelpseg.model_bundle import export_model_bundle, load_model_bundle
+from kelpseg.preprocessing import BAND_NAMES
+from kelpseg.training.settings import TrainingSettings
+from kelpseg.training.transforms import build_input_transform
+
+torch.set_num_threads(1)
+torch.manual_seed(33)
+model = torch.nn.Conv2d(8, 1, 1).eval()
+checkpoint = Path('selected.ckpt')
+torch.save(dict(state_dict={'model.'+k: v for k,v in model.state_dict().items()},
+                averaging_state={'n_averaged': 0}, epoch=0, global_step=1), checkpoint)
+original = export_model_bundle(checkpoint, 'original-model', TrainingSettings(), run_id='installed-smoke')
+shutil.copytree(original, 'copied-model')
+shutil.rmtree(original)
+checkpoint.unlink()
+image = np.full((7, 9, 8), 1000, dtype=np.uint16)
+image[0, 0] = 0
+padded = np.zeros((512, 512, 8), dtype=np.uint16)
+padded[:7, :9] = image
+valid = np.any(padded != 0, axis=-1).astype(np.int8)
+tensor = build_input_transform(BAND_NAMES)(image=padded, validity=valid)['image']
+with torch.inference_mode():
+    expected = model(tensor[None]).sigmoid()[0,0,:7,:9].numpy()
+expected[0,0] = np.nan
+with patch('kelpseg.model_bundle.build_model', return_value=torch.nn.Conv2d(8,1,1)) as build:
+    loaded = load_model_bundle('copied-model')
+    build.assert_called_once_with(8, encoder_weights=None)
+actual = loaded.predict_probabilities(image, BAND_NAMES)
+np.testing.assert_array_equal(actual, expected)
+""",
+            cwd=unrelated,
+        )
         # A stock transform and its raw-unit adapter must work from runtime
         # dependencies alone, outside the temporary legacy environment.
         run(
@@ -185,6 +230,8 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             "-c",
             "import sys, torch, numpy as np; "
             "from kelpseg.models import build_model; "
+            "from kelpseg.model_bundle import load_model_bundle, export_model_bundle; "
+            "assert callable(load_model_bundle) and callable(export_model_bundle); "
             "from kelpseg.training.data import build_training_inputs; "
             "from kelpseg.training.loss import segmentation_loss; "
             "from kelpseg.training.metrics import build_metrics; "

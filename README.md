@@ -21,8 +21,10 @@ Preparation runs once into a fresh output and stops on failure, with no restart
 support. Installed Python helpers connect training/validation tensors to
 SegFormer B3, the selected loss and pooled confusion metrics; see
 [model inputs](docs/quickstart.md#model-and-training-inputs-python).
-The installed `train` command uses Lightning for fitting, validation and checkpoints;
-see [training recipes](docs/quickstart.md#train-and-validate). Prediction arrives later. Retained legacy Planet code/tests
+The installed `train` command uses Lightning for fitting, validation, checkpoints
+and completed-epoch resume; see [training recipes](docs/quickstart.md#train-and-validate).
+[Portable bundles](docs/quickstart.md#copy-and-use-a-portable-model) predict supplied
+image arrays offline. Tiled/georeferenced prediction arrives later. Retained legacy Planet code/tests
 support the ongoing rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
 starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
 

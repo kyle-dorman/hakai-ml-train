@@ -213,3 +213,99 @@ def test_recipe_only_cli_resolves_machine_paths_and_previews_auto_id(
     assert "--paths" not in help_result.stdout
     assert "--variant" not in help_result.stdout
     assert "--run-id" not in help_result.stdout
+
+
+def test_completed_epoch_runner_resume_and_recipe_cli_preview(tmp_path, monkeypatch):
+    """Resume the actual runner without new identity or pretrained initialization."""
+    from lightning.pytorch.callbacks import Callback
+    from typer.testing import CliRunner
+
+    import kelpseg.paths
+    import kelpseg.training.settings
+    from kelpseg.cli import app
+
+    settings, paths = _inputs(tmp_path)
+    native_trainer = run.Trainer
+    observed_initialization = []
+
+    def small_model(settings):
+        observed_initialization.append(settings.encoder_weights)
+        return TrainingModule(settings, torch.nn.Conv2d(3, 1, 1))
+
+    class InterruptAfterEpoch(Callback):
+        def on_train_epoch_start(self, trainer, pl_module):
+            if trainer.current_epoch == 1:
+                raise RuntimeError("simulated interruption after completed epoch")
+
+    def interrupted_trainer(**kwargs):
+        kwargs["callbacks"].append(InterruptAfterEpoch())
+        return native_trainer(**kwargs)
+
+    monkeypatch.setattr(run, "TrainingModule", small_model)
+    monkeypatch.setattr(run, "Trainer", interrupted_trainer)
+    threads = torch.get_num_threads()
+    torch.set_num_threads(1)
+    try:
+        with pytest.raises(RuntimeError, match="simulated interruption"):
+            run.run_training(settings, paths, run_id="same-run")
+        checkpoint = paths.runs_root / "same-run" / "checkpoints" / "last.ckpt"
+        assert checkpoint.is_file()
+        assert not (checkpoint.parent.parent / "model").exists()
+        with pytest.raises(ValueError, match="recipe or selected memberships"):
+            run.run_training(replace(settings, epochs=3), paths, resume=checkpoint)
+        with pytest.raises(ValueError, match="saved run ID"):
+            run.run_training(settings, paths, resume=checkpoint, run_id="different")
+
+        monkeypatch.setattr(
+            kelpseg.training.settings, "load_settings", lambda _: settings
+        )
+        monkeypatch.setattr(kelpseg.paths, "load_paths", lambda _: paths)
+        monkeypatch.setattr(kelpseg.paths, "check_paths", lambda value: value)
+        original_load = np.load
+
+        def no_payloads(*args, **kwargs):
+            raise AssertionError("Resume preview opened a payload")
+
+        monkeypatch.setattr(np, "load", no_payloads)
+        preview = CliRunner().invoke(
+            app,
+            [
+                "train",
+                "--recipe",
+                "recipe.toml",
+                "--resume",
+                str(checkpoint),
+                "--dry-run",
+            ],
+        )
+        assert preview.exit_code == 0, preview.output
+        assert json.loads(preview.stdout)["run_id"] == "same-run"
+        assert len(observed_initialization) == 1
+        monkeypatch.setattr(np, "load", original_load)
+        monkeypatch.setattr(run, "Trainer", native_trainer)
+        # Copy the complete run to another machine root and remove its old path.
+        import shutil
+
+        old_output = checkpoint.parent.parent
+        relocated = tmp_path / "relocated-runs"
+        relocated.mkdir()
+        shutil.copytree(old_output, relocated / "same-run")
+        shutil.rmtree(old_output)
+        paths = replace(paths, runs_root=relocated)
+        checkpoint = relocated / "same-run" / "checkpoints" / "last.ckpt"
+        result = run.run_training(settings, paths, resume=checkpoint)
+        assert result["run_id"] == "same-run"
+        assert result["status"] == "complete"
+        assert result["optimizer_updates_actual"] == 4
+        assert observed_initialization[-1] is None
+        assert Path(result["model_bundle"], "weights.pt").is_file()
+        assert (relocated / "same-run" / "metrics" / "metrics.csv").is_file()
+        assert "resume-" in result["validation_csv"]
+        assert Path(result["validation_csv"]).is_file()
+        assert Path(result["best_checkpoint"]).parent == checkpoint.parent
+        resumed = torch.load(checkpoint, weights_only=False)
+        assert resumed["epoch"] == 1
+        assert resumed["global_step"] == 4
+        assert resumed["training_resume"]["run_id"] == "same-run"
+    finally:
+        torch.set_num_threads(threads)

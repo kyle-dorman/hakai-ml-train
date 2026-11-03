@@ -13,6 +13,13 @@ def train_command(
     recipe: Annotated[
         Path, typer.Option("--recipe", help="Flat training recipe TOML.")
     ],
+    resume: Annotated[
+        Path | None,
+        typer.Option(
+            "--resume",
+            help="Resume the same run from its completed-epoch last.ckpt (num_workers=0).",
+        ),
+    ] = None,
     dry_run: Annotated[
         bool,
         typer.Option(
@@ -33,6 +40,7 @@ def train_command(
             settings,
             check_paths(load_paths(settings.paths_file)),
             dry_run=dry_run,
+            resume=resume,
         )
         typer.echo(json.dumps(report, indent=2, default=str))
     except (OSError, ValueError, RuntimeError) as error:

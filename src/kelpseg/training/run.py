@@ -6,9 +6,10 @@ import math
 import platform
 import re
 import subprocess
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from importlib.metadata import version
+from pathlib import Path
 
 import torch
 from lightning.pytorch import Trainer, seed_everything
@@ -17,10 +18,12 @@ from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from torch.utils.data import DataLoader, default_collate
 
 from kelpseg.augmentation_pipeline import build_training_augmentation
+from kelpseg.model_bundle import export_model_bundle
 from kelpseg.paths import PathSettings
 from kelpseg.training.data import build_training_inputs
 from kelpseg.training.ema import DelayedEMA
 from kelpseg.training.module import TrainingModule
+from kelpseg.training.resume import TrainingResume, build_resume_identity, load_resume
 from kelpseg.training.settings import TrainingSettings
 
 
@@ -66,19 +69,9 @@ def run_training(
     *,
     run_id: str | None = None,
     dry_run: bool = False,
+    resume: str | Path | None = None,
 ) -> dict:
-    """Preview metadata or fit once into a fresh directory; never construct test data."""
-    if run_id is None:
-        run_id = f"{settings.name}-{datetime.now(UTC):%Y%m%dT%H%M%S%fZ}"
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", run_id):
-        raise ValueError(
-            "run-id must be a simple name using letters, digits, '.', '_' or '-'."
-        )
-    output = paths.runs_root / run_id
-    if output.exists():
-        raise ValueError(
-            f"Run output already exists: {output}. Start a new run with a fresh name."
-        )
+    """Preview, start fresh, or resume a completed epoch; never construct test data."""
     chips = (paths.data_root / settings.chips).resolve()
     assignments = (paths.data_root / settings.assignments).resolve()
     inputs = build_training_inputs(
@@ -89,6 +82,34 @@ def run_training(
         variant=settings.variant,
         seed=settings.seed,
     )
+    identity = build_resume_identity(settings, inputs)
+    if resume is not None:
+        resume = Path(resume).expanduser().resolve()
+        saved = load_resume(resume, identity)
+        if run_id is not None and run_id != saved["run_id"]:
+            raise ValueError(
+                "Resume preserves the saved run ID; do not supply another."
+            )
+        run_id = saved["run_id"]
+    if run_id is None:
+        run_id = f"{settings.name}-{datetime.now(UTC):%Y%m%dT%H%M%S%fZ}"
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", run_id):
+        raise ValueError(
+            "run-id must be a simple name using letters, digits, '.', '_' or '-'."
+        )
+    output = paths.runs_root / run_id
+    if output.exists() and resume is None:
+        raise ValueError(
+            f"Run output already exists: {output}. Start a new run with a fresh name."
+        )
+    if resume is not None and resume != output / "checkpoints" / "last.ckpt":
+        raise ValueError(
+            "Resume from <runs_root>/<saved-run-id>/checkpoints/last.ckpt; copy the complete run folder when relocating."
+        )
+    if resume is not None and (output / "model").exists():
+        raise ValueError(
+            "This run already exported model/. Resume is for interrupted training only."
+        )
     if not len(inputs["val"]):
         raise ValueError("No validation windows; check the collection and assignments.")
     if inputs["train"].chip_size != 512:
@@ -158,7 +179,7 @@ def run_training(
     if dry_run:
         return report
     seed_everything(settings.seed, workers=True)
-    output.mkdir(parents=True)
+    output.mkdir(parents=True, exist_ok=resume is not None)
     report["status"] = "running"
     _write_json(output / "settings.json", asdict(settings))
     _write_json(output / "run.json", report)
@@ -170,8 +191,18 @@ def run_training(
         collate_fn=collate_chips,
         worker_init_fn=seed_worker,
     )
-    train_loader = DataLoader(inputs["train"], shuffle=True, **loader_options)
-    val_loader = DataLoader(inputs["val"], shuffle=False, **loader_options)
+    train_loader = DataLoader(
+        inputs["train"],
+        shuffle=True,
+        generator=torch.Generator().manual_seed(settings.seed),
+        **loader_options,
+    )
+    val_loader = DataLoader(
+        inputs["val"],
+        shuffle=False,
+        generator=torch.Generator().manual_seed(settings.seed + 1),
+        **loader_options,
+    )
     checkpoint = ModelCheckpoint(
         dirpath=output / "checkpoints",
         filename="best",
@@ -191,19 +222,26 @@ def run_training(
         save_on_train_epoch_end=True,
         enable_version_counter=False,
     )
-    loggers = [CSVLogger(str(output), name="metrics", version="")]
+    metric_version = (
+        f"resume-{datetime.now(UTC):%Y%m%dT%H%M%S%fZ}" if resume is not None else ""
+    )
+    loggers = [CSVLogger(str(output), name="metrics", version=metric_version)]
     if settings.wandb:
         loggers.append(
             WandbLogger(
                 project="kelpseg",
                 entity="kdorman90-ucla",
                 name=run_id,
+                id=run_id,
+                resume="must" if resume is not None else "never",
                 save_dir=str(output),
                 log_model=False,
             )
         )
     try:
-        model = TrainingModule(settings)
+        model = TrainingModule(
+            replace(settings, encoder_weights=None) if resume is not None else settings
+        )
         trainer = Trainer(
             default_root_dir=output,
             accelerator=settings.accelerator,
@@ -215,6 +253,7 @@ def run_training(
             gradient_clip_algorithm="norm",
             callbacks=[
                 DelayedEMA(),
+                TrainingResume(run_id, identity, train_loader, val_loader),
                 LearningRateMonitor(logging_interval="step"),
                 checkpoint,
                 last_checkpoint,
@@ -227,16 +266,26 @@ def run_training(
             log_every_n_steps=1,
             enable_model_summary=False,
         )
-        trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        trainer.fit(
+            model,
+            train_dataloaders=train_loader,
+            val_dataloaders=val_loader,
+            ckpt_path=resume,
+            weights_only=False,
+        )
+        bundle = export_model_bundle(
+            checkpoint.best_model_path, output / "model", settings, run_id=run_id
+        )
         report.update(
             status="complete",
+            model_bundle=str(bundle),
             optimizer_updates_actual=trainer.global_step,
             best_checkpoint=checkpoint.best_model_path,
             last_checkpoint=last_checkpoint.best_model_path,
             best_validation_iou=float(checkpoint.best_model_score)
             if checkpoint.best_model_score is not None
             else None,
-            validation_csv=str(output / "metrics" / "metrics.csv"),
+            validation_csv=str(Path(loggers[0].log_dir) / "metrics.csv"),
         )
     except Exception as error:
         report.update(status="failed", error=str(error))
