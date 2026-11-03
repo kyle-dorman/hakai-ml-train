@@ -13,8 +13,10 @@ with an explicit optional cap. A NumPy loader selects bands and pads partial
 edges. Isolated and combined augmentation previews use exact stock Albumentations
 classes and capped normalization on training examples only. Full CA/BC chips, split controls and tiny v2 are published on Box; see
 the [restore recipe](quickstart.md#restore-and-use-the-full-cabc-chip-release). Preparation writes run once into a fresh output and stop on failure.
-Retained legacy Planet implementations support the ongoing replacement;
-model workflows arrive through later numbered tasks. Tasks 000–023 describe the
+Installed Python helpers provide manifest-selected training/validation tensors,
+SegFormer B3 and loss/confusion functions. Retained legacy Planet implementations
+support the ongoing replacement; epoch training and prediction workflows arrive
+through later numbered tasks. Tasks 000–023 describe the
 preceding completed PS8B study.
 
 ## Read by task

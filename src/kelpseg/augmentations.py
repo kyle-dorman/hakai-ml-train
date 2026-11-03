@@ -47,15 +47,19 @@ def apply_augmentation(
     and full scale. Stock filters see original nodata/padding zeros. Afterward,
     restore raw units and zero invalid fill; model preprocessing happens later.
 
-    Apply to native bands before selecting spectral views, so physical-band
-    random draws stay consistent. Validity is an int8 mask target: D4 moves it,
+    Establish validity from native bands before selecting spectral views.
+    Training then applies transforms to the selected model-input bands, so
+    ChannelDropout cannot choose an unused native channel; previews may use
+    all eight native bands. Keep ordered band names alongside those arrays.
+    Validity is an int8 mask target: D4 moves it,
     CoarseDropout's -100 mask fill removes hole support, and image-only classes
     preserve it. Never redetect nodata from values made zero by augmentation.
     Fixed sampler parameters are only for a named D4 element or a single named
     ChannelDropout band in diagnostic previews; kernels remain library code.
     The default seed=None advances the transform's existing random state.
-    Build one seeded Compose and reuse it for training; pass an integer seed
-    only when a diagnostic preview must replay a particular draw. Compose
+    This adapter serves previews; training uses its full Albumentations
+    normalization/ToTensorV2 Compose. Pass an integer seed when a diagnostic
+    preview must replay a particular draw. Compose
     records its operation trace when constructed with save_applied_params=True;
     otherwise the returned applied-parameter list is empty.
     """

@@ -14,9 +14,11 @@ Capture a handful of original chips, labels, predictions, and previews as a
 visual gut check before removing legacy code. Exact historical training
 reproduction and backward-compatible code/config APIs are not requirements.
 
-The initial spectral comparison is interpreted as eight bands, RGB+NIR, and
-RGB from the same eight-band acquisitions. Confirm actual band identity/order
-from source metadata. Keep source membership and evaluation policy comparable.
+The initial spectral comparison uses four recipes from the same native
+eight-band acquisitions: `planet8` (native eight), `planet4` (red/green/blue/nir),
+`planet3` (nir/red/green false color), and `planet_RGB` (red/green/blue).
+Confirm physical band identity from source metadata and preserve these explicit
+orders. Keep source membership and evaluation policy comparable.
 Do not treat old multiclass RGB/RGBI configs as valid Planet binary recipes.
 
 Keep the working SegFormer recipe as the first model family. Small controlled

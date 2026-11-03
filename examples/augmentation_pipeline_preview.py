@@ -1,4 +1,4 @@
-"""Review the agreed stock pipeline: uv run python examples/augmentation_pipeline_preview.py.
+"""Review D4, optional Affine and two stock extras: uv run python examples/augmentation_pipeline_preview.py.
 
 Edit paths for your machine and choose a fresh output. The readable actual
 training recipe lives in kelpseg/augmentation_pipeline.py, with its approved
@@ -12,7 +12,7 @@ from pathlib import Path
 from kelpseg.augmentation_debug.pipeline import preview_pipeline
 
 DATA_ROOT = Path("/Volumes/x10pro/kelpseg")
-OUTPUT = DATA_ROOT / "analyses" / "my-pipeline-previews-01"
+OUTPUT = DATA_ROOT / "analyses" / "task033d_affine_pipeline_previews_v1"
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")

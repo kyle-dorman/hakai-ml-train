@@ -2,7 +2,8 @@
 
 Status: Shared decisions updated 2026-11-02. Task 033A uses verified stock
 Albumentations previews; 033A/033B are complete with the user-approved recipe.
-033C reproduces the approved statistics; 033D–033G remain unstarted.
+033C reproduces the approved statistics; 033D implements model/input helpers
+and bounded updates. 033E–033G remain unstarted.
 Task 032B's publication/restore prerequisite is satisfied. Task 032C is separate.
 
 ## Abstract and route
@@ -30,7 +31,7 @@ independent of the later model/training runner.
 | [033F](033f_portable_models_and_resume.md) | Self-contained model bundle and completed-epoch resume; no tiled inference |
 | [033G](033g_tiny_walkthrough_and_handoff.md) | Installed fresh-directory tiny walkthrough, production previews and Task 034 handoff |
 
-033A–033C are complete; 033D is next and unstarted. Do not treat this table as permission to
+033A–033D are complete; 033E is next and unstarted. Do not treat this table as permission to
 execute several tasks together. Each later child may be refined when selected
 without reopening settled scientific/data decisions.
 
@@ -43,8 +44,11 @@ Generated previews, run records, models and reports stay outside Git.
 Keep real checks bounded; run spectral cases sequentially, with at most 4 GiB
 of new model-smoke artifacts and one representative durable bundle/recovery pair.
 
-- One native eight-band collection supplies all/ RGB+NIR/ RGB variants. Keep
-  source assignments, identity and spectral ordering matched; no fold/band copies.
+- One native eight-band collection supplies `planet8` (native eight), `planet4`
+  (red/green/blue/nir), `planet3` (nir/red/green false color), and `planet_RGB`
+  (red/green/blue). These recipe names were confirmed for 033E; existing `rgb`
+  selection still means RGB. Keep source assignments and identity matched; no
+  fold/band copies.
 - The baseline including 011/012 (`augmented`) is primary; `base` excludes both.
   Use **equal epochs**, seeded shuffled passes without replacement, matching
   optimizer/augmentation policy. Including BC adds data and optimizer updates.
@@ -64,9 +68,12 @@ of new model-smoke artifacts and one representative durable bundle/recovery pair
 - Threshold 0.5 is fixed before test; select best aggregate validation foreground
   IoU with earliest ties. Use distinct rebuild identities and local records;
   optional W&B stays `kdorman90-ucla/kelpseg`.
-- Production epoch count, effective batch and schedule remain recipe decisions
-  when training is scoped. Historical 70 epochs / AdamW 3e-4 are proposals,
-  not silently approved new production settings. No production Mac training.
+- The user selected PyTorch Lightning for 033E and historical starting settings:
+  70 epochs, seed 42, AdamW 3e-4 (betas .9/.95, decay .01 excluding bias/norm),
+  batch 3 × accumulation 8, five warmup epochs then cosine to 3e-5, norm clipping
+  .8 and CUDA bf16-mixed. The [033E contract](033e_training_validation_and_ema.md)
+  owns the detailed translation and separate CPU smoke settings. Keep current
+  preprocessing and test isolation; no production Mac training.
 
 ## Selected training normalization
 
@@ -155,24 +162,35 @@ Gain uses multipliers **0.8–1.2** (`contrast_limit=(-0.2, 0.2)`, brightness
 zero). Gaussian-method Sharpen uses **alpha 0–1**, kernel size 5 and sigma 1.
 The user approved these remaining ranges, including ordinary uniform library
 sampling. The configured extra-operation order is brightness, gain, blur, noise,
-Sharpen, coarse dropout, channel shifts, channel dropout. The selected composition is **D4(p=1),
-then SomeOf(n=2, replace=False, p=1)** over the additional operations. Set each
+Sharpen, coarse dropout, channel shifts, channel dropout. The selected composition
+is **D4(p=1), Affine(p=0.5), then SomeOf(n=2, replace=False, p=1)**. Affine is
+a separate spatial stage, outside the additional-operation pool. Set each
 child's `p=1` so both selected operations run. Stock SomeOf selects uniformly
 without replacement and applies selections in configured list order; it does
 not shuffle their execution order. D4's eight symmetries include identity.
 
+The user added light affine jitter during Task 033D review: shared-axis scale
+0.95–1.05, independent x/y translations from -16 to +16 pixels, no additional
+rotation or shear. Keep `fit_output=False` and `keep_ratio=True`: the canvas
+remains 512×512 for normal training inputs. Imagery uses bilinear interpolation;
+labels and validity use nearest-neighbor. Constant image fill is zero and mask
+fill is -100, so exposed borders are ignored. Validation has no affine jitter.
+The updated combined previews expose affine alone and in the full pipeline.
+
 Channel shifts use stock uniform noise constant within each band. Only model-
 input bands are eligible for channel dropout; the current native-eight-band
-preview can drop any one of its eight bands. The future 4/3-band loader must
-restrict eligibility to its selected inputs while preserving physical identity.
+preview can drop any one of its eight bands. The 4/3-band loader restricts eligibility to its selected inputs while
+preserving physical identity.
 Blur starts at 0.5 because zero sigma is not a valid GaussianBlur identity in
 this pinned release.
 
-The user approved the combined outputs and these ranges. The final recipe is
+The user approved the initial combined outputs and the updated affine previews. The recipe is
 saved as [native Albumentations JSON](../configs/augment/baseline.json), generated
 from the readable [stock factory](../src/kelpseg/augmentation_pipeline.py) and
 checked for exact serialization parity. The factory remains the implementation
-used by previews and later training; do not hand-maintain a second schema.
+used by previews and training; do not hand-maintain a second schema.
+Training includes these operations in a full Albumentations Compose with
+raw-domain scaling/cap, Normalize using the same constants and ToTensorV2.
 The wider isolated gallery remains exploratory and does not change this policy.
 No model training was performed.
 Skip smooth illumination, haze, misregistration, posterization, synthetic rain,
@@ -186,9 +204,8 @@ or training were executed. At that point the next action was explicit selection 
 
 ## Current next action
 
-033A–033C are complete: the augmentation policy is approved/saved and the
-installed pixel-statistics command reproduces the selected normalization
-reference. Next, separately select [033D](033d_model_and_training_inputs.md) for
-model inputs and bounded update checks. No 033D implementation is included in
-this handoff.
+033A–033D are complete: approved augmentation, reproduced normalization,
+manifest tensors, the B3 model and loss/confusion helpers have passed bounded
+checks. The affine previews are approved. Separately select [033E](033e_training_validation_and_ema.md) for
+the training/validation loop and EMA. No epoch runner is included in this handoff.
 After all seven children close, select Task 034 in a new window.

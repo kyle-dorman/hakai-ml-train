@@ -40,7 +40,11 @@ locally, including the difference from new fine-tuning initialization.
 
 ## Selected rebuild baseline recipe
 
-Task 033's training implementation is still planned. The user selected the
+Task 033D implements model/input and loss/confusion helpers; the epoch runner,
+EMA and saved states remain planned. The user selected PyTorch Lightning for
+033E and the historical starting optimizer, batch and schedule values recorded
+in its [contract](../tasks/033e_training_validation_and_ema.md#selected-starting-recipes).
+This preserves the new preprocessing and test isolation. The user selected the
 existing 0.7 smoothed-BCE / 0.3 Lovasz loss, EMA with decay 0.999, equal epochs
 for the BC comparison, and the newly measured **kelp-positive with-BC training
 statistics**, computed after a **5000 upper cap**, for normalization. Use raw-unit
@@ -72,19 +76,23 @@ training, including aligned masks and visible clipping/ignore behavior.
 The first pass is [033A's isolated class previews](../tasks/033a_individual_augmentation_previews.md).
 The user's 2026-11-02 direction replaces custom augmentation math with pinned
 stock Albumentations 2.0.8, using actual native constructor parameters. Preview
-and later training must use those implementations and the same input-domain
-adapter; strengths must not be translated to another implementation afterward.
-The adapter uses native uint16 / 65535, stock operations, raw-unit restoration
-and the final 5000 model cap. Stock clipping and zero-nodata boundary effects
+and training use those implementations and the same input-domain scaling;
+strengths must not be translated to another implementation afterward.
+Preview adapters and the training Albumentations Compose use native uint16 /
+65535, stock operations, raw-unit restoration and the final 5000 model cap.
+Training then applies stock Normalize with the shared band-named constants
+and ToTensorV2 inside that Compose. Stock clipping and zero-nodata boundary effects
 are disclosed; there is no bespoke valid-weighted blur or mean-centered
 contrast. Labels/validity remain paired; spatial holes have ignored targets.
 
 The [selected ranges and composition](../tasks/033_baseline_training_and_portable_models.md#limits-selected-after-isolated-review)
-use D4(p=1) followed by SomeOf(n=2, replace=False, p=1); all eight children have
+use D4(p=1), then light Affine(p=0.5) outside SomeOf, followed by
+SomeOf(n=2, replace=False, p=1); all eight pool children have
 p=1 and equal selection eligibility. Stock SomeOf executes selected operations
 in configured list order. Task 033B's combined preview uses this actual recipe,
 the same kelp-rich training examples, clean/labeled close-ups and 2000 display
-ceiling. The user approved those combined outputs and the final recipe is saved
+ceiling. The user approved the initial combined outputs and added affine jitter
+during Task 033D review; the user also approved the updated affine previews. The recipe is saved
 as [native Albumentations JSON](../configs/augment/baseline.json), checked against
 the readable Python factory. Later training must consume this approved policy.
 The native-eight-band preview drops exactly one eligible input band; later

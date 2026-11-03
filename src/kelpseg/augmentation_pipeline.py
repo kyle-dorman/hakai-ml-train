@@ -1,19 +1,35 @@
 """The approved stock Albumentations training augmentation recipe."""
 
 import albumentations as A
+import cv2
 
 
 def build_training_augmentation(seed: int = 33) -> A.Compose:
-    """Always sample D4, then choose two distinct extras in the listed order.
+    """Sample D4, optional small affine, then two distinct extras in pool order.
 
+    Affine is a separate 50% geometric step, outside the two-operation pool.
     All eight pool entries are equally eligible; SomeOf samples without
     replacement and applies chosen entries in pool order.
-    Reuse the returned Compose with apply_augmentation during training; its
-    default seed=None lets successive calls advance the seeded random state.
+    Previews use the raw-unit adapter; training embeds this Compose in its
+    normalization/ToTensorV2 pipeline. Successive calls advance random state.
     """
     return A.Compose(
         [
             A.D4(p=1),
+            A.Affine(
+                scale=(0.95, 1.05),
+                translate_px={"x": (-16, 16), "y": (-16, 16)},
+                keep_ratio=True,
+                rotate=0,
+                shear=0,
+                interpolation=cv2.INTER_LINEAR,
+                mask_interpolation=cv2.INTER_NEAREST,
+                border_mode=cv2.BORDER_CONSTANT,
+                fill=0,
+                fill_mask=-100,
+                fit_output=False,
+                p=0.5,
+            ),
             A.SomeOf(
                 [
                     A.RandomBrightnessContrast(

@@ -83,6 +83,9 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             assert "kelpseg/paths.py" in names
             assert "kelpseg/bands.py" in names
             assert "kelpseg/chips.py" in names
+            assert "kelpseg/models.py" in names
+            for module in ("data", "loss", "metrics", "transforms"):
+                assert f"kelpseg/training/{module}.py" in names
             assert "kelpseg/augmentation_debug/augmentation_viewer.html" in names
             assert "kelpseg/augmentation_debug/pipeline_viewer.html" in names
             assert "kelpseg/augmentation_debug/__init__.py" in names
@@ -164,7 +167,7 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             "assert not result[~valid].any(); "
             "pipeline=build_training_augmentation(seed=33); "
             "combined,_,_,trace=apply_augmentation(pipeline,image,label,valid,seed=33); "
-            "assert combined.shape==image.shape and len(trace['applied'])==3; "
+            "assert combined.shape==image.shape and len(trace['applied']) in (3,4); "
             "from importlib.resources import files; "
             "assert files('kelpseg.augmentation_debug').joinpath('pipeline_viewer.html').is_file(); "
             "assert files('kelpseg.augmentation_debug').joinpath('augmentation_viewer.html').is_file(); "
@@ -172,6 +175,36 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             "from kelpseg.augmentation_debug.preview import preview_augmentations; "
             "assert callable(preview_pipeline) and callable(preview_augmentations); "
             "assert not any(name in sys.modules for name in ('lightning','wandb','kelpseg.models','src.models'))",
+            cwd=unrelated,
+        )
+        # Model/input helpers must import and compute using runtime dependencies
+        # alone. The real B3 optimizer checks run separately and sequentially.
+        run(
+            python,
+            "-I",
+            "-c",
+            "import sys, torch, numpy as np; "
+            "from kelpseg.models import build_model; "
+            "from kelpseg.training.data import build_training_inputs; "
+            "from kelpseg.training.loss import segmentation_loss; "
+            "from kelpseg.training.metrics import build_metrics; "
+            "from kelpseg.training.transforms import build_input_transform; "
+            "raw=np.full((4,4,3),1000,dtype=np.uint16); "
+            "mask=np.ones((4,4),dtype=np.int8); "
+            "valid=np.ones((4,4),dtype=np.int8); valid[0,0]=0; "
+            "transform=build_input_transform(('red','green','blue')); "
+            "sample=transform(image=raw,mask=mask,validity=valid); "
+            "assert sample['image'].shape==(3,4,4) and sample['image'].dtype==torch.float32; "
+            "assert sample['mask'].dtype==torch.int64 and sample['mask'][0,0]==-100; "
+            "assert not sample['image'][:,0,0].any(); "
+            "assert callable(build_model) and callable(build_training_inputs); "
+            "x=torch.tensor([[[[1.,-1.]]]],requires_grad=True); "
+            "y=torch.tensor([[[1,0]]]); "
+            "loss=segmentation_loss(x,y); loss.backward(); "
+            "assert torch.isfinite(loss) and torch.isfinite(x.grad).all(); "
+            "metrics=build_metrics(); metrics.update((x[:,0]>=0).long(),y); assert metrics.compute()['iou'].item()==1.; "
+            "assert not any(n in sys.modules for n in ('src','scripts','lightning','wandb')); "
+            "assert not any(n.startswith('kelpseg.augmentation_debug') for n in sys.modules)",
             cwd=unrelated,
         )
         probe = run(
@@ -182,7 +215,7 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             "print(json.dumps({'file': kelpseg.__file__, "
             "'version': importlib.metadata.version('kelpseg'), "
             "'legacy': {name: importlib.util.find_spec(name) is not None "
-            "for name in ('src', 'scripts', 'torch', 'torchgeo', "
+            "for name in ('src', 'scripts', 'torchgeo', "
             "'wandb')}}))",
             cwd=unrelated,
         )

@@ -570,6 +570,9 @@ dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "rasterio" },
+    { name = "segmentation-models-pytorch" },
+    { name = "torch" },
+    { name = "torchmetrics" },
     { name = "typer" },
 ]
 
@@ -587,10 +590,7 @@ legacy = [
     { name = "numpy" },
     { name = "opencv-python-headless" },
     { name = "pyyaml" },
-    { name = "segmentation-models-pytorch" },
     { name = "shapely" },
-    { name = "torch" },
-    { name = "torchmetrics" },
     { name = "torchvision" },
     { name = "tqdm" },
     { name = "wandb" },
@@ -602,6 +602,9 @@ requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.5,<4" },
     { name = "numpy", specifier = ">=2,<3" },
     { name = "rasterio", specifier = ">=1.4,<2" },
+    { name = "segmentation-models-pytorch", specifier = ">=0.5.0,<0.6" },
+    { name = "torch", specifier = ">=2.11.0" },
+    { name = "torchmetrics", specifier = ">=1.7.3,<2" },
     { name = "typer", specifier = ">=0.25.1,<0.26" },
 ]
 
@@ -619,10 +622,7 @@ legacy = [
     { name = "numpy", specifier = ">=2,<3" },
     { name = "opencv-python-headless", specifier = ">=4.13.0.92" },
     { name = "pyyaml", specifier = ">=6,<7" },
-    { name = "segmentation-models-pytorch", specifier = ">=0.5.0" },
     { name = "shapely", specifier = ">=2,<3" },
-    { name = "torch", specifier = ">=2.11.0" },
-    { name = "torchmetrics", specifier = ">=1.7.3" },
     { name = "torchvision", specifier = ">=0.26.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "wandb", specifier = ">=0.21.0" },

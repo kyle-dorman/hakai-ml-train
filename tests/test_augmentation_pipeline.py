@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import albumentations as A
+import cv2
 import numpy as np
 import pytest
 
@@ -34,8 +35,17 @@ def sample():
 
 def test_readable_factory_records_approved_ranges_and_equal_sampling():
     pipeline = build_training_augmentation()
-    d4, selector = pipeline.transforms
+    d4, affine, selector = pipeline.transforms
     assert isinstance(d4, A.D4) and d4.p == 1
+    assert isinstance(affine, A.Affine) and affine.p == 0.5
+    assert affine.scale == {"x": (0.95, 1.05), "y": (0.95, 1.05)}
+    assert affine.translate_px == {"x": (-16, 16), "y": (-16, 16)}
+    assert affine.keep_ratio and not affine.fit_output
+    assert affine.rotate == (0, 0) and affine.shear == {"x": (0, 0), "y": (0, 0)}
+    assert affine.interpolation == cv2.INTER_LINEAR
+    assert affine.mask_interpolation == cv2.INTER_NEAREST
+    assert affine.border_mode == cv2.BORDER_CONSTANT
+    assert affine.fill == 0 and affine.fill_mask == -100
     assert isinstance(selector, A.SomeOf)
     assert selector.n == 2 and not selector.replace and selector.p == 1
     pool = selector.transforms
@@ -82,7 +92,7 @@ def test_adapter_and_full_state_match_direct_stock_compose(sample, seed):
     assert [name for name, _ in full["parameters"]["applied"]] == [
         name for name, _ in expected["applied_transforms"]
     ]
-    assert len(full["parameters"]["operation_trace"]) == 3
+    assert len(full["parameters"]["operation_trace"]) == 4
     json.dumps(full["parameters"])
 
 
@@ -101,7 +111,7 @@ def test_seed_replay_source_preservation_and_exactly_two_distinct_extras(sample)
 
     # A fresh stock Compose per draw exposes exactly the selected children.
     # Observe every pool entry across a bounded deterministic set of real draws.
-    eligible = set()
+    eligible, affine_cases = set(), set()
     for seed in range(32):
         pipeline = build_training_augmentation(seed)
         result = pipeline(
@@ -110,18 +120,32 @@ def test_seed_replay_source_preservation_and_exactly_two_distinct_extras(sample)
         )
         selected = [
             index
-            for index, child in enumerate(pipeline.transforms[1].transforms)
+            for index, child in enumerate(pipeline.transforms[2].transforms)
             if child.get_applied_params()
         ]
         assert len(selected) == 2 and len(set(selected)) == 2
         eligible.update(selected)
-        assert len(result["applied_transforms"]) == 3
+        affine_params = pipeline.transforms[1].get_applied_params()
+        affine_cases.add(bool(affine_params))
+        if affine_params:
+            scale = affine_params["scale"]
+            assert 0.95 <= scale["x"] == scale["y"] <= 1.05
+            height, width = sample["image"].shape[:2]
+            center = np.array([(width - 1) / 2, (height - 1) / 2, 1])
+            displacement = (affine_params["matrix"] @ center - center)[:2]
+            assert np.all(np.abs(displacement) <= 16)
+            assert affine_params["output_shape"] == (height, width)
+        assert len(result["applied_transforms"]) == 3 + bool(
+            pipeline.transforms[1].get_applied_params()
+        )
         assert result["applied_transforms"][0][0] == "D4"
     assert eligible == set(range(8))
+    assert affine_cases == {False, True}
 
 
 def test_d4_reference_and_final_share_transformed_footprint(sample):
-    source, reference, full = pipeline_states(sample, 33)
+    source, reference, geometry, full = pipeline_states(sample, 33)
+    assert geometry["closeup"] == full["closeup"]
     group = full["parameters"]["applied"][0][1]["group_element"]
     d4 = A.D4(p=1)
     np.testing.assert_array_equal(
@@ -137,19 +161,16 @@ def test_d4_reference_and_final_share_transformed_footprint(sample):
     footprint[y0:y1, x0:x1] = 1
     moved = d4.apply_to_mask(footprint, group)
     ys, xs = np.where(moved)
-    assert (
-        reference["closeup"]
-        == full["closeup"]
-        == (ys.min(), xs.min(), ys.max() + 1, xs.max() + 1)
-    )
+    assert reference["closeup"] == (ys.min(), xs.min(), ys.max() + 1, xs.max() + 1)
 
 
 def test_coarse_ignore_survives_later_photometric_operation(sample):
     # This real seed selects CoarseDropout then AdditiveNoise in pool order.
-    _, reference, full = pipeline_states(sample, 7)
+    _, _, reference, full = pipeline_states(sample, 7)
     trace = full["parameters"]["operation_trace"]
     assert [entry["class"] for entry in trace] == [
         "D4",
+        "Affine",
         "CoarseDropout",
         "AdditiveNoise",
     ]
@@ -157,7 +178,7 @@ def test_coarse_ignore_survives_later_photometric_operation(sample):
         reference["label"].copy(),
         reference["valid"].copy(),
     )
-    holes = trace[1]["parameters"]["holes"]
+    holes = trace[2]["parameters"]["holes"]
     assert 1 <= len(holes) <= 4
     for x0, y0, x1, y1 in holes:
         expected_label[y0:y1, x0:x1] = -100
@@ -183,7 +204,7 @@ def test_named_dropped_band_is_recorded_and_retains_other_bands(sample):
             )[3]["applied"]
         )
     )
-    _, _, full = pipeline_states(sample, seed)
+    _, _, _, full = pipeline_states(sample, seed)
     entry = next(
         e
         for e in full["parameters"]["operation_trace"]
@@ -265,4 +286,4 @@ def test_native_serialized_recipe_applies_without_optional_trace_recording(sampl
     for actual, expected in zip(replay[:3], direct[:3], strict=True):
         np.testing.assert_array_equal(actual, expected)
     assert replay[3]["applied"] == []
-    assert len(direct[3]["applied"]) == 3
+    assert len(direct[3]["applied"]) in (3, 4)

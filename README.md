@@ -18,7 +18,10 @@ examples, with exact capped normalization and separately labeled backgrounds;
 see the [isolated previews](docs/quickstart.md#preview-individual-augmentations)
 and [combined pipeline preview](docs/quickstart.md#preview-the-combined-augmentation-pipeline).
 Preparation runs once into a fresh output and stops on failure, with no restart
-support. Training and prediction commands arrive in later tasks. Retained legacy Planet code/tests
+support. Installed Python helpers connect training/validation tensors to
+SegFormer B3, the selected loss and pooled confusion metrics; see
+[model inputs](docs/quickstart.md#model-and-training-inputs-python).
+Training and prediction commands arrive in later tasks. Retained legacy Planet code/tests
 support the ongoing rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
 starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
 
@@ -55,7 +58,7 @@ uv run kelpseg check-paths --paths paths.local.toml
 
 The Typer command calls reusable Python functions. Most later workflow settings
 will live in recipe files. The selected future training style is
-`uv run kelpseg train --recipe <recipe-file>`; training is not implemented yet.
+`uv run kelpseg train --recipe <recipe-file>`; the epoch runner is not implemented yet.
 
 Development checks use synthetic CPU fixtures, including fresh wheel/sdist
 installation outside the checkout:

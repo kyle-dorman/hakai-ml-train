@@ -67,7 +67,7 @@ def pipeline_inputs(tmp_path, monkeypatch):
     return chips, rows
 
 
-def test_gallery_reads_training_only_and_keeps_three_paired_views_per_draw(
+def test_gallery_reads_training_only_and_keeps_four_paired_views_per_draw(
     pipeline_inputs, tmp_path, monkeypatch
 ):
     chips, rows = pipeline_inputs
@@ -107,8 +107,13 @@ def test_gallery_reads_training_only_and_keeps_three_paired_views_per_draw(
     native_recipe = json.loads((output / "pipeline.json").read_text())
     assert native_recipe == metadata["pipeline_recipe"]
     stages = native_recipe["transform"]["transforms"]
-    assert [stage["__class_fullname__"] for stage in stages] == ["D4", "SomeOf"]
-    assert stages[1]["n"] == 2 and stages[1]["replace"] is False
+    assert [stage["__class_fullname__"] for stage in stages] == [
+        "D4",
+        "Affine",
+        "SomeOf",
+    ]
+    assert stages[1]["p"] == 0.5
+    assert stages[2]["n"] == 2 and stages[2]["replace"] is False
     seeds = []
     for summary in metadata["samples"]:
         assert summary["window"]["split"] == "train"
@@ -118,17 +123,22 @@ def test_gallery_reads_training_only_and_keeps_three_paired_views_per_draw(
         assert len(record["draws"]) == 2
         for draw in record["draws"]:
             seeds.append(draw["seed"])
-            source, reference, full = draw["states"]
+            source, reference, geometry, full = draw["states"]
             assert "source" in source["title"].lower()
             assert "d4" in reference["title"].lower()
             assert "two" in full["title"].lower()
             assert source["parameters"]["class"] == "NoOp"
-            assert reference["parameters"]["class"] == "D4"
+            assert reference["parameters"]["operation_trace"][0]["class"] == "D4"
+            assert "affine" in geometry["title"].lower()
             assert full["parameters"]["class"] == "Compose"
             trace = full["parameters"]["operation_trace"]
-            assert len(trace) == 3 and trace[0]["class"] == "D4"
+            assert len(trace) == 4 and trace[0]["class"] == "D4"
+            assert trace[1]["class"] == "Affine"
+            assert isinstance(trace[1]["applied"], bool)
             assert (
-                reference["parameters"]["applied"]["group_element"]
+                reference["parameters"]["operation_trace"][0]["parameters"][
+                    "group_element"
+                ]
                 == trace[0]["parameters"]["group_element"]
             )
             assert (
@@ -139,7 +149,8 @@ def test_gallery_reads_training_only_and_keeps_three_paired_views_per_draw(
                 reference["metrics"]["foreground_pixels"]
                 == source["metrics"]["foreground_pixels"]
             )
-            assert reference["closeup"] == full["closeup"]
+            assert geometry["closeup"] == full["closeup"]
+            assert geometry["parameters"]["operation_trace"] == trace[:2]
             for state in draw["states"]:
                 assert set(state["assets"]) == {
                     "rgb",

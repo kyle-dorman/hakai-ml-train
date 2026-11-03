@@ -182,7 +182,7 @@
       }
       .trace {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 8px;
         margin-bottom: 12px;
       }
@@ -546,7 +546,7 @@
           <div class="brand">Kelpseg / training imagery</div>
           <h1>Combined pipeline review</h1>
           <p class="muted">
-            Compare the same geometry before and after two sampled operations.
+            Inspect the affine change, then compare the full pipeline with matched geometry.
           </p>
           <p id="backend-label" class="muted backend"></p>
         </div>
@@ -613,6 +613,8 @@
         </div>
       </div>
       <div class="reference-row">
+        <span class="field-label">Comparison</span>
+        <div class="segmented" id="comparison-controls" aria-label="Comparison mode"></div>
         <span class="field-label">Left reference</span>
         <div
           class="segmented"
@@ -641,8 +643,8 @@
         </article>
         <article class="image-card">
           <div class="card-heading">
-            <strong>Full pipeline</strong>
-            <span>D4 + two sampled operations</span>
+            <strong id="pipeline-heading">D4 + Affine</strong>
+            <span id="pipeline-description">Same draw; geometry only</span>
           </div>
           <div class="image-stage" id="pipeline-stage">
             <canvas
@@ -667,7 +669,7 @@
             <pre id="parameter-detail"></pre>
           </section>
           <section>
-            <h2>Left reference → full pipeline</h2>
+            <h2>Left reference → selected output</h2>
             <pre id="metric-detail"></pre>
           </section>
           <section style="grid-column: 1/-1">
@@ -733,6 +735,8 @@
         </label>
       </div>
       <div class="reference-row">
+        <span class="field-label">Comparison</span>
+        <div class="segmented" id="zoom-comparison-controls" aria-label="Comparison mode"></div>
         <span class="field-label">Left reference</span>
         <div
           class="segmented"
@@ -781,8 +785,11 @@
       ];
       const ui = {
         sample: 0,
-        draw: 0,
+        draw: Math.max(0, samples[0].draws.findIndex((draw) =>
+          draw.states[3].parameters.operation_trace.some((operation) =>
+            operation.class === "Affine" && operation.applied))),
         reference: 1,
+        output: 2,
         view: "false_color",
         cleanView: "false_color",
         closeup: false,
@@ -801,7 +808,8 @@
           sample,
           draw,
           reference: draw.states[ui.reference],
-          pipeline: draw.states[2],
+          pipeline: draw.states[ui.output],
+          full: draw.states[3],
         };
       }
       function labelName() {
@@ -851,6 +859,12 @@
         const params = operation.parameters || {};
         if (operation.class === "D4")
           return `group_element = ${params.group_element ?? "see exact parameters"}`;
+        if (operation.class === "Affine") {
+          if (!operation.applied) return "Skipped on this draw (p = 0.5)";
+          const scale = params.scale || {};
+          const shift = operation.center_shift_pixels || {};
+          return `Applied · scale x/y = ${formatParameterValue(scale.x)} / ${formatParameterValue(scale.y)} · shift x/y = ${formatParameterValue(shift.x)} / ${formatParameterValue(shift.y)} px`;
+        }
         if (operation.class === "GaussianBlur") {
           const configured = constructorSettings("GaussianBlur");
           const kernel = params.kernel;
@@ -910,6 +924,7 @@
       function operationHeading(operation) {
         const names = {
           D4: "Rotations / reflections",
+          Affine: "Scale / translation",
           AdditiveNoise: "Channel shifts",
           GaussNoise: "Gaussian noise",
           GaussianBlur: "Gaussian blur",
@@ -969,11 +984,22 @@
           select.append(option);
         });
         select.value = String(ui.draw);
+        for (const id of ["comparison-controls", "zoom-comparison-controls"]) {
+          const comparisons = byId(id);
+          comparisons.replaceChildren();
+          for (const [index, label] of [[2, "Inspect affine"], [3, "Inspect full pipeline"]])
+            comparisons.append(createToggleButton(label, ui.output === index, () => {
+              ui.output = index;
+              ui.reference = index - 1;
+              render();
+            }));
+        }
         for (const id of ["reference-controls", "zoom-reference-controls"]) {
           const control = byId(id);
           control.replaceChildren();
           for (const [index, label] of [
-            [1, "D4 only · aligned"],
+            ...(ui.output === 3 ? [[2, "D4 + Affine · aligned"]] : []),
+            [1, "D4 only"],
             [0, "Source original"],
           ])
             control.append(
@@ -1066,14 +1092,15 @@
       }
       async function render() {
         const request = ++requestNumber;
-        const { sample, draw, reference, pipeline } = currentDraw();
+        const { sample, draw, reference, pipeline, full } = currentDraw();
         fillControls(sample, pipeline);
-        showTrace(sample, pipeline);
+        showTrace(sample, full);
         const viewName =
           ui.view === "labels"
             ? labelName()
             : views.find(([key]) => key === ui.view)[1];
-        const leftName = ui.reference === 1 ? "D4 only" : "Source original";
+        const leftName = ["Source original", "D4 only", "D4 + Affine"][ui.reference];
+        const rightName = ui.output === 2 ? "D4 + Affine" : "Full pipeline";
         byId("app").classList.toggle("background", sample.background_control);
         text("example-counter", `Example ${ui.sample + 1} / ${samples.length}`);
         text(
@@ -1097,15 +1124,13 @@
         text("zoom-reference-heading", leftName);
         text(
           "reference-description",
-          ui.reference === 1
-            ? "Same D4 draw; no extra operations"
-            : "Before D4 and extra operations",
+          ["Before augmentation", "Same D4 draw; before Affine", "Same geometry; before two extras"][ui.reference],
         );
         text(
           "reference-note",
-          ui.reference === 1
+          ui.reference === 2
             ? "Geometry matches the full pipeline."
-            : "Geometry may differ from the full pipeline.",
+            : "Close-ups follow the same source footprint through each geometry change.",
         );
         text(
           "reference-caption",
@@ -1139,7 +1164,7 @@
           "source-line",
           `${sample.window.source_key} · row ${sample.window.row}, column ${sample.window.col}`,
         );
-        text("parameter-detail", JSON.stringify(pipeline.parameters, null, 2));
+        text("parameter-detail", JSON.stringify(full.parameters, null, 2));
         text(
           "metric-detail",
           metricComparison(reference.metrics, pipeline.metrics),
@@ -1150,7 +1175,9 @@
           "zoom-title",
           `Example ${ui.sample + 1} / ${samples.length} · draw ${ui.draw + 1} / ${sample.draws.length} · region ${sample.window.region}`,
         );
-        text("zoom-pipeline-heading", `Full pipeline · seed ${draw.seed}`);
+        text("pipeline-heading", rightName);
+        text("pipeline-description", ui.output === 2 ? "Same draw; geometry only" : "Geometry + two sampled extras");
+        text("zoom-pipeline-heading", `${rightName} · seed ${draw.seed}`);
         byId("error").hidden = true;
         text("status", "Loading comparison…");
         try {
@@ -1239,7 +1266,7 @@
       });
       text(
         "backend-label",
-        `Albumentations ${gallery.albumentations_version || "version not recorded"} · D4 + two sampled operations`,
+        `Albumentations ${gallery.albumentations_version || "version not recorded"} · D4 → Affine (p=0.5) → two sampled operations`,
       );
       text("recipe-detail", JSON.stringify(gallery.pipeline_recipe, null, 2));
       render();

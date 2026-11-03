@@ -9,6 +9,54 @@
         "p": 1.0
       },
       {
+        "__class_fullname__": "Affine",
+        "p": 0.5,
+        "balanced_scale": false,
+        "border_mode": 0,
+        "fill": 0.0,
+        "fill_mask": -100.0,
+        "fit_output": false,
+        "interpolation": 1,
+        "keep_ratio": true,
+        "mask_interpolation": 0,
+        "rotate": [
+          0.0,
+          0.0
+        ],
+        "rotate_method": "largest_box",
+        "scale": {
+          "x": [
+            0.95,
+            1.05
+          ],
+          "y": [
+            0.95,
+            1.05
+          ]
+        },
+        "shear": {
+          "x": [
+            0.0,
+            0.0
+          ],
+          "y": [
+            0.0,
+            0.0
+          ]
+        },
+        "translate_percent": null,
+        "translate_px": {
+          "x": [
+            -16.0,
+            16.0
+          ],
+          "y": [
+            -16.0,
+            16.0
+          ]
+        }
+      },
+      {
         "__class_fullname__": "SomeOf",
         "p": 1,
         "transforms": [

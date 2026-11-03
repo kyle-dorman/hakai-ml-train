@@ -918,17 +918,27 @@ uv run python examples/augmentation_pipeline_preview.py
 ```
 
 Open its `index.html`. Flip the same 16 training examples or use **Next draw**
-to inspect eight seeded pipeline draws for each example. The three cards above
-the images show the actual D4 element and two selected operations in execution
-order. The left image defaults to **D4 only**, so both sides share geometry;
-switch to **Source original** to include the rotation/reflection difference.
-Clean RGB/NIR, matching label overlays, paired kelp close-ups and enlarged
-comparison remain available. Two explicitly labeled background controls are
-diagnostics; the training eligibility rule is unchanged.
+to inspect eight seeded draws per example. **Inspect affine** compares D4 alone
+with the same D4 plus the sampled affine step. **Inspect full pipeline** compares
+the geometry-only reference with the full result, so the remaining augmentation
+can be assessed separately. Switch the left reference to **Source original**
+when useful. The operation cards report affine applied/skipped, actual scale
+and pixel shifts, alongside D4 and the two pool operations.
+
+Clean RGB/NIR, label overlays, paired kelp close-ups and enlarged comparison
+remain available. Close-ups follow the same source footprint through D4 and
+affine. Two labeled background controls are diagnostics; training eligibility
+is unchanged. The affine review output is
+`/Volumes/x10pro/kelpseg/analyses/task033d_affine_pipeline_previews_v1/index.html`;
+choose a new output name before generating another gallery.
 
 The readable recipe is
 [`build_training_augmentation`](../src/kelpseg/augmentation_pipeline.py): stock
-`D4(p=1)` then `SomeOf(n=2, replace=False, p=1)`, with every child at `p=1`.
+`D4(p=1)`, then `Affine(p=0.5)`, then `SomeOf(n=2, replace=False, p=1)`,
+with every pool child at `p=1`. Affine stays outside the SomeOf pool. It uses
+0.95–1.05× shared-axis zoom, independent ±16-pixel x/y shifts, no extra rotation
+or shear, and the original output size. Imagery is bilinear; labels/validity are
+nearest-neighbor. New borders use zero image fill and ignored mask fill.
 Children are selected uniformly and execute in listed order: brightness, gain,
 blur, noise, Sharpen, coarse dropout, channel shifts, channel dropout. It uses
 the [approved native ranges](../tasks/033_baseline_training_and_portable_models.md#limits-selected-after-isolated-review).
@@ -936,8 +946,8 @@ The final [native Albumentations recipe](../configs/augment/baseline.json) is a
 saved snapshot of that factory, verified by a focused parity check. It can be
 loaded directly with `albumentations.from_dict`; there is no custom parser.
 Channel dropout removes exactly one of the eight physical input bands in this
-preview. A later RGB/RGB+NIR training loader must restrict eligibility to that
-model's input bands. D4 includes the identity square symmetry.
+preview. The RGB/RGB+NIR training loader restricts eligibility to that
+model's selected input bands. D4 includes the identity square symmetry.
 
 `pipeline.json` saves the stock serialized recipe. `gallery.json`, selected
 windows and per-example parameter records save the input/domain/normalization
@@ -947,10 +957,10 @@ kernel, and the noise std range plus explicitly empirical realized field std.
 Full noise arrays are not copied into JSON. The cap remains 5000 after the
 entire pipeline, using exact fixed normalization; display remains 0–2000.
 
-The preview constructs a seeded pipeline for each reproducible draw. Future
-training should create one pipeline and reuse it through the shared raw-data
-adapter. Its default `seed=None` advances the random state; explicit integer
-seeds are for replayable previews. This gallery runs no model and opens no held-out payloads.
+The preview constructs a seeded pipeline for each reproducible draw. The
+training loader reuses one seeded Albumentations pipeline that includes
+normalization and tensor conversion. Its random state advances across samples;
+explicit per-draw seeds are for replayable previews. This gallery runs no model and opens no held-out payloads.
 Existing outputs are refused; failed generation needs a fresh output.
 
 ## Tiny v2: split, chip and load locally
@@ -1077,6 +1087,95 @@ and about 102 MB of output. The same partial-edge loading example applies:
 select a retained `windows.csv` row with width 257 and resolve its payload from
 the v1 chip root. Original v1 paths and detailed results remain in
 [Task 031](../tasks/031_chipping_bands_and_tiny_walkthrough.md#outcome-2026-10-27).
+
+## Model and training inputs (Python)
+
+The installed package now supplies manifest-selected tensors, one SegFormer B3
+model, the binary objective, and pooled confusion helpers. An epoch runner and
+public `train` command are still pending. Use this notebook/Python example to
+inspect the full published baseline inputs without reading test payloads:
+
+```python
+import logging
+from kelpseg.paths import load_paths
+from kelpseg.training.data import build_training_inputs
+
+logging.basicConfig(level=logging.INFO)
+root = load_paths("paths.local.toml").data_root
+inputs = build_training_inputs(
+    root / "data/chips/ca_bc/v1",
+    root / "data/splits/ca_bc/v1/assignments.csv",
+    selection="rgbnir",  # "all" = native eight; "rgb" = red/green/blue
+    experiment="baseline",
+    variant="augmented",  # primary with-BC baseline; "base" excludes BC
+    seed=33,
+)
+print(inputs["counts"])
+print(inputs["train"].band_names)  # red, green, blue, nir
+sample = inputs["train"][0]
+print(sample["image"].shape, sample["target"].shape, sample["metadata"])
+```
+
+For the full with-BC release, expect 18,311 candidate training windows, 8,518
+eligible and 9,793 zero-kelp exclusions; validation retains 933 windows and
+1,262 test identities remain metadata only. `excluded_training_rows` preserves
+excluded identities. `val` uses representative disjoint windows, including
+backgrounds. Neither input construction nor train/validation loading opens test
+payloads; `test_rows` is deliberately a list of metadata, not a dataset.
+Missing labels or training kelp counts raise errors naming the affected payload.
+
+Each sample returns float32 `image` (channels/height/width), int64 `target`
+(height/width), boolean `valid_mask`, and source/window `metadata`. Native-band
+validity is detected before selecting channels. Training applies the approved
+D4 + light Affine + SomeOf(2) factory to selected channels inside one
+Albumentations `Compose`. Affine has a separate 50% chance, 0.95–1.05× zoom
+and independent ±16-pixel shifts while keeping the 512×512 canvas.
+The pipeline includes unit-scale conversion, restoration to raw units with the
+shared 5000 cap, stock `Normalize` using the shared band-named constants, and
+`ToTensorV2`. It restores zero invalid fill after normalization. Channel dropout
+therefore always removes a model input. Augmented zero values never redefine nodata. One seeded pipeline advances
+across calls; these bounded checks use ordinary single-process loading.
+
+Targets use 0/1/-100. Nodata, padding, and coarse-dropout holes are ignored;
+valid imagery with ignored labels stays image-valid but unscored. Metadata keeps
+original source placement and true extents. D4 can move padding in training;
+use the transformed validity mask there. Validation applies no augmentation and
+keeps bottom/right padding, removable using `true_height`/`true_width`.
+
+The model and objective are ordinary functions:
+
+```python
+from kelpseg.models import build_model
+from kelpseg.training.loss import segmentation_loss
+from kelpseg.training.metrics import build_metrics
+
+# Construct one model at a time. None avoids any pretrained-weight download.
+model = build_model(len(inputs["train"].band_names), encoder_weights=None)
+metrics = build_metrics()  # Native TorchMetrics MetricCollection.
+# Given B1HW logits and BHW targets from later validation batches:
+# loss = segmentation_loss(logits, targets)
+# metrics.update((logits[:, 0] >= 0).long(), targets)  # Each batch.
+# report = metrics.compute()  # Once after the entire validation scope.
+# metrics.reset()  # Before the next scope.
+```
+
+`build_model` always uses SegFormer B3 / `mit_b3` and one full-resolution logit.
+Its default `encoder_weights="imagenet"` is the initialization for new baselines
+and may download weights on first use. SMP retains RGB weights for three inputs;
+for four/eight it repeats the RGB input kernels cyclically and multiplies by
+3/channel-count. This positional initialization does not assign pretrained
+spectral meaning to the native eight-band order.
+
+The objective is 0.7 BCE with 0.1 label smoothing plus 0.3 batch-pooled Lovasz
+hinge on hard labels. Both ignore -100; all-ignored support returns a
+differentiable zero. TorchMetrics accumulates the confusion matrix, foreground
+IoU, precision, recall, F1 and accuracy over updates. Explicit integer predictions
+use probability >= 0.5 and avoid automatic logits/probability guessing. Each
+metric ignores -100. Results are tensors; the confusion matrix is
+`[[tn, fp], [fn, tp]]`. Undefined ratios use TorchMetrics' zero convention;
+inspect `report["confusion_matrix"].sum()` for scored support, and never treat
+zero-support output as evidence of model performance. These helpers provide no
+epoch loop, optimizer policy or checkpoint selection.
 
 ## Later workflows and outputs
 

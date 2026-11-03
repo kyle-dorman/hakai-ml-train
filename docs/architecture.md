@@ -6,7 +6,16 @@ The installed `src/kelpseg/` package provides the Typer command and read-only
 machine-path checks, generic byte-preserving organization, quick/full directory
 checks, shared cleanup, native-band chipping with optional labels, and source
 assignment/window-selection functions and streaming training-image pixel
-statistics. The checkout retains legacy Planet
+statistics. Installed model/input helpers connect these manifests to one
+SegFormer B3 (`mit_b3`) with 8/4/3 inputs and one logit. `training/data.py`
+loads kelp-positive training rows and representative validation; test rows stay
+metadata only. Shared preprocessing and the approved stock augmentation factory
+feed float32 tensors through an Albumentations Compose ending in Normalize
+and ToTensorV2. `training/loss.py` and `training/metrics.py` implement the
+selected objective and native TorchMetrics accumulation. Task 033E will use
+PyTorch Lightning Trainer/LightningModule and native callbacks/loggers rather
+than a custom epoch loop. That training interface is not implemented yet.
+The checkout retains legacy Planet
 `src.*` modules, root `trainer.py`, `scripts/`, relevant configs, and focused tests until their
 replacements land. Unrelated application/model/export families are removed.
 The legacy recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
@@ -72,7 +81,8 @@ means and sample standard deviations; overlap counts as repeated chip exposure.
 Labels, model preprocessing and artificial loading padding are not used.
 
 Runtime dependencies cover implemented workflows: Typer, NumPy, Rasterio,
-Albumentations and Matplotlib. Pixel-statistics computation imports NumPy and
+Albumentations, Matplotlib, Torch, TorchMetrics and segmentation-models-pytorch.
+Pixel-statistics computation imports NumPy and
 metadata helpers only; TIFF libraries are imported when TIFF workflows run.
 Checkout-only dependencies for retained code live in the default `legacy`
 group alongside `dev`; plain frozen setup includes both. New workflows promote
@@ -266,7 +276,7 @@ reasons and paths resolved from the explicit chip root. Omitted windows stay
 unused without payloads. Selection reads no arrays and creates no fold copies.
 
 The installed selector returns all canonical retained assigned training windows,
-including overlap. Task 033's planned training loader further requires
+including overlap. The training loader further requires
 `kelp_pixels > 0` for train rows, using existing manifest counts. It reports
 eligible and excluded training counts without changing the canonical release,
 assignments or validation/test selection. Task 032B needs no rebuild or upload

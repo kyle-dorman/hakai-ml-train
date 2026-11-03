@@ -12,7 +12,7 @@ from kelpseg.augmentation_debug.panels import display_limits
 from kelpseg.augmentation_debug.preview import load_preview_samples, preview_metadata
 from kelpseg.augmentation_debug.trials import value_metrics
 from kelpseg.augmentation_pipeline import build_training_augmentation
-from kelpseg.augmentations import apply_augmentation
+from kelpseg.augmentations import NATIVE_SCALE, apply_augmentation
 from kelpseg.prepare.chip import _write_json
 from kelpseg.prepare.splits import check_split_output
 from kelpseg.preprocessing import cap_raw
@@ -21,38 +21,81 @@ logger = logging.getLogger(__name__)
 
 
 def pipeline_states(sample: dict, seed: int = 33) -> list[dict]:
-    """Return source, the same sampled D4 reference, and actual full output.
+    """Return source, sampled D4, sampled D4+Affine, and actual full output.
 
-    Every full draw records the real stock operation order and parameters;
-    source and D4 reference explain which changes came from geometry alone.
+    Replay the stock geometry with its actual sampled parameters, without a
+    second random draw. Move the close-up footprint through those same kernels.
     """
     image, label, valid = sample["image"], sample["label"], sample["valid"]
     names, crop = sample["band_names"], sample["closeup"]
-    full = apply_augmentation(
-        build_training_augmentation(seed), image, label, valid, seed
-    )
+    pipeline = build_training_augmentation(seed)
+    full = apply_augmentation(pipeline, image, label, valid, seed)
     full_parameters = full[3]
-    group = full_parameters["applied"][0][1]["group_element"]
-    d4 = A.D4(p=1)
-    reference = apply_augmentation(
-        d4, image, label, valid, seed, {"group_element": group}
-    )
-    footprint = np.zeros(label.shape, dtype=np.uint8)
-    top, left, bottom, right = crop
-    footprint[top:bottom, left:right] = 1
-    moved = d4.apply_to_mask(footprint, group_element=group)
-    ys, xs = np.where(moved)
-    moved_crop = int(ys.min()), int(xs.min()), int(ys.max()) + 1, int(xs.max()) + 1
+    d4, affine = pipeline.transforms[:2]
+    group = d4.get_applied_params()["group_element"]
+    affine_parameters = affine.get_applied_params()
 
     trace = []
     for class_name, parameters in full_parameters["applied"]:
-        entry = {"class": class_name, "parameters": parameters}
+        entry = {"class": class_name, "parameters": parameters, "applied": True}
         if class_name == "ChannelDropout":
             entry["dropped_bands"] = [
                 names[index] for index in parameters["channels_to_drop"]
             ]
+        if class_name == "Affine":
+            # Stock parameters expose the matrix, not the sampled translation.
+            # Its displacement of the image center reports that shift directly.
+            height, width = image.shape[:2]
+            center = np.array([(width - 1) / 2, (height - 1) / 2, 1])
+            shifted = affine_parameters["matrix"] @ center
+            entry["center_shift_pixels"] = {
+                "x": float(shifted[0] - center[0]),
+                "y": float(shifted[1] - center[1]),
+            }
         trace.append(entry)
+    if not affine_parameters:
+        trace.insert(1, {"class": "Affine", "parameters": {}, "applied": False})
     full_parameters["operation_trace"] = trace
+
+    inputs = dict(
+        image=image.astype(np.float32) / NATIVE_SCALE,
+        mask=label.copy(),
+        validity=valid.astype(np.int8),
+    )
+    d4_result = d4.apply_with_params(d4.get_applied_params(), **inputs)
+    geometry_result = (
+        affine.apply_with_params(affine_parameters, **d4_result)
+        if affine_parameters
+        else d4_result
+    )
+
+    footprint = np.zeros(label.shape, dtype=np.int8)
+    top, left, bottom, right = crop
+    footprint[top:bottom, left:right] = 1
+    d4_footprint = d4.apply_to_mask(footprint, **d4.get_applied_params())
+    geometry_footprint = (
+        affine.apply_to_mask(d4_footprint, **affine_parameters)
+        if affine_parameters
+        else d4_footprint
+    )
+
+    def footprint_bounds(footprint):
+        ys, xs = np.where(footprint == 1)
+        if not len(ys):
+            # A crop shifted entirely outside the window has no close-up left.
+            return (0, 0, *footprint.shape)
+        return int(ys.min()), int(xs.min()), int(ys.max()) + 1, int(xs.max()) + 1
+
+    def geometry_output(result, operations):
+        support = result["validity"] == 1
+        raw = result["image"].astype(np.float32, copy=True) * NATIVE_SCALE
+        raw[~support] = 0
+        return raw, result["mask"], support, dict(operation_trace=operations, seed=seed)
+
+    reference = geometry_output(d4_result, trace[:1])
+    geometry = geometry_output(geometry_result, trace[:2])
+    d4_crop = footprint_bounds(d4_footprint)
+    geometry_crop = footprint_bounds(geometry_footprint)
 
     def state(title, result, closeup, *, identity=False):
         raw, targets, support, parameters = result
@@ -72,8 +115,14 @@ def pipeline_states(sample: dict, seed: int = 33) -> list[dict]:
     original = apply_augmentation(A.NoOp(p=1), image, label, valid, seed)
     return [
         state("Source original", original, crop, identity=True),
-        state(f"D4 reference: {group}", reference, moved_crop, identity=group == "e"),
-        state("D4 + two sampled extras", full, moved_crop),
+        state(f"D4 reference: {group}", reference, d4_crop, identity=group == "e"),
+        state(
+            "D4 + Affine: " + ("applied" if affine_parameters else "skipped"),
+            geometry,
+            geometry_crop,
+            identity=group == "e" and not affine_parameters,
+        ),
+        state("D4 + optional Affine + two sampled extras", full, geometry_crop),
     ]
 
 
@@ -87,7 +136,7 @@ def preview_pipeline(
     positive_samples: int = 14,
     draws: int = 8,
 ) -> Path:
-    """Show seeded real pipeline calls, each beside its same-D4-only reference.
+    """Show actual draws with D4-only and D4+Affine geometry references.
 
     The stock factory is the recipe; save its native serialized form with the
     gallery. Seeds identify draws for inspection, not representative evaluation
@@ -103,11 +152,11 @@ def preview_pipeline(
         chips, assignments, variant, seed, positive_samples, limits
     )
     metadata.update(
-        purpose="Selected D4 + SomeOf(2) pipeline; combined outputs await user review.",
+        purpose="Selected D4 + Affine(p=0.5) + SomeOf(2) pipeline; geometry and full review.",
         pipeline_recipe=A.to_dict(build_training_augmentation(seed=seed)),
         draws_per_example=draws,
         seed_rule="base seed + example index * draws per example + draw index",
-        reference="Same sampled D4 only; optional source-original comparison",
+        reference="Source, same D4, same D4+Affine, and full pipeline; no geometry resampling",
     )
     work = output.with_name(f".{output.name}.incomplete")
     work.mkdir()

@@ -9,6 +9,9 @@ dependencies = [
     "matplotlib>=3.10.5,<4",
     "numpy>=2,<3",
     "rasterio>=1.4,<2",
+    "segmentation-models-pytorch>=0.5.0,<0.6",
+    "torch>=2.11.0",
+    "torchmetrics>=1.7.3,<2",
     "typer>=0.25.1,<0.26",
 ]
 
@@ -33,10 +36,7 @@ legacy = [
     "numpy>=2,<3",
     "opencv-python-headless>=4.13.0.92",
     "PyYAML>=6,<7",
-    "segmentation-models-pytorch>=0.5.0",
     "shapely>=2,<3",
-    "torch>=2.11.0",
-    "torchmetrics>=1.7.3",
     "torchvision>=0.26.0",
     "tqdm>=4.67.1",
     "wandb>=0.21.0",
