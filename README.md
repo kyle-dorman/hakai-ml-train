@@ -11,6 +11,8 @@ quick/full directory checks, shared cleanup, native-band chipping with optional
 labels, and source-level baseline/LORO split manifests. The chip loader selects
 8/4/3 bands and pads partial edges. Window selection keeps overlap for training;
 chip validation/test selection is disjoint and reports geometric coverage gaps.
+The `pixel-stats` command computes raw training-band means and sample standard
+deviations with an optional cap and manifest-based kelp-only chip filter.
 Exploratory Python examples preview real Albumentations classes on training
 examples, with exact capped normalization and separately labeled backgrounds;
 see the [isolated previews](docs/quickstart.md#preview-individual-augmentations)

@@ -86,6 +86,7 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             assert "kelpseg/augmentation_viewer.html" in names
             assert "kelpseg/pipeline_viewer.html" in names
             assert "kelpseg/augmentation_pipeline.py" in names
+            assert "kelpseg/cli/pixel_stats.py" in names
             assert "kelpseg/augmentations.py" in names
             assert "kelpseg/augmentation_photometric.py" not in names
             assert "kelpseg/cli/split.py" in names
@@ -101,6 +102,7 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
                 "chip",
                 "split_inputs",
                 "splits",
+                "channel_stats",
             ):
                 assert f"kelpseg/prepare/{module}.py" in names
                 assert f"kelpseg/{module}.py" not in names
@@ -200,6 +202,7 @@ runpy.run_module("kelpseg", run_name="__main__")
             ("clean", "--help"),
             ("chip", "--help"),
             ("split", "--help"),
+            ("pixel-stats", "--help"),
         ):
             run(python, "-I", "-c", lazy_probe, *arguments, cwd=unrelated)
 
@@ -284,6 +287,54 @@ assert not any(name in sys.modules for name in ("src", "scripts", "torch", "wand
 """,
             selection_chips,
             splits / "assignments.csv",
+            cwd=tmp_path,
+        )
+
+        # Statistics reuses those assignments, reading positive training images
+        # only. Background and held-out payloads deliberately do not exist.
+        _statistics_payloads(selection_chips)
+        statistics = unrelated / "statistics.json"
+        run(
+            command,
+            "pixel-stats",
+            "--chips",
+            selection_chips,
+            "--assignments",
+            splits / "assignments.csv",
+            "--variant",
+            "augmented",
+            "--kelp-only",
+            "--clip-value",
+            "5000",
+            "--output",
+            statistics,
+            cwd=tmp_path,
+        )
+        run(
+            python,
+            "-I",
+            "-c",
+            """
+import json
+import sys
+import numpy as np
+from pathlib import Path
+from kelpseg.prepare.channel_stats import compute_channel_stats
+
+report = json.loads(Path(sys.argv[1]).read_text())
+image = np.arange(4 * 4 * 3).reshape(4, 4, 3) + 1
+pixels = np.concatenate([image.reshape(-1, 3)[1:], (image + 100).reshape(-1, 3)[1:]])
+assert report['band_names'] == ['blue', 'green', 'red']
+assert report['available_training_windows'] == 4
+assert report['selected_training_windows'] == 2
+assert report['excluded_zero_kelp_windows'] == 2
+assert report['pixels'] == 30 and report['clip_value'] == 5000
+np.testing.assert_allclose(report['mean'], pixels.mean(0), rtol=1e-12)
+np.testing.assert_allclose(report['std_sample'], pixels.std(0, ddof=1), rtol=1e-12)
+assert callable(compute_channel_stats)
+assert not any(name in sys.modules for name in ('torch', 'rasterio', 'albumentations', 'src', 'scripts'))
+""",
+            statistics,
             cwd=tmp_path,
         )
 
@@ -622,3 +673,28 @@ def _selection_controls(root: Path, source_csv: Path) -> Path:
                     )
                 )
     return root
+
+
+def _statistics_payloads(chips: Path) -> None:
+    """Add three-band image-only entries for the installed training-stats check."""
+    import numpy as np
+
+    (chips / "recipe.json").write_text(
+        json.dumps(dict(chip_size=4, source_band_names=["blue", "green", "red"]))
+    )
+    with (chips / "windows.csv").open(newline="") as stream:
+        rows = list(csv.DictReader(stream))
+    image = np.arange(4 * 4 * 3, dtype=np.uint16).reshape(4, 4, 3) + 1
+    for row in rows:
+        positive = int(row["col"]) == 0
+        row["kelp_pixels"] = "1" if positive else "0"
+        if positive and row["source_key"] in {"train", "optional"}:
+            pixels = image + (100 if row["source_key"] == "optional" else 0)
+            pixels[0, 0] = 0
+            path = chips / row["payload"]
+            path.parent.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(path, image=pixels)
+    with (chips / "windows.csv").open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)

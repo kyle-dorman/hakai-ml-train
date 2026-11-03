@@ -9,8 +9,6 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
-import rasterio
-
 from kelpseg.bands import resolve_band_indices
 from kelpseg.prepare.check import (
     CheckRecipe,
@@ -231,6 +229,8 @@ def _inspect_source(pair: InputPair, recipe: ChipRecipe, identity: dict) -> dict
     """Check input headers once without reading or realigning pixels."""
     from contextlib import ExitStack
 
+    import rasterio
+
     expectations = CheckRecipe(
         profile="cleaned",
         image_band_counts=(len(recipe.source_band_names),),
@@ -264,6 +264,8 @@ def _inspect_source(pair: InputPair, recipe: ChipRecipe, identity: dict) -> dict
 
 def _check_original_identity(source: dict, originals: dict) -> None:
     """Crops of one original must agree after removing their pixel offsets."""
+    import rasterio
+
     key = tuple(source[name] for name in ("dataset_id", "release_id", "source_id"))
     metadata = tuple(
         source[name]
@@ -295,6 +297,8 @@ def build_chip_plan(
     images, labels, output, recipe: ChipRecipe, *, metadata=None
 ) -> ChipPlan:
     """Inspect selected TIFF headers only; pixel checks happen during writing."""
+    import rasterio
+
     validate_chip_recipe(recipe)
     images, output = safe_path(images), safe_path(output)
     labels = safe_path(labels) if labels is not None else None

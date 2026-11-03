@@ -5,7 +5,8 @@
 The installed `src/kelpseg/` package provides the Typer command and read-only
 machine-path checks, generic byte-preserving organization, quick/full directory
 checks, shared cleanup, native-band chipping with optional labels, and source
-assignment/window-selection functions. The checkout retains legacy Planet
+assignment/window-selection functions and streaming training-image pixel
+statistics. The checkout retains legacy Planet
 `src.*` modules, root `trainer.py`, `scripts/`, relevant configs, and focused tests until their
 replacements land. Unrelated application/model/export families are removed.
 The legacy recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
@@ -54,7 +55,8 @@ training command style is `uv run kelpseg train --recipe <recipe-file>`;
 it remains planned until the training task implements it. See
 [quickstart.md](quickstart.md) for working setup and preparation recipes.
 
-The preparation surface is `organize`, `check`, shared `clean`, `chip`, and `split`;
+The preparation surface is `organize`, `check`, shared `clean`, `chip`, `split`
+and `pixel-stats`;
 there is no BC-specific command or intermediate. Task 029B implements
 direct-directory
 checking/cleanup for imagery with optional paired labels, without requiring an
@@ -62,7 +64,16 @@ organizer catalog. Quick checks inspect structure/headers; full checks scan all
 selected pixels and state any unavailable checks. Both are read-only. Cleanup
 uses the same functions for CA, BC and other explicitly supported inputs.
 
-Runtime dependencies cover implemented workflows: Typer, NumPy and Rasterio.
+Pixel statistics uses the declared native band order and true-size chip images,
+selects training rows from existing assignments, and optionally keeps only whole
+chips with positive manifest kelp counts. Native all-band-zero nodata is excluded
+before an explicit optional upper cap. Streaming float64 central moments produce
+means and sample standard deviations; overlap counts as repeated chip exposure.
+Labels, model preprocessing and artificial loading padding are not used.
+
+Runtime dependencies cover implemented workflows: Typer, NumPy, Rasterio,
+Albumentations and Matplotlib. Pixel-statistics computation imports NumPy and
+metadata helpers only; TIFF libraries are imported when TIFF workflows run.
 Checkout-only dependencies for retained code live in the default `legacy`
 group alongside `dev`; plain frozen setup includes both. New workflows promote
 their dependencies into runtime as implemented. Distribution checks install

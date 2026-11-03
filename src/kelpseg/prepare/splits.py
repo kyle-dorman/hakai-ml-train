@@ -9,7 +9,6 @@ from collections import Counter
 from pathlib import Path
 
 from kelpseg.prepare.check import PreparationError
-from kelpseg.prepare.chip import _write_json
 from kelpseg.prepare.chip_inputs import IDENTITY_COLUMNS
 from kelpseg.prepare.split_inputs import (
     COLLECTION_COLUMNS,
@@ -217,6 +216,8 @@ def write_splits(
     collection: list[dict], assignments: list[dict], recipe: dict, output: str | Path
 ) -> Path:
     """Publish five controls together. Failed work is not resumed or reused."""
+    from kelpseg.prepare.chip import _write_json
+
     output = check_split_output(output)
     work = output.with_name(f".{output.name}.incomplete")
     work.mkdir()

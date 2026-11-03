@@ -41,8 +41,11 @@ tiny-v2 offline walkthrough pass. Task 033 is now split into seven bounded
 contracts. [Task 033A](../tasks/033a_individual_augmentation_previews.md) and
 [033B](../tasks/033b_review_augmentation_settings.md) are complete: the user
 approved the stock D4 + SomeOf(2) pipeline, the final native recipe is saved,
-and the readability review and focused checks pass. **033C is next and
-unstarted**; no model training has started.
+and the readability review and focused checks pass.
+[033C is complete](../tasks/033c_simplify_pixel_statistics.md#outcome-2026-11-02):
+the installed NumPy pixel-statistics command reproduces all eight approved
+normalization bands to floating-point precision. **033D is next and unstarted**;
+no model training has started.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -95,8 +98,8 @@ selected; split further if needed.
 | [033](../tasks/033_baseline_training_and_portable_models.md) | Shared baseline decisions and split plan | Exact 5000-capped normalization and family routing; no umbrella implementation |
 | [033A](../tasks/033a_individual_augmentation_previews.md) | Individual augmentation previews — complete | Stock native sweeps through defaults; separate coarse size/count modes; no stacking or training |
 | [033B](../tasks/033b_review_augmentation_settings.md) | Review and select augmentation settings — complete | Combined outputs approved; final native recipe, readable viewers and package checks pass |
-| [033C](../tasks/033c_simplify_pixel_statistics.md) | Simplify pixel statistics — next, not started | Small NumPy prepare/ utility reproduces selected capped reference |
-| [033D](../tasks/033d_model_and_training_inputs.md) | Model and training inputs — planned | Shared preprocessing, kelp-only tensors, real B3 update and loss/confusion checks |
+| [033C](../tasks/033c_simplify_pixel_statistics.md) | Simplify pixel statistics — complete | Installed NumPy command; exact chip/pixel scope; approved constants reproduced within 1.5e-11 raw units |
+| [033D](../tasks/033d_model_and_training_inputs.md) | Model and training inputs — next, not started | Shared preprocessing, kelp-only tensors, real B3 update and loss/confusion checks |
 | [033E](../tasks/033e_training_validation_and_ema.md) | Training, validation and EMA — planned | Flat recipes, equal epochs, validation-only selection, local records and saved states |
 | [033F](../tasks/033f_portable_models_and_resume.md) | Portable models and resume — planned | Copied bundle and completed-epoch recovery verified independently |
 | [033G](../tasks/033g_tiny_walkthrough_and_handoff.md) | Tiny walkthrough and handoff — planned | Installed fresh-directory rehearsal, all six production previews and Task 034 handoff |

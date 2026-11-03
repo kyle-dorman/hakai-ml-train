@@ -2,7 +2,7 @@
 
 Status: Shared decisions updated 2026-11-02. Task 033A uses verified stock
 Albumentations previews; 033A/033B are complete with the user-approved recipe.
-033C–033G remain unstarted.
+033C reproduces the approved statistics; 033D–033G remain unstarted.
 Task 032B's publication/restore prerequisite is satisfied. Task 032C is separate.
 
 ## Abstract and route
@@ -30,7 +30,7 @@ independent of the later model/training runner.
 | [033F](033f_portable_models_and_resume.md) | Self-contained model bundle and completed-epoch resume; no tiled inference |
 | [033G](033g_tiny_walkthrough_and_handoff.md) | Installed fresh-directory tiny walkthrough, production previews and Task 034 handoff |
 
-033A/033B are complete; 033C is next and unstarted. Do not treat this table as permission to
+033A–033C are complete; 033D is next and unstarted. Do not treat this table as permission to
 execute several tasks together. Each later child may be refined when selected
 without reopening settled scientific/data decisions.
 
@@ -95,6 +95,10 @@ Later fold-specific normalization is resolved with Task 036.
 
 The full result is outside Git at
 `/Volumes/x10pro/kelpseg/analyses/task033_normalization_positive_with_bc_clip5000_v1/statistics.json`.
+Task [033C](033c_simplify_pixel_statistics.md#outcome-2026-11-02) reproduced this
+reference with the installed NumPy command: exact chip/pixel counts and maximum
+absolute mean/std differences of 1.14e-13 / 1.47e-11 raw units. The approved
+constants above remain unchanged.
 The [archived planning/analysis record](history/033_training_planning_and_analysis.md)
 preserves the unclipped comparisons, high-value counts, legacy clipping audit,
 exact source paths and validation. Current choices in this file supersede its
@@ -182,8 +186,9 @@ or training were executed. At that point the next action was explicit selection 
 
 ## Current next action
 
-033A/033B are complete: isolated and combined outputs were inspected, the user
-approved the policy, and the final recipe is saved. Next, separately select
-[033C](033c_simplify_pixel_statistics.md) to simplify and reproduce the pixel
-statistics reference. No 033C implementation is included in this handoff.
+033A–033C are complete: the augmentation policy is approved/saved and the
+installed pixel-statistics command reproduces the selected normalization
+reference. Next, separately select [033D](033d_model_and_training_inputs.md) for
+model inputs and bounded update checks. No 033D implementation is included in
+this handoff.
 After all seven children close, select Task 034 in a new window.

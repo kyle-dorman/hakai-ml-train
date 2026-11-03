@@ -71,8 +71,8 @@ are authorized by Task 024.
 | [033](033_baseline_training_and_portable_models.md) | Shared planning | Split into 033A–033G | Exact normalization and approved augmentation policy; remaining children planned |
 | [033A](033a_individual_augmentation_previews.md) | Local preview implementation | Complete | Wider stock native sweeps and coarse count/size modes; next 033B review |
 | [033B](033b_review_augmentation_settings.md) | User review/combined preview | Complete | Combined outputs approved; final native recipe and quality pass complete; next 033C |
-| [033C](033c_simplify_pixel_statistics.md) | Local NumPy utility | Next, not started | Simplify into prepare/ and reproduce capped statistics |
-| [033D](033d_model_and_training_inputs.md) | Local model/input checks | Planned | Manifest tensors, shared preprocessing and bounded 8/4/3 real-model updates |
+| [033C](033c_simplify_pixel_statistics.md) | Local NumPy utility | Complete | Installed NumPy command reproduces approved constants and exact chip/pixel scope; next 033D |
+| [033D](033d_model_and_training_inputs.md) | Local model/input checks | Next, not started | Manifest tensors, shared preprocessing and bounded 8/4/3 real-model updates |
 | [033E](033e_training_validation_and_ema.md) | Local training/validation | Planned | Strict recipes, EMA, validation selection, local records and saved states |
 | [033F](033f_portable_models_and_resume.md) | Local bundle/recovery | Planned | Portable image-array model loading and completed-epoch resume |
 | [033G](033g_tiny_walkthrough_and_handoff.md) | Installed rehearsal/docs | Planned | Tiny walkthrough, six full-data previews and Task 034 handoff |

@@ -2,7 +2,8 @@
 
 The installed `kelpseg` command checks machine paths, organizes raw catalogs,
 checks ordinary image directories, cleans imagery with optional paired labels,
-chips cleaned TIFFs into one native-band collection, and assigns source splits.
+chips cleaned TIFFs into one native-band collection, assigns source splits,
+and computes training-image pixel statistics.
 Training, prediction, and evaluation arrive in later tasks; see [the roadmap](todo.md). Retained legacy Planet code
 is development/reference material, outside the installed package.
 
@@ -764,6 +765,61 @@ in place of `uv run` in the commands below; install the locked environment
 before disconnecting. Choose fresh generated output names each time. No Box
 access is needed during the walkthrough. The
 [preserved v1 example](#preserved-v1-example) remains available separately.
+
+## Compute training pixel statistics
+
+Use the existing chip collection and source assignments. To reproduce the
+approved kelp-positive with-BC normalization reference:
+
+```bash
+uv run kelpseg pixel-stats --chips /Volumes/x10pro/kelpseg/data/chips/ca_bc/v1 --assignments /Volumes/x10pro/kelpseg/data/splits/ca_bc/v1/assignments.csv --experiment baseline --variant augmented --kelp-only --clip-value 5000 --output /Volumes/x10pro/kelpseg/analyses/my-training-statistics-01.json
+```
+
+Change the paths for your machine and use a fresh output filename with an
+existing parent directory. The default experiment/variant are `baseline` and
+`augmented`; a declared LORO experiment such as `loro_001` uses its own training
+assignment rows. The command logs selection, current file, progress counts and
+payload bytes, then prints the resulting band means/sample standard deviations.
+
+`--kelp-only` selects entire training chips with manifest `kelp_pixels > 0`.
+Every nonnodata image pixel in those chips contributes, including background
+and pixels whose labels are ignored. Omit the flag to include all active
+training chips. Validation/test payloads and label arrays are never opened.
+Native all-band-zero nodata is excluded before clipping; zero in just one band
+is a valid observation. True-size edges are read directly without padding.
+Overlapping training chips count repeated pixel exposures, as in the approved
+reference.
+
+`--clip-value` is an explicit optional raw-unit upper cap. Omit it for uncapped
+statistics; the approved baseline requires **5000**. No scaling, augmentation or
+standardization occurs. Float64 per-chip central moments and streaming merges
+produce sample standard deviations (`ddof=1`). The declared band names/order
+come from the collection, so other declared channel counts use the same code.
+
+The one JSON report contains input/split/filter references, bands, cap,
+`mean`, `std_sample`, valid pixel exposures, selected/excluded chip counts,
+source count and elapsed time. `payload_bytes_read` sums the selected NPZ file
+sizes for progress; it is not a measurement of physical disk reads. Existing
+reports are refused before reading inputs. Empty selections, fewer than two
+valid observations and zero-variance bands give an error; no partial report is
+published. A failed calculation starts again with a fresh report name.
+
+The same plain function works in Python:
+
+```python
+from kelpseg.prepare.channel_stats import compute_channel_stats
+
+report = compute_channel_stats(
+    "/data/chips/coast-v1", "/data/splits/assignments.csv",
+    "/data/reports/fresh-statistics.json",
+    experiment="baseline", variant="augmented",
+    kelp_only=True, clip_value=5000,
+)
+print(report["band_names"], report["mean"], report["std_sample"])
+```
+
+The selected full-precision baseline values remain in the
+[shared normalization contract](../tasks/033_baseline_training_and_portable_models.md#selected-training-normalization).
 
 ## Preview individual augmentations
 
