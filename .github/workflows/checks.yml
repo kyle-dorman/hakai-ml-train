@@ -9,8 +9,8 @@ permissions:
 
 jobs:
   cpu:
-    # arm64 matches the locked macOS Torch wheels and needs no CUDA packages.
-    runs-on: macos-15
+    # Match the Linux x86_64 training host; CI exercises CPU behavior only.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       WANDB_MODE: offline
@@ -28,7 +28,7 @@ jobs:
           uv python install 3.12
           uv lock --check
           uv sync --python 3.12 --frozen
-          uv run --frozen python -c 'import platform; assert platform.machine() == "arm64"'
+          uv run --frozen python -c 'import platform; assert platform.system() == "Linux" and platform.machine() == "x86_64"'
       - name: CPU fixtures and isolated distribution checks
         env:
           UV_OFFLINE: "1"

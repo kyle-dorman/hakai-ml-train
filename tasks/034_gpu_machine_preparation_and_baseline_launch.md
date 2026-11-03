@@ -223,3 +223,12 @@ The guide now uses that artifact root and `/home/sky/data/runs`, preserves the
 project-relative release layout, and permits an existing root while refusing
 existing release destinations before copying. Capacity and instance-lifecycle
 persistence still need confirmation on the host. No data was moved locally.
+
+### Linux CI follow-up
+
+Changed `.github/workflows/checks.yml` to Ubuntu 24.04 x86_64 after GitHub
+failed to allocate a macOS ARM runner. Keep the same frozen Python 3.12
+environment, CPU tests, offline wheel/sdist checks, Ruff and pre-commit.
+The platform assertion now verifies Linux x86_64. The Linux dependency dry
+run, lock check, Ruff and pre-commit pass locally; execution on the hosted
+Linux runner is pending the next push. CUDA validation remains GPU-host work.
