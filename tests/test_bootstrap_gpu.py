@@ -66,7 +66,7 @@ def test_setup_uses_sudo_only_for_apt_and_frozen_user_environment(tmp_path, dist
         "sudo apt-get update",
         "sudo env DEBIAN_FRONTEND=noninteractive apt-get upgrade -y",
         "sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y "
-        "ca-certificates curl git build-essential pkg-config unzip rclone tmux",
+        "ca-certificates curl git build-essential pkg-config unzip rclone tmux vim",
         "uv --version",
         "uv python install 3.12",
         "uv sync --python 3.12 --frozen",

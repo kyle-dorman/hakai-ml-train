@@ -206,3 +206,20 @@ links in changed Markdown and the guide's Bash block syntax pass review. No trai
 changed; Linux installation and CUDA checks remain pending.
 Exact next action: commit/push the setup draft, follow `docs/gpu_setup.md` on
 the allocated instance, then iterate there through this task's remote gate.
+
+### Remote Box authentication correction
+
+The user reported that UCLA Box must already be signed in in the Mac browser
+before opening rclone's terminal link; otherwise it led to the regular Box login.
+Updated the guide to forward port 53682 over SSH, answer yes to browser
+authentication, and open the link in that same authenticated browser profile.
+This replaces the token-copy instructions. Documentation/diff checks only;
+the remaining remote installation and GPU validation status is unchanged.
+
+### Remote storage choice
+
+The user selected `/home/sky/data` because `/mnt/persistent` is unavailable.
+The guide now uses that artifact root and `/home/sky/data/runs`, preserves the
+project-relative release layout, and permits an existing root while refusing
+existing release destinations before copying. Capacity and instance-lifecycle
+persistence still need confirmation on the host. No data was moved locally.

@@ -46,7 +46,7 @@ printf '\n==> Updating Ubuntu/Debian packages\n'
 sudo apt-get update
 sudo env DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  ca-certificates curl git build-essential pkg-config unzip rclone tmux
+  ca-certificates curl git build-essential pkg-config unzip rclone tmux vim
 
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 if ! command -v uv >/dev/null; then
