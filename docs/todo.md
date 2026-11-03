@@ -51,9 +51,10 @@ manifest-selected inputs, shared preprocessing, one B3 model and loss/confusion
 helpers pass bounded 8/4/3 CPU updates. Inputs use a full Albumentations tensor
 pipeline and metrics use TorchMetrics. The added light affine step has
 [updated previews](quickstart.md#preview-the-combined-augmentation-pipeline)
-approved by the user. **033E is next and unstarted**, using PyTorch Lightning
-and the confirmed spectral recipes/historical starting values; no epoch
-runner or production training has started.
+approved by the user. [033E is complete](../tasks/033e_training_validation_and_ema.md#outcome-2026-11-02):
+Lightning training/validation, explicit spectral recipes, delayed EMA and distinct
+best/last checkpoints pass bounded CPU checks. **033F is next and unstarted**;
+portable bundles and exact resume remain pending. No production training ran.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -108,8 +109,8 @@ selected; split further if needed.
 | [033B](../tasks/033b_review_augmentation_settings.md) | Review and select augmentation settings — complete | Combined outputs approved; final native recipe, readable viewers and package checks pass |
 | [033C](../tasks/033c_simplify_pixel_statistics.md) | Simplify pixel statistics — complete | Installed NumPy command; exact chip/pixel scope; approved constants reproduced within 1.5e-11 raw units |
 | [033D](../tasks/033d_model_and_training_inputs.md) | Model and training inputs — complete | Shared preprocessing, kelp-only tensors, real B3 update and loss/confusion checks |
-| [033E](../tasks/033e_training_validation_and_ema.md) | Training, validation and EMA — next, not started | Flat recipes, equal epochs, validation-only selection, local records and saved states |
-| [033F](../tasks/033f_portable_models_and_resume.md) | Portable models and resume — planned | Copied bundle and completed-epoch recovery verified independently |
+| [033E](../tasks/033e_training_validation_and_ema.md) | Training, validation and EMA — complete | Flat recipes, equal epochs, validation-only selection, local records and saved states |
+| [033F](../tasks/033f_portable_models_and_resume.md) | Portable models and resume — next, not started | Copied bundle and completed-epoch recovery verified independently |
 | [033G](../tasks/033g_tiny_walkthrough_and_handoff.md) | Tiny walkthrough and handoff — planned | Installed fresh-directory rehearsal, all six production previews and Task 034 handoff |
 | 034 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
 | 035 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics; region/date/year/month prevalence and errors; signed area bias and supported matched-footprint change checks; see experiments.md |

@@ -3,7 +3,8 @@
 Status: Shared decisions updated 2026-11-02. Task 033A uses verified stock
 Albumentations previews; 033A/033B are complete with the user-approved recipe.
 033C reproduces the approved statistics; 033D implements model/input helpers
-and bounded updates. 033E–033G remain unstarted.
+and bounded updates. 033E implements Lightning training/validation and EMA;
+033F–033G remain unstarted.
 Task 032B's publication/restore prerequisite is satisfied. Task 032C is separate.
 
 ## Abstract and route
@@ -31,7 +32,7 @@ independent of the later model/training runner.
 | [033F](033f_portable_models_and_resume.md) | Self-contained model bundle and completed-epoch resume; no tiled inference |
 | [033G](033g_tiny_walkthrough_and_handoff.md) | Installed fresh-directory tiny walkthrough, production previews and Task 034 handoff |
 
-033A–033D are complete; 033E is next and unstarted. Do not treat this table as permission to
+033A–033E are complete; 033F is next and unstarted. Do not treat this table as permission to
 execute several tasks together. Each later child may be refined when selected
 without reopening settled scientific/data decisions.
 
@@ -204,8 +205,9 @@ or training were executed. At that point the next action was explicit selection 
 
 ## Current next action
 
-033A–033D are complete: approved augmentation, reproduced normalization,
-manifest tensors, the B3 model and loss/confusion helpers have passed bounded
-checks. The affine previews are approved. Separately select [033E](033e_training_validation_and_ema.md) for
-the training/validation loop and EMA. No epoch runner is included in this handoff.
+033A–033E are complete: approved augmentation, reproduced normalization,
+manifest tensors, B3 model, Lightning training/validation and delayed EMA have
+passed bounded CPU checks. Select [033F](033f_portable_models_and_resume.md) in
+a new chat for portable bundles and completed-epoch resume. No exact-resume or
+production-training claim is made by the current checkpoint implementation.
 After all seven children close, select Task 034 in a new window.

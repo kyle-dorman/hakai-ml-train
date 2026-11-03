@@ -15,8 +15,8 @@ classes and capped normalization on training examples only. Full CA/BC chips, sp
 the [restore recipe](quickstart.md#restore-and-use-the-full-cabc-chip-release). Preparation writes run once into a fresh output and stop on failure.
 Installed Python helpers provide manifest-selected training/validation tensors,
 SegFormer B3 and loss/confusion functions. Retained legacy Planet implementations
-support the ongoing replacement; epoch training and prediction workflows arrive
-through later numbered tasks. Tasks 000–023 describe the
+support the ongoing replacement. The installed `train` command provides Lightning
+training, validation, EMA and local checkpoints; prediction arrives later. Tasks 000–023 describe the
 preceding completed PS8B study.
 
 ## Read by task

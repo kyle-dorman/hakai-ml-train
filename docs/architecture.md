@@ -301,8 +301,8 @@ See [the researcher recipes](quickstart.md#assign-sources-and-select-chip-window
 During training, validate ordinary non-overlapping chips and aggregate their
 confusion counts; validation alone selects checkpoints. Test remains held out
 until model selection is complete. This chip scope is reported with its coverage
-and does not claim a stitched full-TIFF score. Training/evaluation commands are
-implemented by later tasks.
+and does not claim a stitched full-TIFF score. The installed Lightning training command uses this validation scope.
+Post-training evaluation remains a later task.
 
 Post-training tiled prediction and source-level scoring use the separate rules
 below. Share one image/window predictor between unlabeled inference and labeled

@@ -21,7 +21,8 @@ Preparation runs once into a fresh output and stops on failure, with no restart
 support. Installed Python helpers connect training/validation tensors to
 SegFormer B3, the selected loss and pooled confusion metrics; see
 [model inputs](docs/quickstart.md#model-and-training-inputs-python).
-Training and prediction commands arrive in later tasks. Retained legacy Planet code/tests
+The installed `train` command uses Lightning for fitting, validation and checkpoints;
+see [training recipes](docs/quickstart.md#train-and-validate). Prediction arrives later. Retained legacy Planet code/tests
 support the ongoing rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
 starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
 
@@ -57,8 +58,10 @@ uv run kelpseg check-paths --paths paths.local.toml
 ```
 
 The Typer command calls reusable Python functions. Most later workflow settings
-will live in recipe files. The selected future training style is
-`uv run kelpseg train --recipe <recipe-file>`; the epoch runner is not implemented yet.
+will live in recipe files. The training command is
+`uv run kelpseg train --recipe <recipe-file>`.
+The recipe selects the variant and machine-paths file; each fit gets an automatic run ID.
+Use `--dry-run` to preview the inputs and update budget before fitting.
 
 Development checks use synthetic CPU fixtures, including fresh wheel/sdist
 installation outside the checkout:

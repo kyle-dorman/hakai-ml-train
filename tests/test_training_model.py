@@ -13,7 +13,10 @@ from kelpseg.training.data import ChipDataset
 from kelpseg.training.loss import segmentation_loss
 
 
-@pytest.mark.parametrize("selection,channels", [("all", 8), ("rgbnir", 4), ("rgb", 3)])
+@pytest.mark.parametrize(
+    "selection,channels",
+    [("all", 8), ("rgbnir", 4), ("rgb", 3), (("nir", "red", "green"), 3)],
+)
 def test_real_b3_cpu_optimizer_update(tmp_path, selection, channels, monkeypatch):
     # Fail immediately if a no-weights construction ever tries either download path.
     def no_download(*args, **kwargs):

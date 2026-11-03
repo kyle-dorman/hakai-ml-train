@@ -120,7 +120,7 @@ def test_manifest_selection_filters_train_only_and_never_reads_test(
         ChipDataset(inputs["test_rows"], BAND_NAMES)
 
 
-@pytest.mark.parametrize("selection", ["all", "rgbnir", "rgb"])
+@pytest.mark.parametrize("selection", ["all", "rgbnir", "rgb", ("nir", "red", "green")])
 def test_partial_edges_native_validity_physical_order_and_exact_normalization(
     tmp_path, selection
 ):
@@ -163,7 +163,7 @@ def test_partial_edges_native_validity_physical_order_and_exact_normalization(
     )
 
 
-@pytest.mark.parametrize("selection", ["all", "rgbnir", "rgb"])
+@pytest.mark.parametrize("selection", ["all", "rgbnir", "rgb", ("nir", "red", "green")])
 def test_selected_channels_use_approved_shared_pipeline(tmp_path, selection):
     payload = tmp_path / "chip.npz"
     image, label = _payload(payload, height=16, width=16)
@@ -191,7 +191,7 @@ def test_selected_channels_use_approved_shared_pipeline(tmp_path, selection):
     assert not np.array_equal(dataset[0]["image"].numpy(), sample["image"].numpy())
 
 
-@pytest.mark.parametrize("selection", ["rgbnir", "rgb"])
+@pytest.mark.parametrize("selection", ["rgbnir", "rgb", ("nir", "red", "green")])
 def test_channel_dropout_can_only_drop_actual_model_inputs(tmp_path, selection):
     payload = tmp_path / "chip.npz"
     image = np.full((4, 4, 8), 1000, dtype=np.uint16)
@@ -286,7 +286,7 @@ def test_full_pipeline_uses_stock_normalize_and_tensor_conversion():
     assert isinstance(result["validity"], torch.Tensor)
 
 
-@pytest.mark.parametrize("selection", ["all", "rgbnir", "rgb"])
+@pytest.mark.parametrize("selection", ["all", "rgbnir", "rgb", ("nir", "red", "green")])
 def test_affine_translation_moves_image_labels_validity_and_partial_padding(
     tmp_path, selection
 ):

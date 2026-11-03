@@ -1,1 +1,1 @@
-"""Small training input, objective and metric helpers; no epoch runner."""
+"""Lightning training, manifest inputs, objective and metric helpers."""

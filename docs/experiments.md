@@ -11,7 +11,9 @@ Each run records dataset release, split/manifest reference, band
 names/order, normalization, model and initialization, resolved recipe, seed,
 budget, participating regions, checkpoint selection, Git commit, runtime,
 status, and output paths. Held-out region and adaptation case are explicit
-fields. Do not infer them from a run name.
+fields. Do not infer them from a run name. Recipes supply a descriptive `name`
+for the automatic `<name>-<UTC timestamp>` run ID and a separate `experiment`
+for assignment selection (currently `baseline` only).
 
 Local machine-readable records are required even when W&B is offline. Keep the
 implementation small; the legacy registry schema is not a compatibility target.
@@ -40,10 +42,9 @@ locally, including the difference from new fine-tuning initialization.
 
 ## Selected rebuild baseline recipe
 
-Task 033D implements model/input and loss/confusion helpers; the epoch runner,
-EMA and saved states remain planned. The user selected PyTorch Lightning for
-033E and the historical starting optimizer, batch and schedule values recorded
-in its [contract](../tasks/033e_training_validation_and_ema.md#selected-starting-recipes).
+The installed training command uses PyTorch Lightning automatic optimization,
+native CSV logging/checkpointing and delayed EMA. It implements the historical
+starting optimizer, batch and schedule values recorded in the [contract](../tasks/033e_training_validation_and_ema.md#selected-starting-recipes).
 This preserves the new preprocessing and test isolation. The user selected the
 existing 0.7 smoothed-BCE / 0.3 Lovasz loss, EMA with decay 0.999, equal epochs
 for the BC comparison, and the newly measured **kelp-positive with-BC training

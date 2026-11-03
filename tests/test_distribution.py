@@ -207,6 +207,20 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             "assert not any(n.startswith('kelpseg.augmentation_debug') for n in sys.modules)",
             cwd=unrelated,
         )
+        # Lightning training components must also exist in runtime-only installs.
+        run(
+            python,
+            "-I",
+            "-c",
+            "import torch; from lightning.pytorch import Trainer; "
+            "from kelpseg.training.module import TrainingModule; "
+            "from kelpseg.training.ema import DelayedEMA; "
+            "from kelpseg.training.settings import load_settings; "
+            "from kelpseg.training.run import run_training; "
+            "assert callable(run_training); "
+            "assert issubclass(TrainingModule, __import__('lightning').pytorch.LightningModule)",
+            cwd=unrelated,
+        )
         probe = run(
             python,
             "-I",
@@ -250,6 +264,7 @@ runpy.run_module("kelpseg", run_name="__main__")
             ("chip", "--help"),
             ("split", "--help"),
             ("pixel-stats", "--help"),
+            ("train", "--help"),
         ):
             run(python, "-I", "-c", lazy_probe, *arguments, cwd=unrelated)
 

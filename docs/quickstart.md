@@ -56,7 +56,8 @@ The output lists the absolute settings-file location, `data_root`, and
 directory existence only. It does not fetch data, scan imagery, check write
 permissions, or verify a dataset or Box backup.
 
-The required `--paths` option chooses exactly one file. There is no search for
+For preparation commands, the required `--paths` option chooses exactly one file.
+Training selects that same machine-paths file through `paths_file` in its recipe. There is no search for
 a settings file in parent folders or automatic fallback. `~` expands to your
 home directory; relative paths inside the TOML resolve against that file's
 directory. Environment-variable expressions such as `$DATA_ROOT` stay literal.
@@ -1059,8 +1060,8 @@ may still be excluded from that experiment. During training, validation loss and
 aggregate chip confusion counts use the disjoint list; test stays held out until
 model selection ends. Post-training tiled prediction/source scoring can combine
 overlapping probabilities separately. The full published release uses the
-[restore recipe above](#restore-and-use-the-full-cabc-chip-release); model training
-and evaluation commands arrive later.
+[restore recipe above](#restore-and-use-the-full-cabc-chip-release); model training is available below;
+post-training evaluation arrives later.
 
 ## Preserved v1 example
 
@@ -1091,8 +1092,8 @@ the v1 chip root. Original v1 paths and detailed results remain in
 ## Model and training inputs (Python)
 
 The installed package now supplies manifest-selected tensors, one SegFormer B3
-model, the binary objective, and pooled confusion helpers. An epoch runner and
-public `train` command are still pending. Use this notebook/Python example to
+model, the binary objective, and pooled confusion helpers. The public `train`
+command below connects these through Lightning. Use this notebook/Python example to
 inspect the full published baseline inputs without reading test payloads:
 
 ```python
@@ -1177,19 +1178,111 @@ inspect `report["confusion_matrix"].sum()` for scored support, and never treat
 zero-support output as evidence of model performance. These helpers provide no
 epoch loop, optimizer policy or checkpoint selection.
 
+## Train and validate
+
+Preview each run before fitting. The preview reads manifests only and does not
+create an output folder or open image arrays:
+
+```bash
+uv run kelpseg train --recipe configs/train/planet8.toml --dry-run
+```
+
+The four explicit recipes reuse the same native collection and assignments:
+
+| Recipe | Ordered inputs |
+|---|---|
+| `planet8.toml` | coastal_blue, blue, green_i, green, yellow, red, rededge, nir |
+| `planet4.toml` | red, green, blue, nir |
+| `planet3.toml` | nir, red, green |
+| `planet_RGB.toml` | red, green, blue |
+
+The existing Python `selection="rgb"` still means red/green/blue. Set
+`variant = "base"` in a copied recipe for the without-BC comparison; keep epochs
+and optimizer policy matched. Production recipes default to `variant = "augmented"`.
+
+`paths_file = "../../paths.local.toml"` selects your machine settings, relative
+to the recipe's directory. Change it if you move the recipe, or use an absolute
+path. Machine roots remain in that separate TOML so they need not be repeated
+in every training recipe. Relative `chips` and `assignments` resolve against
+its `data_root`. Each recipe has a `name` used as the run-ID prefix:
+
+```toml
+name = "planet3"
+experiment = "baseline"
+variant = "augmented"
+paths_file = "../../paths.local.toml"
+```
+
+Each fit receives `<name>-<UTC timestamp>` automatically, printed with the
+resolved output location. Rename a copied recipe in TOML to distinguish a
+comparison; the filename itself does not determine the run name. `experiment`
+selects the assignment scope and is recorded separately from the descriptive
+name. This training stage supports `baseline`; LORO needs its later fold-specific
+normalization work. Dry-run IDs are previews, not reservations;
+a later fit gets its own ID. Unknown settings and empty validation produce
+errors, and existing output folders are never overwritten. No resume command exists yet.
+
+For a bounded local smoke, copy `configs/train/tiny_cpu.toml` and set its
+`chips` and `assignments` to your tiny walkthrough outputs if desired. This
+recipe uses NIR/red/green, float32 CPU, no weight download, two epochs, two
+training microbatches and one validation batch per epoch. It still uses the
+512 canvas and approved preprocessing; limited validation is smoke evidence
+only. Preview and run it:
+
+```bash
+uv run kelpseg train --recipe configs/train/tiny_cpu.toml --dry-run
+uv run kelpseg train --recipe configs/train/tiny_cpu.toml
+```
+
+Production recipes target CUDA bf16 mixed precision with float32 loss, 70
+epochs, seed 42, microbatch 3 and accumulation 8. They use ImageNet-initialized
+SegFormer B3, AdamW (3e-4, betas .9/.95, decay .01 except biases/normalization),
+five warmup epochs, cosine decay to 3e-5 and norm clipping .8. Hardware sizing
+and CUDA verification remain GPU-host work; do not run production on the Mac.
+Workers, pinned memory and persistent workers are explicit machine settings.
+The approved D4 → Affine(p=.5) → SomeOf(2), 5000 cap and exact band constants
+remain fixed. Training uses positive chips; validation includes backgrounds;
+test payloads are never loaded, including after fitting.
+
+Lightning steps the scheduler once per optimizer update. Its initial LR is
+zero; the scheduled LR reaches the peak after the warmup updates and the floor
+after the final update. Thus the last applied update uses the preceding LR.
+The final incomplete accumulation group still performs an optimizer update;
+Lightning divides each microbatch loss by the configured accumulation factor,
+including that final group. The preview reports actual update budget and
+partial groups; effective batch 24 describes complete groups only.
+
+Training and validation each log IoU, precision, recall, F1 and accuracy through
+native TorchMetrics collections. Lightning computes pooled epoch metrics and
+resets their state; these are not averages of per-batch IoUs. Training metrics
+measure the augmented training pass with changing current weights, so they are
+diagnostics, not directly comparable to deterministic validation with EMA.
+`train_loss_step` records each logged training batch loss; `train_loss` and
+`val_loss` are native TorchMetrics valid-pixel-weighted epoch means of batch
+BCE/Lovasz losses. Lovasz is pooled within each batch, not recalculated over the
+whole epoch. The scalar logger receives the collection directly; confusion
+matrices remain available through the Python metric helper, without hand-split
+TN/FP/FN/TP log columns. Validation uses fixed threshold .5.
+Aggregate foreground IoU selects best weights, preserving the earliest tie.
+Zero scored validation support fails rather than selecting a meaningless model.
+EMA (.999) first copies weights after optimizer update 101; earlier validation
+uses current weights. Afterward validation and selected weights use EMA.
+
+Each run writes resolved settings and a run record under `<runs_root>/<run_id>`,
+CSV metrics under `metrics/`, and distinct best/last Lightning checkpoints under
+`checkpoints/`. The checkpoint `state_dict` contains validation weights;
+`current_model_state` retains ordinary weights separately from averaging state.
+These are local training checkpoints, not yet portable prediction bundles or
+verified exact-resume artifacts. Keep them outside Git. Local records work
+offline. `wandb = true` optionally adds native W&B logging to
+`kdorman90-ucla/kelpseg` (install `wandb` in a runtime-only environment first).
+
 ## Later workflows and outputs
 
-The selected future training style is
-`uv run kelpseg train --recipe <recipe-file>`. It is not available yet.
-Training, prediction, scoring, LORO model comparisons, and
-adding a region will gain copyable recipes here when implemented. Most settings
-will live in those recipes, with a few explicit command options.
-
-Later run-producing commands will use `<runs_root>/<run_id>/`, with resolved
-settings/input identities at the root and `checkpoints/`, `metrics/`, and
-`figures/` underneath. This is an agreed layout, not an implemented run manager.
-The reusable real-data walkthrough above covers chipping, loading and source splitting. Current automated
-fixtures use temporary synthetic data, requiring no Box/W&B login, GPU, model weights, or research-data download.
+Portable prediction bundles, exact resume, prediction, scoring, LORO model
+comparisons and adding a region remain later tasks. The reusable walkthrough
+above covers chipping, loading and source splitting. Automated CPU fixtures
+need no Box/W&B login, GPU or model-weight download.
 
 See [data and artifacts](data_artifacts.md) for storage/backup rules and
 [experiments](experiments.md) for model, checkpoint, and run identity rules.

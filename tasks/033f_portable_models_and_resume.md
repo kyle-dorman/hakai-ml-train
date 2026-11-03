@@ -1,6 +1,6 @@
 # Task 033F: Portable models and completed-epoch resume
 
-Status: Planned — 2026-10-28. Not started; the current user request is docs only.
+Status: Next, not started — handoff updated 2026-11-03 after approved 033E.
 Depends on: Completed 033E training/state writing and 033D model construction.
 
 ## Abstract
@@ -20,9 +20,15 @@ Shared parent, 033E saved-state layout, [experiments](../docs/experiments.md),
 Complete small bundle/checkpoint helpers and `tests/test_model_bundle.py`,
 `tests/test_training_resume.py`. A copied `model/` holds `weights.pt` and
 `model.json` with architecture, ordered bands, cap5000, normalization, input/
-padding/nodata policy, threshold and EMA identity. Future resume interface:
-`uv run kelpseg train --resume <run/checkpoints/last.pt> --paths <relocated-paths>`.
-Update actual researcher save/load/resume instructions.
+padding/nodata policy, threshold and EMA identity. Finalize the resume interface
+around the existing recipe-led CLI (`train --recipe ...`): TOML owns `name`,
+`experiment`, `variant` and `paths_file`; fresh runs receive name-prefixed UTC IDs.
+Resume must preserve the saved run identity rather than generate a fresh one.
+Current native Lightning states are `checkpoints/best.ckpt` and `last.ckpt`, with
+validation weights in `state_dict`, ordinary weights in `current_model_state`
+and separate `averaging_state`. Keep native Trainer/checkpoint mechanisms and
+the distinct best/last callbacks. Update researcher save/load/resume instructions.
+No resume interface is implemented yet.
 
 ## Plan/spec
 

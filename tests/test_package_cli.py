@@ -20,7 +20,7 @@ def test_help_keeps_explicit_subcommand_and_no_future_commands() -> None:
     assert "split" in result.stdout
     assert "pixel-stats" in result.stdout
     assert "preview-augmentations" not in result.stdout
-    assert "train" not in {command.name for command in app.registered_commands}
+    assert "train" in {command.name for command in app.registered_commands}
     assert "--version" in result.stdout
     result = runner.invoke(app, ["check-paths", "--help"])
     assert result.exit_code == 0
@@ -36,7 +36,7 @@ def test_version_uses_installed_distribution() -> None:
 @pytest.mark.parametrize(
     ("arguments", "message"),
     [
-        (["train"], "No such command"),
+        (["train"], "Missing option"),
         (["--unknown"], "No such option"),
         (["check-paths"], "Missing option"),
         (["check-paths", "--unknown"], "No such option"),
@@ -121,7 +121,8 @@ def test_required_paths_never_discovers_a_file(
 
 
 @pytest.mark.parametrize(
-    "argument", ["--help", "--version", "check-paths", "organize", "chip", "split"]
+    "argument",
+    ["--help", "--version", "check-paths", "organize", "chip", "split", "train"],
 )
 def test_module_entry_is_lightweight_in_real_process(
     tmp_path: Path, argument: str
@@ -147,7 +148,7 @@ runpy.run_module('kelpseg', run_name='__main__')
     environment = dict(os.environ)
     environment.pop("PYTHONPATH", None)
     arguments = [argument]
-    if argument in ("organize", "chip", "split"):
+    if argument in ("organize", "chip", "split", "train"):
         arguments += ["--help"]
     if argument == "check-paths":
         roots = tmp_path / "roots"
@@ -168,7 +169,7 @@ runpy.run_module('kelpseg', run_name='__main__')
         assert "check-paths" in result.stdout
     elif argument == "--version":
         assert result.stdout.strip() == f"kelpseg {version('kelpseg')}"
-    elif argument in ("organize", "chip", "split"):
+    elif argument in ("organize", "chip", "split", "train"):
         assert "--recipe" in result.stdout
     else:
         assert "Both roots are existing directories." in result.stdout
