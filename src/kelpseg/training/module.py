@@ -2,13 +2,16 @@
 
 import lightning.pytorch as pl
 import torch
+from lightning.pytorch.loggers import WandbLogger
 from torch import nn
 from torchmetrics import MeanMetric, SumMetric
+from torchmetrics.functional.classification import binary_jaccard_index
 
 from kelpseg.models import build_model
-from kelpseg.training.loss import segmentation_loss
+from kelpseg.training.loss import segmentation_loss_components
 from kelpseg.training.metrics import build_metrics
 from kelpseg.training.scheduler import LinearWarmupCosineDecayLR
+from kelpseg.training.visuals import EpochImages
 
 
 def parameter_groups(model):
@@ -61,20 +64,53 @@ class TrainingModule(pl.LightningModule):
             )
         )
         metrics = build_metrics(include_confusion=False)
-        self.train_metrics = metrics.clone(prefix="train_")
-        self.val_metrics = metrics.clone(prefix="val_")
+        self.train_metrics = metrics.clone(prefix="train/")
+        self.val_metrics = metrics.clone(prefix="val/")
         # Metric objects let Lightning own epoch computation/reset. Float64
         # preserves pixel-weighted sums over the full validation collection.
         self.train_loss = MeanMetric().set_dtype(torch.float64)
         self.val_loss = MeanMetric().set_dtype(torch.float64)
+        self.train_bce = MeanMetric().set_dtype(torch.float64)
+        self.val_bce = MeanMetric().set_dtype(torch.float64)
+        self.train_lovasz = MeanMetric().set_dtype(torch.float64)
+        self.val_lovasz = MeanMetric().set_dtype(torch.float64)
         self.val_pixels = SumMetric().set_dtype(torch.float64)
+        self.region_metrics = nn.ModuleDict()
+        self.region_pixels = nn.ModuleDict()
+        self.epoch_images = None
+        self.image_logger = None
+
+    def configure_diagnostics(self, validation_rows):
+        """Register only represented regions before Trainer moves metrics to device."""
+        regions = sorted({row["region"] for row in validation_rows})
+        self.region_metrics = nn.ModuleDict(
+            {
+                region: build_metrics(include_confusion=False).clone(
+                    prefix=f"val_region_{region}/"
+                )
+                for region in regions
+            }
+        )
+        self.region_pixels = nn.ModuleDict(
+            {region: SumMetric().double() for region in regions}
+        )
+        self.epoch_images = EpochImages(validation_rows, self.settings.band_names)
+
+    def on_fit_start(self):
+        self.image_logger = next(
+            (logger for logger in self.loggers if isinstance(logger, WandbLogger)), None
+        )
+
+    def on_train_epoch_end(self):
+        if self.image_logger is not None and self.epoch_images is not None:
+            self.epoch_images.log(self.image_logger, "train", self.global_step)
 
     def forward(self, images):
         return self.model(images)
 
     def training_step(self, batch, batch_idx):
         loss = self._shared_step(batch, "train")
-        self.log("train_loss_step", loss, on_step=True, on_epoch=False)
+        self.log("train/loss_step", loss, on_step=True, on_epoch=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -85,23 +121,55 @@ class TrainingModule(pl.LightningModule):
         targets = batch["target"]
         # Mixed precision applies to the model only; BCE/Lovasz stay float32.
         with torch.autocast(device_type=logits.device.type, enabled=False):
-            loss = segmentation_loss(logits.float(), targets)
+            bce, lovasz = segmentation_loss_components(logits.float(), targets)
+            loss = 0.7 * bce + 0.3 * lovasz
         support = (targets != -100).sum()
-        loss_metric = getattr(self, f"{phase}_loss")
-        loss_metric.update(loss.detach().double(), weight=support.double())
-        self.log(f"{phase}_loss", loss_metric, on_step=False, on_epoch=True)
+        for name, value in (("loss", loss), ("bce", bce), ("lovasz", lovasz)):
+            metric = getattr(self, f"{phase}_{name}")
+            metric.update(value.detach().double(), weight=support.double())
+            self.log(f"{phase}/{name}", metric, on_step=False, on_epoch=True)
+            if phase == "train" and name != "loss":
+                self.log(
+                    f"train/{name}_step", value.detach(), on_step=True, on_epoch=False
+                )
         metrics = getattr(self, f"{phase}_metrics")
-        metrics.update((logits[:, 0] >= 0).long(), targets)
+        predictions = (logits[:, 0] >= 0).long()
+        metrics.update(predictions, targets)
+        if phase == "train":
+            batch_iou = binary_jaccard_index(
+                predictions, targets, ignore_index=-100, zero_division=0
+            )
+            self.log("train/iou_step", batch_iou, on_step=True, on_epoch=False)
         self.log_dict(metrics, on_step=False, on_epoch=True)
+        if (
+            self.image_logger is not None
+            and self.epoch_images is not None
+            and not self.trainer.sanity_checking
+        ):
+            self.epoch_images.collect(batch, predictions, phase, self.current_epoch)
+        if phase == "val" and self.region_metrics:
+            regions = [row["region"] for row in batch["metadata"]]
+            for region in sorted(set(regions)):
+                indices = [i for i, value in enumerate(regions) if value == region]
+                regional = self.region_metrics[region]
+                regional.update(predictions[indices], targets[indices])
+                self.log_dict(regional, on_step=False, on_epoch=True)
+                pixels = self.region_pixels[region]
+                pixels.update((targets[indices] != -100).sum().double())
+                self.log(
+                    f"val_region_{region}/pixels", pixels, on_step=False, on_epoch=True
+                )
         if phase == "val":
             self.val_pixels.update(support.double())
-            self.log("val_pixels", self.val_pixels, on_step=False, on_epoch=True)
+            self.log("val/pixels", self.val_pixels, on_step=False, on_epoch=True)
         return loss
 
     def on_validation_epoch_end(self):
         if self.val_pixels.compute() == 0:
             raise ValueError("Validation has no scored pixels; cannot select a model.")
-        self.log("optimizer_updates", float(self.global_step))
+        self.log("trainer/optimizer_updates", float(self.global_step))
+        if self.image_logger is not None and self.epoch_images is not None:
+            self.epoch_images.log(self.image_logger, "val", self.global_step)
 
     def configure_optimizers(self):
         settings = self.settings

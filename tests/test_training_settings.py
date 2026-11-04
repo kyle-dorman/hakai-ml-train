@@ -42,6 +42,7 @@ def test_recipe_order_and_historical_defaults(recipe, bands):
     assert settings.precision == "bf16-mixed"
     assert settings.accelerator == "cuda"
     assert settings.encoder_weights == "imagenet"
+    assert settings.deterministic
 
 
 def test_rgb_selector_unchanged_and_nir_recipe_explicit():
@@ -89,6 +90,8 @@ def test_cpu_recipe_separates_bounded_float32_smoke():
         {"limit_train_batches": True},
         {"limit_val_batches": 0.0},
         {"wandb": "false"},
+        {"deterministic": "false"},
+        {"deterministic": 0},
         {"chips": ""},
         {"clip_value": 4000},
         {"mean": (0,) * 8},
@@ -124,3 +127,9 @@ def test_machine_path_reference_resolves_relative_to_recipe(tmp_path, monkeypatc
     assert settings.variant == "base"
     recipe.write_text("")
     assert load_settings(recipe).paths_file == str(recipe_dir / "paths.local.toml")
+
+
+def test_recipe_can_disable_deterministic_algorithms(tmp_path):
+    recipe = tmp_path / "train.toml"
+    recipe.write_text("deterministic = false\n")
+    assert not load_settings(recipe).deterministic

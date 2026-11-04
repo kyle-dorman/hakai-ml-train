@@ -2,8 +2,11 @@
 
 Status: In progress — 2026-11-03. Linux setup, CUDA/bf16, staged data,
 tiny training, portable loading and deterministic completed-epoch continuation
-pass. Final sizing passes; user will launch a ten-epoch with-BC pilot before the
-full baseline. Changes remain uncommitted for user review.
+pass. The user stopped the ten-epoch pilot and requested throughput tuning.
+Seventeen benchmark cases and ordinary multiworker GPU resume checks pass;
+the user completed the twenty-epoch fast pilot and validation/EMA review.
+Logging diagnostics are ready with changes uncommitted; longer-run recipe
+selection and Box backup remain pending.
 The user selected remote-first implementation: finish the small entry checklist
 locally, then test and iterate on the external machine.
 Depends on: Completed Task 033A–G, published CA/BC chips and tiny v2.
@@ -385,3 +388,309 @@ W&B is enabled. Preview saved to
 Ruff format/check, guide shell syntax and `git diff --check` pass. No new
 behavioral tests needed for this recipe/documentation-only change. All changes
 remain uncommitted and unpushed.
+
+## Performance benchmark plan — 2026-11-04
+
+The user stopped the pilot and authorized benchmarking worker counts,
+deterministic execution and larger microbatches. Keep existing methods when
+measurements show they are not a bottleneck. Do not commit/push or start another
+pilot. Benchmark only full-release training/validation selections on the RTX
+3090, sequentially, with real model/loss/augmentation and effective batch 24.
+Compare workers 0/2/4/8, native deterministic on/off, and microbatches 3/6/12/24
+with matching accumulation. Measure steady samples/sec, loader wait, validation,
+checkpoint time and peak VRAM, separating startup from steady throughput.
+Use two short epochs to include persistent-worker behavior. Larger microbatches
+change batch-pooled Lovasz semantics; report this separately from throughput-only
+changes. Confirm leading settings on a longer bounded sample before choosing.
+Evidence/harnesses stay outside Git under
+`/home/sky/data/analyses/task034_performance_v1`; remove redundant benchmark
+weights after each run to keep disposable smoke artifacts bounded. If workers
+help, add ordinary completed-epoch continuation that restores training state
+while explicitly allowing changed worker augmentation streams. If disabling
+determinism helps, expose a plain setting while preserving the default. Run
+focused correctness tests and GPU continuation checks for any implementation
+change. Update researcher guidance and handoff, leaving all changes reviewable.
+
+## Throughput results — 2026-11-04
+
+The user accepted randomness on continuation and requested speed improvements
+only where measurements identify a bottleneck. This supersedes the earlier
+zero-worker/exact-replay launch requirement. No production restart is authorized
+from this chat; the user reviews changes and starts the next pilot.
+
+Method: real ImageNet-initialized SegFormer B3, native eight-band with-BC
+training/validation selections, approved augmentation/loss/TorchMetrics, bf16,
+CSV logging and normal best/last writes. Effective batch stays 24. Each case
+runs two declared smoke epochs; short cases use 192 training and 48 validation
+samples per epoch, longer confirmations 768/192. Exclude 24 warmup training
+samples per epoch from steady throughput. Timings synchronize CUDA, and loader
+wait includes transfer/loop time before the next training-batch callback.
+Initialization, worker startup, full-epoch wall time and checkpoint time are
+recorded separately. Cases run sequentially on the otherwise idle RTX 3090.
+No test arrays were opened. W&B was off for benchmarks; live tracking overhead
+is not included. Results establish throughput/operation, not scientific quality.
+
+| Case | Workers | Microbatch | Deterministic | Train samples/s | Wait ms/batch | Peak GiB |
+|---|---:|---:|---|---:|---:|---:|
+| b3-w0-det | 0 | 3 | True | 6.70 | 261.5 | 3.82 |
+| b3-w2-det | 2 | 3 | True | 15.62 | 1.9 | 3.82 |
+| b3-w4-det | 4 | 3 | True | 15.63 | 2.0 | 3.82 |
+| b3-w8-det | 8 | 3 | True | 15.69 | 1.9 | 3.82 |
+| b3-w2-fast | 2 | 3 | False | 21.18 | 40.1 | 3.84 |
+| b3-w4-fast | 4 | 3 | False | 29.02 | 1.9 | 3.84 |
+| b3-w8-fast | 8 | 3 | False | 27.94 | 2.4 | 3.84 |
+| b4-w4-fast | 4 | 4 | False | 35.30 | 2.7 | 4.79 |
+| b6-w2-fast | 2 | 6 | False | 21.32 | 144.5 | 6.70 |
+| b6-w4-fast | 4 | 6 | False | 42.88 | 4.0 | 6.70 |
+| b12-w4-fast | 4 | 12 | False | 46.33 | 19.0 | 12.39 |
+| b12-w8-fast | 8 | 12 | False | 47.82 | 8.4 | 12.39 |
+| confirm-b6-w4-fast | 4 | 6 | False | 42.11 | 8.1 | 6.70 |
+| confirm-b8-w4-fast | 4 | 8 | False | 42.51 | 18.3 | 8.60 |
+| confirm-b12-w4-fast | 4 | 12 | False | 43.26 | 35.6 | 12.39 |
+| confirm-b12-w8-fast | 8 | 12 | False | 47.61 | 8.2 | 12.39 |
+| b24-w4-fast | 4 | 24 | False | OOM | — | >23 |
+
+Batch 24 failed with 23.12 GiB allocated and only about 1 MiB free when another
+192 MiB was needed. This was a capacity failure, not evidence for allocator
+or recovery machinery; the failed run/log remain, and the process exited.
+
+The selected fast candidate is microbatch 12 × accumulation 2, eight persistent
+workers and `deterministic=false`: 47.61 samples/s in the longer confirmation,
+12.39 GiB allocated / 12.88 GiB reserved. Four workers suffice for batch 3;
+eight offered no benefit there. With batch 12, eight workers reduce the renewed
+loader bottleneck enough to improve 43.26 to 47.61 samples/s. Batch 8 at four
+workers and batch 6 at four workers were about 42 samples/s. The selected case
+is about 7.1× the original 6.70 samples/s. Keep bf16, pinned memory, default
+prefetching, augmentation, model, optimizer, schedule, metrics and checkpoint
+frequency unchanged; no evidence justifies changing them. Validation is about
+99 samples/s and best+last writes about 3.2 seconds/epoch, too small a runtime
+share to justify reducing either.
+
+The selected projection is 191.6 seconds/epoch: 31.9 minutes for ten epochs or
+3.7 hours for seventy before normal variation. Budget 35–45 minutes and 4–5
+hours respectively; these are bounded-sample estimates, not guarantees.
+
+Added `configs/train/planet8_gpu_10ep_fast.toml`, keeping the original pilot and
+70-epoch reference untouched. W&B remains enabled in the pilot. It has a distinct
+`planet8-cabc-10ep-fast` identity; preview reports 710 training / 78 validation
+batches per epoch, 355 optimizer updates/epoch, 3,550 total, effective batch 24,
+and the same 8,518/933 training/validation selections. Final training microbatch
+has 10 samples, so the final optimizer group still has 22 samples. Five warmup
+epochs and five cosine epochs are unchanged. Larger microbatches change the
+batch-pooled Lovasz objective and batch-normalization statistics; this is an
+explicit pilot variation, not numerical equivalence to batch 3. Comparisons
+must use matching microbatch settings. The batch-3 alternative with four
+workers and nondeterministic execution measured 29 samples/s without changing
+the microbatch loss grouping.
+
+Implementation: plain boolean `deterministic` (default true) in the existing
+schema, passed to Lightning and recorded in run metadata; ordinary multiworker
+completed-epoch continuation saves identity, progress and main/loader random
+state while omitting unadvanced parent augmentation state. Native Lightning
+restores model/optimizer/scheduler/EMA; worker streams restart and sample order
+may differ. Existing strict identity/schedule checks remain. Missing deterministic
+in immediately preceding checkpoints is interpreted as true; older nondeterministic
+GPU smoke artifacts have no exact-replay guarantee. No worker-state capture,
+new checkpoint framework, dependency, hashing or recovery service was added.
+
+External evidence: `/home/sky/data/analyses/task034_performance_v1` contains the
+benchmark harness, 17 case logs/reports, `summary.csv`, selected recipe preview
+and check logs. Redundant case weights were removed after measurement; original
+pilot outputs were untouched. Ordinary multiworker GPU continuation is exercised
+separately under `/home/sky/data/analyses/task034_performance_resume_v1`.
+
+### Fast continuation and final handoff
+
+On real B3/CUDA/bf16 with batch 12 × accumulation 2, eight persistent workers
+and deterministic execution off, ran a declared two-epoch smoke of 202 training
+microbatches/epoch (101 updates/epoch). Deliberately stopped after the first
+completed last checkpoint, then resumed with the same run identity and schedule.
+Before resumed updates, ordinary model weights, optimizer, scheduler and EMA
+state matched the saved checkpoint exactly. The checkpoint held EMA count 1 at
+step 101; completion reached step 202 / EMA count 102. Worker transform state is
+intentionally absent. No final-weight replay claim was made. Exported weights
+match the validation-selected EMA state and offline bundle loading predicts a
+512×512 validation image successfully. `verification.json` and
+`restored-state.json` retain these results under the continuation evidence root.
+Peak GPU allocation remained about 12.4 GiB. Original deterministic evidence
+plus the new representative continuation artifacts occupy about 3.3 GiB total;
+benchmark case weights are removed, and the user's stopped pilot is untouched.
+
+Validation: 95 focused CPU resume/settings/runner/loop/bundle/CLI tests passed,
+including state restoration with persistent workers and old zero-worker identity
+compatibility. Ruff format/check, all-file pre-commit, 151 relative link targets,
+GPU-guide shell syntax and `git diff --check` pass. Native Lightning/fork notices
+remain warnings. Independent review found no restoration defect; clarified that
+missing deterministic defaults to the immediately preceding true policy, not a
+promise about older nondeterministic GPU smokes. No dependencies changed.
+
+Changed repo files: the existing training settings/runner/resume and CLI help;
+three focused test files; one separate fast pilot TOML; architecture/experiments,
+quickstart/GPU guide, current queue and task records. No commit or push performed.
+No replacement pilot or production training started; only bounded benchmarks
+and verification fitting ran.
+
+Exact next action: user reviews the uncommitted changes, commits/pushes when
+ready, then launches `configs/train/planet8_gpu_10ep_fast.toml` in tmux using a
+fresh log filename. Assess that pilot before selecting the longer baseline.
+Task 034 remains in progress pending the user's launch/first-epoch monitoring
+and stable-output Box backup; do not start Task 035 here.
+
+## Twenty-epoch pilot update — 2026-11-04
+
+User selected twenty epochs for the fast pilot. Renamed the uncommitted recipe
+to `configs/train/planet8_gpu_20ep_fast.toml` and run name to
+`planet8-cabc-20ep-fast`; changed epochs from 10 to 20. Five warmup epochs remain,
+followed by fifteen cosine epochs. All other fast settings and W&B remain.
+This supersedes the ten-epoch fast recipe and launch action above; the original
+batch-3 ten-epoch reference remains available. User reviews and launches the new
+recipe; do not commit, push or start training here.
+
+Validation: metadata-only preview passes: 20 epochs, 355 updates/epoch, 7,100
+total updates; W&B enabled. Ruff format/check and diff checks pass. No training
+started; changes remain uncommitted.
+
+## Slash-grouped metric logging plan — 2026-11-04
+
+User requested `train/` and `val/` metric names for W&B sections and research
+into W&B logging guidance. Keep native Lightning logging/global-step handling,
+pooled metric/loss definitions, and logging frequency. Rename logged metrics
+and checkpoint monitor together; preserve old `val_iou` checkpoint callback
+selection state on continuation. Add focused logging/checkpoint tests, update
+researcher docs, and leave changes uncommitted. The current 20-epoch process
+continues using its already-loaded code; do not restart it or run GPU tests.
+
+### Slash-grouped logging outcome
+
+Renamed native Lightning metrics to `train/`, `val/` and `trainer/` prefixes
+in the training module and switched best-checkpoint monitoring to `val/iou`.
+The resume callback maps preceding `val_iou` callback state so the best score
+and earliest selected checkpoint survive continuation and relocation. Loss and
+pooled metric definitions, logging frequency and native global-step handling
+are unchanged. Updated loop/runner tests, quickstart and experiment contract;
+the latter links the official W&B panel-grouping and Lightning guidance.
+
+Validation: 37 focused CPU loop/runner/resume/bundle tests pass, including CSV
+names and legacy best-score restoration with zero and two workers. Ruff format,
+Ruff check and all-file pre-commit pass. No new external training artifacts,
+commits, pushes or training launches. The active pilot retains its already-loaded
+metric names; the user can review these changes for the next start/continuation.
+Task 034 remains open for pilot assessment and Box backup of stable outputs.
+
+## Training batch IoU follow-up — 2026-11-04
+
+User requested live batch IoU alongside pooled epoch metrics. Add a stateless
+TorchMetrics `train/iou_step` calculation with the same threshold/ignore policy,
+keep epoch accumulators unchanged, verify distinct batch and pooled values in
+the CPU CSV integration test, and document logging cadence. Do not restart the
+active pilot, commit or push.
+
+Outcome: added `train/iou_step` using the existing TorchMetrics functional API;
+pooled `train/iou` and all validation metrics remain unchanged. The CSV test
+verifies batch IoUs [1, 0, 0, 2/3] versus pooled epoch IoUs [1/4, 1/2], including
+ignored pixels and epoch resets. Updated runner metric-name assertion and
+quickstart/experiment documentation. All 22 focused loop/runner CPU tests,
+Ruff format/check and diff checks pass. No training launch, commit or push.
+Next action: user reviews changes for their next start/resume; current pilot
+continues with already-loaded code. Task 034 remains in progress.
+
+## Completed-pilot validation analysis — 2026-11-04
+
+User requested validation predictions and regional/background error analysis
+while locating a representative historical W&B run. Ran a bounded external
+analysis using existing validation datasets and epoch-18/20 EMA weights; no
+Task 035/036 implementation or test-payload evaluation. Evidence and plain
+analysis scripts are under `/home/sky/data/analyses/task034_pilot20_review`.
+The validation subfolder retains best prediction arrays, identity-preserving
+chip CSVs, region/source confusion summaries, visual examples and report.txt.
+
+All 933 disjoint validation chips (53 sources, regions 001-010) reproduce logged
+IoU/loss: best .68512695, last .68398852. Background-only FPR is .00426% across
+546 chips. Region 004/006 recall and region 008 false positives warrant review.
+Epoch 18→20 BCE and Brier improve slightly; increasing Lovasz explains the late
+combined-loss rise. Earlier overfit wording is too strong without earlier
+checkpoint comparisons. Visuals show missed fragmented labeled patches and
+filled-in predicted patches in selected extremes; no label-correctness claim.
+Only selected chip coverage is scored, not complete reconstructed TIFFs.
+
+No training launch, commit, push or Box upload. Exact next action: compare the
+user's representative W&B run with matched objective/data/EMA semantics before
+selecting a further training change; back up stable run/analysis outputs to Box.
+Task 034 remains in progress.
+
+## Separate loss component logging — 2026-11-04
+
+Add unweighted smoothed BCE and Lovasz step/epoch diagnostics without changing
+the 0.7/0.3 objective, valid-pixel averaging, or checkpoint selection. Compute
+components once, retain the scalar loss helper, test weighting/reset/ignored
+pixels and native CSV logging, then update researcher docs. No launch or Git
+commit/push; additional logging suggestions remain separate from implementation.
+
+Outcome: training/validation now log unweighted `bce` and `lovasz` epoch means
+and training `bce_step`/`lovasz_step`, alongside existing combined loss. BCE
+retains 0.1 smoothing. Components are computed once per forward pass and detached
+for logging; the scalar helper and training objective remain unchanged. Native
+MeanMetric accumulation uses the same valid-pixel weights and epoch resets.
+Changed loss/module, focused loop tests, quickstart and experiment contract.
+All 37 objective/loop/runner/resume CPU tests pass, including ignored support,
+component reconstruction, CSV output/reset and completed-epoch continuation.
+Ruff format/check, all-file pre-commit and diff checks pass. No run launched,
+recipe changed, commit or push. Next: user reviews logging and selects the
+longer-run recipe/checkpoint policy; Task 034 remains in progress.
+
+## W&B prediction panels and regional validation plan — 2026-11-04
+
+Use existing batch predictions for bounded epoch media: one fixed positive
+validation chip per region when available plus two background examples, and
+four samples from shuffled augmented training. Native W&B image/mask logging
+preserves identity captions and ignored pixels without extra inference. Pool
+validation metrics per region from existing metadata and retain global selection.
+Test media selection/alignment, native offline W&B serialization, regional pooling
+and epoch reset. Keep implementation in a small diagnostics helper; no launch,
+commit or push, and no changes to the training recipe.
+
+Outcome: added `training/visuals.py` with deterministic region/background sample
+selection and bounded CPU media collection from existing forwards. Runner
+registers validation diagnostics before Trainer setup; module logs epoch media
+through native WandbLogger and pools registered per-region TorchMetrics with
+valid support. Images retain aligned augmented targets and ignored pixels;
+validation removes loading padding. RGB or NIR/red/green captions explain display
+stretch and retain source/date/window identity. No additional model pass or
+random-number consumption. Global selection and loss remain unchanged.
+
+Validation: 32 focused CPU media/loop/runner/resume tests pass. Offline native
+W&B image/mask serialization passes; no online test run was created. Tests cover
+stable selection, sample bounds, transformed-canvas masking, region pooling with
+unequal valid support, epoch reset, and completed-epoch resume. Ruff format/check,
+all-file pre-commit and diff checks pass. Quickstart/experiment docs describe
+panel controls, sample policy, limits and regional metric interpretation. No
+production training, recipe changes, commit or push. Exact next action: user
+reviews changes and launches the selected future run with W&B enabled; that run
+will upload epoch media and regional metrics. Task 034 remains in progress.
+
+## Diagnostics simplicity review — 2026-11-04
+
+Review the recent logging/media/regional changes against plain-function and
+minimal-bookkeeping guidance. Initialize optional state explicitly, resolve the
+W&B logger once at fit start, simplify sample selection, and separate W&B-free
+sampling tests from optional native integration. Exercise actual epoch hooks
+with a bounded offline CPU fit; preserve metrics/media policy and user changes.
+
+Review outcome: replaced missing-attribute checks with explicitly initialized
+empty metrics/optional media state, and resolve the native W&B logger once at
+fit start instead of searching each batch. Sample selection now sorts once and
+uses ordinary loops, stopping after two extra background chips; no generator
+reads a list while extending it. Kept native TorchMetrics/WandbLogger and the
+small media helper; no new configuration layer, dependency or framework.
+
+Separated bounded sampling/reset checks from optional W&B availability, and
+added a real two-epoch offline Trainer integration test proving both phase
+panels carry epoch/global-step captions and clear their buffers. Across focused
+objective/loop/runner/resume/media checks, 42 tests pass (41 in the initial
+suite plus the corrected media integration case; all four media tests rerun).
+Ruff format/check, all-file pre-commit and diff checks pass. Corrected stale
+queue/task status to reflect the completed pilot. No further correctness issue
+found in reviewed logging paths; online dashboard appearance remains unverified.
+No training recipe changes, production launch, commit or push. Next action stays
+user review and selection of the longer-run recipe/checkpoint policy, with Box
+backup of stable outputs; Task 034 remains in progress.

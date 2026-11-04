@@ -156,6 +156,19 @@ def test_native_fit_writes_local_checkpoints_and_never_reads_test(
     assert state["averaging_state"]["n_averaged"] == 0
     assert state["current_model_state"].keys() == state["state_dict"].keys()
     assert Path(report["validation_csv"]).is_file()
+    with Path(report["validation_csv"]).open(newline="") as stream:
+        names = csv.DictReader(stream).fieldnames
+    assert {
+        "train/loss",
+        "train/loss_step",
+        "train/iou_step",
+        "train/iou",
+        "val/loss",
+        "val/iou",
+        "val/pixels",
+        "trainer/optimizer_updates",
+    } <= set(names)
+    assert "val_iou" not in names and "train_loss" not in names
     saved = json.loads((paths.runs_root / "fit" / "run.json").read_text())
     assert saved["status"] == "complete" and saved["optimizer_updates_actual"] == 4
 
@@ -276,7 +289,10 @@ def test_recipe_only_cli_resolves_machine_paths_and_previews_auto_id(
     assert "--run-id" not in help_result.stdout
 
 
-def test_completed_epoch_runner_resume_and_recipe_cli_preview(tmp_path, monkeypatch):
+@pytest.mark.parametrize(("workers", "deterministic"), [(0, True), (2, False)])
+def test_completed_epoch_runner_resume_and_recipe_cli_preview(
+    tmp_path, monkeypatch, workers, deterministic
+):
     """Resume the actual runner without new identity or pretrained initialization."""
     from lightning.pytorch.callbacks import Callback
     from typer.testing import CliRunner
@@ -286,6 +302,12 @@ def test_completed_epoch_runner_resume_and_recipe_cli_preview(tmp_path, monkeypa
     from kelpseg.cli import app
 
     settings, paths = _inputs(tmp_path)
+    settings = replace(
+        settings,
+        num_workers=workers,
+        persistent_workers=bool(workers),
+        deterministic=deterministic,
+    )
     native_trainer = run.Trainer
     observed_initialization = []
 
@@ -312,6 +334,19 @@ def test_completed_epoch_runner_resume_and_recipe_cli_preview(tmp_path, monkeypa
         checkpoint = paths.runs_root / "same-run" / "checkpoints" / "last.ckpt"
         assert checkpoint.is_file()
         assert not (checkpoint.parent.parent / "model").exists()
+        saved_checkpoint = torch.load(checkpoint, weights_only=False)
+        callbacks = saved_checkpoint["callbacks"]
+        best_key = next(
+            key for key, value in callbacks.items() if value.get("monitor") == "val/iou"
+        )
+        prior_best = callbacks.pop(best_key)
+        prior_best["monitor"] = "val_iou"
+        # A score of 1 cannot be beaten; failure to restore would select epoch 1.
+        prior_best["best_model_score"] = torch.tensor(1.0)
+        prior_best["best_k_models"] = {prior_best["best_model_path"]: torch.tensor(1.0)}
+        prior_best["kth_value"] = torch.tensor(1.0)
+        callbacks[best_key.replace("val/iou", "val_iou")] = prior_best
+        torch.save(saved_checkpoint, checkpoint)
         with pytest.raises(ValueError, match="recipe or selected memberships"):
             run.run_training(replace(settings, epochs=3), paths, resume=checkpoint)
         with pytest.raises(ValueError, match="saved run ID"):
@@ -358,6 +393,8 @@ def test_completed_epoch_runner_resume_and_recipe_cli_preview(tmp_path, monkeypa
         assert result["run_id"] == "same-run"
         assert result["status"] == "complete"
         assert result["optimizer_updates_actual"] == 4
+        assert result["best_validation_iou"] == 1.0
+        assert torch.load(result["best_checkpoint"], weights_only=False)["epoch"] == 0
         assert observed_initialization[-1] is None
         assert Path(result["model_bundle"], "weights.pt").is_file()
         assert (relocated / "same-run" / "metrics" / "metrics.csv").is_file()

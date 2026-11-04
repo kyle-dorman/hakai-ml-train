@@ -62,9 +62,15 @@ completed-epoch resume; eight production metadata previews pass.
 is in progress.** The [entry checklist](gpu_setup.md) has been followed on the RTX 3090 host.
 Frozen installation, CUDA/bf16, staged-data inventory, tiny training, copied
 bundle prediction, eight metadata previews and deterministic GPU EMA/resume
-checks pass. The user selected a ten-epoch eight-band with-BC pilot with W&B, and will
-review/commit changes and launch it themselves. The recipe is prepared; no
-production or pilot training has started.
+checks pass. The user started then stopped the ten-epoch eight-band with-BC
+pilot and requested throughput benchmarks. Seventeen cases identified a faster
+batch-12/eight-worker recipe, with deterministic execution off; ordinary
+multiworker resume restores training state while worker randomness restarts.
+The user completed the twenty-epoch fast pilot; validation prediction and EMA
+comparisons are recorded in Task 034. Component losses, epoch prediction panels
+and regional metrics are prepared for the next run. Next: review uncommitted
+changes, select the longer-run recipe/checkpoint policy, and back up outputs to
+Box. No longer run has been launched.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in

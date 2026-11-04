@@ -18,8 +18,10 @@ def binary_targets(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     return targets
 
 
-def segmentation_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-    """0.7 BCE (0.1 label smoothing) + 0.3 batch-pooled Lovasz hinge.
+def segmentation_loss_components(
+    logits: torch.Tensor, targets: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return unweighted BCE (0.1 smoothing) and batch-pooled Lovasz hinge.
 
     Ignore -100 in both terms. Entirely ignored batches return differentiable
     zero with zero gradients; they contribute no evidence to the objective.
@@ -28,10 +30,17 @@ def segmentation_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tens
     targets = binary_targets(logits, targets)
     valid = targets != -100
     if not valid.any():
-        return logits.sum() * 0
+        zero = logits.sum() * 0
+        return zero, zero
     smoothed = targets[valid].to(logits.dtype) * 0.9 + 0.05
     bce = F.binary_cross_entropy_with_logits(logits[:, 0][valid], smoothed)
     lovasz = LovaszLoss(mode="binary", ignore_index=-100, per_image=False)(
         logits, targets
     )
+    return bce, lovasz
+
+
+def segmentation_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+    """Return the approved 0.7 BCE + 0.3 Lovasz objective."""
+    bce, lovasz = segmentation_loss_components(logits, targets)
     return 0.7 * bce + 0.3 * lovasz

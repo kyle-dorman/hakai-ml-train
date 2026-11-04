@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader, Dataset
 from kelpseg.training.ema import DelayedEMA
 from kelpseg.training.module import TrainingModule
 from kelpseg.training.resume import TrainingResume, build_resume_identity, load_resume
+from kelpseg.training.run import seed_worker
 from kelpseg.training.settings import TrainingSettings
 
 
@@ -39,26 +40,39 @@ class StopAfterEpoch(Callback):
         trainer.should_stop = True
 
 
-def fit_run(path, count, stop=False, checkpoint=None):
+def fit_run(path, count, stop=False, checkpoint=None, workers=0, observed=None):
     pl.seed_everything(42)
     settings = TrainingSettings(
         epochs=2,
         warmup_epochs=1,
-        num_workers=0,
-        persistent_workers=False,
+        num_workers=workers,
+        persistent_workers=bool(workers),
         accelerator="cpu",
         precision="32-true",
         encoder_weights=None,
     )
-    train = DataLoader(
-        RandomImages(count), shuffle=True, generator=torch.Generator().manual_seed(42)
+    options = dict(
+        num_workers=workers,
+        persistent_workers=bool(workers),
+        worker_init_fn=seed_worker,
     )
-    val = DataLoader(RandomImages(1), generator=torch.Generator().manual_seed(43))
+    train = DataLoader(
+        RandomImages(count),
+        shuffle=True,
+        generator=torch.Generator().manual_seed(42),
+        **options,
+    )
+    val = DataLoader(
+        RandomImages(1), generator=torch.Generator().manual_seed(43), **options
+    )
     module = TrainingModule(
         settings, nn.Sequential(nn.Dropout2d(0.1), nn.Conv2d(3, 1, 1))
     )
     resume = TrainingResume(
-        "saved-name", {"settings": {"num_workers": 0, "epochs": 2}}, train, val
+        "saved-name",
+        {"settings": {"num_workers": workers, "epochs": 2, "deterministic": True}},
+        train,
+        val,
     )
     last = ModelCheckpoint(
         dirpath=path,
@@ -71,6 +85,31 @@ def fit_run(path, count, stop=False, checkpoint=None):
     callbacks = [DelayedEMA(), resume, last]
     if stop:
         callbacks.append(StopAfterEpoch())
+    if observed is not None:
+        saved = torch.load(checkpoint, weights_only=False)
+
+        class CheckRestoredState(Callback):
+            def on_train_start(self, trainer, pl_module):
+                assert_equal(pl_module.state_dict(), saved["current_model_state"])
+                assert_equal(
+                    trainer.optimizers[0].state_dict(), saved["optimizer_states"][0]
+                )
+                assert_equal(
+                    trainer.lr_scheduler_configs[0].scheduler.state_dict(),
+                    saved["lr_schedulers"][0],
+                )
+                ema = next(c for c in trainer.callbacks if isinstance(c, DelayedEMA))
+                assert_equal(
+                    ema._average_model.module.state_dict(), saved["state_dict"]
+                )
+                assert_equal(
+                    ema._average_model.n_averaged,
+                    saved["averaging_state"]["n_averaged"],
+                )
+                assert trainer.global_step == saved["global_step"]
+                observed["restored"] = True
+
+        callbacks.append(CheckRestoredState())
     trainer = pl.Trainer(
         accelerator="cpu",
         devices=1,
@@ -140,6 +179,24 @@ def test_completed_epoch_resume_matches_uninterrupted(tmp_path, count):
     assert int(resumed["averaging_state"]["n_averaged"]) == max(0, count * 2 - 100)
 
 
+def test_persistent_worker_resume_restores_training_state_and_advances(tmp_path):
+    partial = fit_run(tmp_path / "workers", 102, stop=True, workers=2)
+    assert partial["epoch"] == 0
+    assert int(partial["averaging_state"]["n_averaged"]) == 2
+    assert partial["training_resume"]["transform"] is None
+    checkpoint = tmp_path / "workers/last.ckpt"
+    load_resume(checkpoint, partial["training_resume"]["identity"])
+    observed = {}
+    resumed = fit_run(
+        tmp_path / "workers", 102, checkpoint=checkpoint, workers=2, observed=observed
+    )
+    assert observed["restored"]
+    assert resumed["training_resume"]["run_id"] == "saved-name"
+    assert resumed["epoch"] == 1
+    assert resumed["global_step"] == 204
+    assert int(resumed["averaging_state"]["n_averaged"]) == 104
+
+
 def test_resume_identity_and_boundary_errors(tmp_path):
     from types import SimpleNamespace
 
@@ -191,13 +248,15 @@ def test_resume_identity_and_boundary_errors(tmp_path):
         load_resume(checkpoint, identity)
 
 
-def test_resume_rejects_workers_and_exhausted_budget(tmp_path):
+def test_resume_rejects_exhausted_budget(tmp_path):
     checkpoint = tmp_path / "last.ckpt"
-    for workers, epoch, message in ((2, 0, "num_workers"), (0, 1, "already completed")):
-        identity = {"settings": {"num_workers": workers, "epochs": 2}}
+    for workers in (0, 2):
+        identity = {
+            "settings": {"num_workers": workers, "epochs": 2, "deterministic": True}
+        }
         torch.save(
             {
-                "epoch": epoch,
+                "epoch": 1,
                 "training_resume": {
                     "identity": identity,
                     "completed_epoch": True,
@@ -205,5 +264,25 @@ def test_resume_rejects_workers_and_exhausted_budget(tmp_path):
             },
             checkpoint,
         )
-        with pytest.raises(ValueError, match=message):
+        with pytest.raises(ValueError, match="already completed"):
             load_resume(checkpoint, identity)
+
+
+def test_old_zero_worker_identity_defaults_to_deterministic(tmp_path):
+    checkpoint = tmp_path / "last.ckpt"
+    identity = {"settings": {"num_workers": 0, "epochs": 2, "deterministic": True}}
+    torch.save(
+        {
+            "epoch": 0,
+            "training_resume": {
+                "run_id": "existing",
+                "completed_epoch": True,
+                "identity": {"settings": {"num_workers": 0, "epochs": 2}},
+            },
+        },
+        checkpoint,
+    )
+    assert load_resume(checkpoint, identity)["run_id"] == "existing"
+    identity["settings"]["deterministic"] = False
+    with pytest.raises(ValueError, match="recipe or selected memberships"):
+        load_resume(checkpoint, identity)

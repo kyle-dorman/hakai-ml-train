@@ -36,13 +36,15 @@ def build_resume_identity(settings, inputs):
 
 def load_resume(path, identity):
     """Only the last completed epoch from this implementation can resume."""
-    if identity["settings"]["num_workers"] != 0:
-        raise ValueError("Exact completed-epoch resume requires num_workers = 0.")
     checkpoint = torch.load(Path(path), map_location="cpu", weights_only=False)
     saved = checkpoint.get("training_resume")
     if saved is None or not saved["completed_epoch"]:
         raise ValueError("Resume requires a last checkpoint from a completed epoch.")
-    if saved["identity"] != identity:
+    # The immediately preceding runner hardcoded deterministic=True. Interpret
+    # its missing field that way; earlier GPU smokes have no replay guarantee.
+    saved_identity = copy.deepcopy(saved["identity"])
+    saved_identity["settings"].setdefault("deterministic", True)
+    if saved_identity != identity:
         raise ValueError(
             "Resume recipe or selected memberships changed; start a fresh run."
         )
@@ -75,9 +77,9 @@ def _restore_transform(transform, state):
 class TrainingResume(Callback):
     """Save only missing random state; Lightning owns all training state.
 
-    Worker-process augmentation streams cannot be captured here. Exact resume
-    is deliberately limited to zero workers, with dedicated loader generators
-    so iterator creation does not perturb model randomness.
+    Worker-process augmentation streams restart on resume. Training state still
+    continues from the completed epoch, but worker draws and sample order may
+    differ. Zero workers retain the saved augmentation stream for exact replay.
     """
 
     def __init__(self, run_id, identity, train_loader, val_loader):
@@ -95,8 +97,6 @@ class TrainingResume(Callback):
         self.completed_epoch = True
 
     def on_save_checkpoint(self, trainer, pl_module, checkpoint):
-        if self.train_loader.num_workers:
-            return
         checkpoint["training_resume"] = {
             "run_id": self.run_id,
             "identity": self.identity,
@@ -107,7 +107,10 @@ class TrainingResume(Callback):
             "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else [],
             "train_generator": self.train_loader.generator.get_state(),
             "val_generator": self.val_loader.generator.get_state(),
-            "transform": _transform_state(
+            # With workers, this parent-process transform has not advanced.
+            "transform": None
+            if self.train_loader.num_workers
+            else _transform_state(
                 getattr(self.train_loader.dataset, "transform", None)
             ),
         }
@@ -118,7 +121,18 @@ class TrainingResume(Callback):
         for callback in trainer.callbacks:
             if not isinstance(callback, ModelCheckpoint):
                 continue
-            state = checkpoint.get("callbacks", {}).get(callback.state_key)
+            states = checkpoint.get("callbacks", {})
+            # The display-name change must not reset the best validation score.
+            if callback.monitor == "val/iou" and callback.state_key not in states:
+                for key, saved_state in list(states.items()):
+                    if (
+                        isinstance(saved_state, dict)
+                        and saved_state.get("monitor") == "val_iou"
+                    ):
+                        saved_state["monitor"] = "val/iou"
+                        states[callback.state_key] = states.pop(key)
+                        break
+            state = states.get(callback.state_key)
             if state is None or state["dirpath"] == callback.dirpath:
                 continue
             old_directory = Path(state["dirpath"])

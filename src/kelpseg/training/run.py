@@ -175,7 +175,12 @@ def run_training(
         "git_commit": _git_commit(),
         "runtime": {name: version(name) for name in ("torch", "lightning", "kelpseg")},
         "python": platform.python_version(),
-        "deterministic_algorithms": True,
+        "deterministic_algorithms": settings.deterministic,
+        "resume_randomness": (
+            "worker augmentation streams restart; sample order may differ"
+            if settings.num_workers
+            else "main-process and augmentation random states restored"
+        ),
     }
     if dry_run:
         return report
@@ -207,7 +212,7 @@ def run_training(
     checkpoint = ModelCheckpoint(
         dirpath=output / "checkpoints",
         filename="best",
-        monitor="val_iou",
+        monitor="val/iou",
         mode="max",
         save_top_k=1,
         save_last=False,
@@ -243,14 +248,14 @@ def run_training(
         model = TrainingModule(
             replace(settings, encoder_weights=None) if resume is not None else settings
         )
+        model.configure_diagnostics(inputs["val"].rows)
         trainer = Trainer(
             default_root_dir=output,
             accelerator=settings.accelerator,
             devices=1,
             precision=settings.precision,
-            # CUDA backward kernels otherwise diverge even with identical seeds.
-            # Native Lightning also configures the deterministic cuBLAS workspace.
-            deterministic=True,
+            # Strict replay costs GPU throughput; the recipe makes that choice.
+            deterministic=settings.deterministic,
             max_epochs=settings.epochs,
             accumulate_grad_batches=settings.accumulate_grad_batches,
             gradient_clip_val=settings.gradient_clip_val,

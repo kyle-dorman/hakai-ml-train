@@ -203,9 +203,11 @@ Do not use its batch limits or schedule for production.
 
 The full-data launch recipe is `configs/train/planet8_gpu.toml`: native eight
 bands with BC (`augmented`), 70 epochs, microbatch 3 × accumulation 8, bf16,
-zero loader workers, and W&B at `kdorman90-ucla/kelpseg`. The trainer enables
-native deterministic algorithms for repeatable GPU continuation. Zero workers are
-required from the beginning for completed-epoch continuation. The original
+zero loader workers, and W&B at `kdorman90-ucla/kelpseg`. This reference recipe
+uses deterministic execution for repeatable GPU continuation. Ordinary
+completed-epoch continuation also supports multiple workers; their augmentation
+streams restart and sample order may differ. The faster pilot below trades exact
+replay for throughput. The original
 spectral examples remain available; this machine recipe makes those choices
 explicit. Metadata previews open no test arrays.
 
@@ -234,20 +236,38 @@ Resume is for interrupted runs, not runs that already exported `model/`.
 CUDA agreement is bounded by the tolerance recorded in Task 034, not a promise
 of bitwise reproducibility on every GPU/software combination.
 
-## Ten-epoch pilot
+## Twenty-epoch pilot
 
-The user selected a ten-epoch native-eight-band pilot with BC before the full
-baseline. Use `configs/train/planet8_gpu_10ep.toml`: W&B enabled, all selected
-training/validation batches, batch 3 × accumulation 8, and zero workers.
-It retains five warmup epochs and decays over the remaining five. This is a
-separate ten-epoch schedule, not the first ten epochs of the 70-epoch schedule.
-Expect roughly four hours on the measured RTX 3090. Review changes before launch;
-the user handles Git commits/pushes and starts this run.
+Use `configs/train/planet8_gpu_20ep_fast.toml` for the throughput-tested pilot:
+eight native bands with BC, twenty epochs, W&B enabled, eight persistent workers,
+`deterministic = false`, and microbatch 12 × accumulation 2 (effective batch 24).
+It retains five warmup epochs and decays over the remaining fifteen. This is a
+separate twenty-epoch schedule, not the first twenty epochs of the 70-epoch schedule.
+The original `planet8_gpu_10ep.toml` remains available as the batch-3,
+zero-worker deterministic reference.
 
+The selected setting measured 47.6 training samples/second and 12.4 GiB peak
+GPU allocation on the RTX 3090. Budget roughly **70–90 minutes for twenty epochs**
+or **4–5 hours for 70**, including some allowance beyond the short measurements.
+Live W&B/network overhead and full-run variation are not measured guarantees.
+The benchmark covers 17 cases, including a batch-24 out-of-memory failure;
+detailed evidence is in Task 034. More workers were useful only after faster
+GPU computation and larger batches exposed a loading bottleneck again.
+
+Larger microbatches change batch-pooled Lovasz loss and batch-normalization
+statistics, even with the same effective batch. This is a separate pilot recipe,
+not numerically equivalent to the original batch-3 run. Keep microbatch settings
+matched when making scientific comparisons. If preserving batch 3 is preferred,
+a copied recipe with four persistent workers and `deterministic = false` measured
+29 samples/second (roughly four times the original throughput).
+
+Review changes before launch; the user handles commits/pushes and starts the
+run. Keep its code and recipe fixed while it runs. Start a fresh pilot with this
+changed recipe; continuation of a saved run requires its original settings.
 From the checkout, run inside tmux to survive SSH disconnects:
 
 ```bash
-tmux new -s kelp-pilot
+tmux new -s kelp-pilot-fast
 ```
 
 Then in that session:
@@ -255,13 +275,17 @@ Then in that session:
 ```bash
 cd /home/sky/hakai-ml-train
 set -o noclobber
-uv run --frozen kelpseg train --recipe configs/train/planet8_gpu_10ep.toml > /home/sky/data/runs/planet8-cabc-10ep.log 2>&1
+uv run --frozen kelpseg train --recipe configs/train/planet8_gpu_20ep_fast.toml > /home/sky/data/runs/planet8-cabc-20ep-fast.log 2>&1
 ```
 
 Detach with Ctrl-b, then d. Monitor from another terminal with
-`tail -f /home/sky/data/runs/planet8-cabc-10ep.log`, or use W&B. The run creates
-its own `planet8-cabc-10ep-*` output folder. Choose a fresh log filename if
-repeating the pilot; `noclobber` refuses an existing log.
+`tail -f /home/sky/data/runs/planet8-cabc-20ep-fast.log`, or use W&B. The run
+creates its own `planet8-cabc-20ep-fast-*` output folder. Choose a fresh log
+filename if repeating the pilot; `noclobber` refuses an existing log.
+For continuation, use this same fast recipe with the run's `--resume` path.
+Training state restores; identical future augmentation draws or weights are not
+promised. Back up stable outputs to Box using the procedure below, substituting
+this recipe and log filename when copying records.
 
 ## Launch and monitor the baseline
 

@@ -1261,13 +1261,25 @@ native TorchMetrics collections. Lightning computes pooled epoch metrics and
 resets their state; these are not averages of per-batch IoUs. Training metrics
 measure the augmented training pass with changing current weights, so they are
 diagnostics, not directly comparable to deterministic validation with EMA.
-`train_loss_step` records each logged training batch loss; `train_loss` and
-`val_loss` are native TorchMetrics valid-pixel-weighted epoch means of batch
+`train/iou_step` records current-batch foreground IoU (threshold .5, ignoring
+-100, zero for an empty union); it does not update or replace pooled epoch IoU.
+The runner logs step metrics every optimizer update. With gradient accumulation,
+the logged batch is the final microbatch of that update, not the combined group.
+`train/loss_step` records each logged training batch loss; `train/loss` and
+`val/loss` are native TorchMetrics valid-pixel-weighted epoch means of batch
 BCE/Lovasz losses. Lovasz is pooled within each batch, not recalculated over the
 whole epoch. The scalar logger receives the collection directly; confusion
 matrices remain available through the Python metric helper, without hand-split
 TN/FP/FN/TP log columns. Validation uses fixed threshold .5.
-Aggregate foreground IoU selects best weights, preserving the earliest tie.
+Aggregate foreground `val/iou` selects best weights, preserving the earliest tie.
+`train/bce`, `train/lovasz`, `val/bce` and `val/lovasz` record unweighted
+loss components with the same valid-pixel epoch weighting as combined loss.
+BCE includes 0.1 label smoothing; Lovasz remains batch-pooled. Thus epoch
+`loss = 0.7 * bce + 0.3 * lovasz` (up to rounding). `train/bce_step` and
+`train/lovasz_step` accompany step loss at the same logging cadence.
+CSV and W&B share slash-separated names (`train/iou`, `val/iou`, `val/pixels`),
+so W&B groups training and validation panels separately. Update counters use
+`trainer/optimizer_updates`; native Lightning logging supplies the global step.
 Zero scored validation support fails rather than selecting a meaningless model.
 EMA (.999) first copies weights after optimizer update 101; earlier validation
 uses current weights. Afterward validation and selected weights use EMA.
@@ -1281,6 +1293,35 @@ Use `checkpoints/last.ckpt` for completed-epoch resume, and keep `best.ckpt`
 for the selected model; they serve different purposes. Keep these artifacts
 outside Git. Local records work offline. `wandb = true` optionally adds native W&B logging to
 `kdorman90-ucla/kelpseg` (install `wandb` in a runtime-only environment first).
+
+### Prediction panels and regional metrics
+
+With `wandb = true`, `val/predictions` shows the same selected validation chips
+each epoch: one kelp-positive chip per represented region where available
+(otherwise that region's first chip), plus up to two additional background-only
+chips. Selection is deterministic by source/window identity, not model errors.
+`train/predictions` shows four distinct chips from the first encountered shuffled,
+augmented training batches each epoch. Both reuse predictions from the ordinary
+passes; training uses current weights and validation uses validation/EMA weights.
+There is no extra inference pass. Batch limits can omit selected validation images.
+
+In W&B, open these image panels and toggle the `label` and `prediction` mask
+layers. Masks use threshold .5; class 2 is ignored, including nodata/padding and
+augmentation-masked pixels. Captions identify epoch, region, source/date and
+original source window; training imagery and masks show the transformed canvas.
+RGB displays use red/green/blue when available, otherwise NIR/red/green false
+color. Each image uses a 2–98 percentile display stretch; these display colors
+are not model inputs. Validation images remove bottom/right loading padding.
+Media uploads use the existing W&B run and logger; offline runs retain media
+for later W&B synchronization. No media are built when W&B logging is disabled.
+
+`val_region_001/iou` (and each represented region) logs pooled epoch metrics,
+including precision, recall, F1, accuracy and `pixels`, to both CSV and W&B.
+These use the same threshold/ignored pixels as global validation, including
+background-only chips. Zero-denominator scores are zero; inspect `pixels` for
+support and avoid interpreting empty foreground IoU as evidence of poor quality.
+Only validation regions appear; training-only BC regions do not acquire validation
+scores. Global `val/iou` remains the checkpoint-selection metric.
 
 ## Copy and use a portable model
 
@@ -1340,14 +1381,19 @@ completed epoch is discarded; there is no partial-epoch or mid-batch recovery.
 Use `last.ckpt`, not the validation-selected `best.ckpt`. Older Task 033E
 checkpoints lack the new resume state and cannot provide exact resume.
 
-Exact resume currently requires `num_workers = 0` from the start. Fresh runs
-still support the existing multiworker settings; their worker-local random
-streams are outside this resume guarantee. Changing the recipe, total schedule,
+Completed-epoch continuation supports zero or multiple loader workers. With
+workers, augmentation streams restart and sample order may differ; saved model,
+optimizer, scheduler and EMA state still restore. Exact replay requires
+`num_workers = 0` and `deterministic = true` from the start. Set
+`deterministic = false` to allow faster GPU kernels with numerical variation.
+Old multiworker checkpoints without resume metadata remain unsupported.
+Changing the recipe (including worker count or deterministic mode), total schedule,
 bands or selected memberships fails before training. Machine roots may relocate:
 update `paths_file`, `chips` and `assignments` to the same copied data and retain
 the saved run folder under the new `runs_root`. These path changes do not grant
-permission to change data identity. CPU equivalence is checked with bounded
-training; CUDA/mixed-precision equivalence remains a GPU-host check.
+permission to change data identity. CPU equivalence and bounded deterministic CUDA continuation have been checked;
+see Task 034 for the device and tolerance. Multiworker continuation is checked
+for restored state/progress, not equality of subsequent weights.
 
 ## Tiny v2: installed training walkthrough
 

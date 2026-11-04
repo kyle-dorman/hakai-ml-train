@@ -17,7 +17,7 @@ def train_command(
         Path | None,
         typer.Option(
             "--resume",
-            help="Resume the same run from its completed-epoch last.ckpt (num_workers=0).",
+            help="Resume from completed-epoch last.ckpt; worker random streams restart.",
         ),
     ] = None,
     dry_run: Annotated[

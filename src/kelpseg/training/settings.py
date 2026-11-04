@@ -35,6 +35,7 @@ class TrainingSettings:
     gradient_clip_val: float = 0.8
     accelerator: str = "cuda"
     precision: str = "bf16-mixed"
+    deterministic: bool = True
     encoder_weights: str | None = "imagenet"
     num_workers: int = 8
     pin_memory: bool = True
@@ -97,7 +98,7 @@ class TrainingSettings:
             or any(type(v) not in (int, float) or not 0 <= v < 1 for v in self.betas)
         ):
             raise ValueError("betas must contain two numbers in [0, 1).")
-        for name in ("pin_memory", "persistent_workers", "wandb"):
+        for name in ("pin_memory", "persistent_workers", "wandb", "deterministic"):
             if type(getattr(self, name)) is not bool:
                 raise ValueError(f"{name} must be true or false.")
         if self.persistent_workers and self.num_workers == 0:

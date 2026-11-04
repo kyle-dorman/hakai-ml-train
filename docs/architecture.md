@@ -69,8 +69,9 @@ the CLI uses standard Python logging for progress, without a custom logging
 or orchestration layer. Later tasks add model workflow commands. The installed
 training command is `uv run kelpseg train --recipe <recipe-file>`;
 `--resume <run/checkpoints/last.ckpt>` restores the same run from a completed
-epoch, with the same total budget and input identities. Exact resume requires
-zero loader workers; preparation remains one pass. See
+epoch, with the same total budget and input identities. Multiworker continuation
+restarts worker augmentation streams and may change sample order. Exact replay
+requires zero workers and deterministic execution; preparation remains one pass. See
 [quickstart.md](quickstart.md) for working setup and preparation recipes.
 
 The preparation surface is `organize`, `check`, shared `clean`, `chip`, `split`

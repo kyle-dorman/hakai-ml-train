@@ -125,7 +125,7 @@ def test_partial_accumulation_early_validation_and_earliest_tie(tmp_path):
     checkpoint = ModelCheckpoint(
         dirpath=tmp_path,
         filename="best",
-        monitor="val_iou",
+        monitor="val/iou",
         mode="max",
         save_last=False,
         save_on_train_epoch_end=False,
@@ -166,7 +166,7 @@ def test_ema_first_copy101_and_separate_saved_states(tmp_path):
     observe = Observe(ema)
     checkpoint = ModelCheckpoint(
         dirpath=tmp_path,
-        monitor="val_iou",
+        monitor="val/iou",
         mode="max",
         save_last=False,
         save_on_train_epoch_end=False,
@@ -197,9 +197,9 @@ def test_ema_first_copy101_and_separate_saved_states(tmp_path):
         saved["current_model_state"]["model.weight"],
     )
     torch.testing.assert_close(module.model.weight, observe.updates[102])
-    assert fit.callback_metrics["val_pixels"] == 4
-    assert module.train_metrics["train_iou"].update_count == 0
-    assert module.val_metrics["val_iou"].update_count == 0
+    assert fit.callback_metrics["val/pixels"] == 4
+    assert module.train_metrics["train/iou"].update_count == 0
+    assert module.val_metrics["val/iou"].update_count == 0
     assert module.train_loss.update_count == module.val_loss.update_count == 0
 
 
@@ -254,9 +254,21 @@ def test_validation_loss_weights_batch_objective_by_valid_pixels():
         segmentation_loss(batches[0]["image"], batches[0]["target"])
         + 2 * segmentation_loss(batches[1]["image"], batches[1]["target"])
     ) / 3
-    torch.testing.assert_close(recorded["val_loss"].compute(), expected.double())
-    assert recorded["val_pixels"].compute() == 3
-    assert recorded["val_iou"].compute().item() == pytest.approx(1 / 3)
+    torch.testing.assert_close(recorded["val/loss"].compute(), expected.double())
+    from kelpseg.training.loss import segmentation_loss_components
+
+    components = [
+        segmentation_loss_components(batch["image"], batch["target"])
+        for batch in batches
+    ]
+    for index, name in enumerate(("bce", "lovasz")):
+        expected_component = (components[0][index] + 2 * components[1][index]) / 3
+        torch.testing.assert_close(
+            recorded[f"val/{name}"].compute(), expected_component.double()
+        )
+        assert components[2][index] == 0
+    assert recorded["val/pixels"].compute() == 3
+    assert recorded["val/iou"].compute().item() == pytest.approx(1 / 3)
 
 
 def test_native_metric_logging_pools_and_resets_train_and_validation(tmp_path):
@@ -304,19 +316,110 @@ def test_native_metric_logging_pools_and_resets_train_and_validation(tmp_path):
     fit.fit(module, train, val)
     with open(logger.log_dir + "/metrics.csv", newline="") as stream:
         records = list(csv.DictReader(stream))
-    train_records = [record for record in records if record["train_iou"]]
-    val_records = [record for record in records if record["val_iou"]]
-    assert [float(record["train_iou"]) for record in train_records] == [0.25, 0.5]
-    assert [float(record["val_iou"]) for record in val_records] == [0.25, 0.75]
+    train_records = [record for record in records if record["train/iou"]]
+    val_records = [record for record in records if record["val/iou"]]
+    assert [float(record["train/iou"]) for record in train_records] == [0.25, 0.5]
+    assert [float(record["val/iou"]) for record in val_records] == [0.25, 0.75]
     for phase, phase_records in (("train", train_records), ("val", val_records)):
-        for name in ("iou", "precision", "recall", "f1", "accuracy", "loss"):
-            assert all(record[f"{phase}_{name}"] for record in phase_records)
-    assert any(record["train_loss_step"] for record in records)
-    assert all(float(record["val_pixels"]) == 4 for record in val_records)
+        for name in (
+            "iou",
+            "precision",
+            "recall",
+            "f1",
+            "accuracy",
+            "loss",
+            "bce",
+            "lovasz",
+        ):
+            assert all(record[f"{phase}/{name}"] for record in phase_records)
+    step_records = [record for record in records if record["train/iou_step"]]
+    assert [
+        float(record["train/iou_step"]) for record in step_records
+    ] == pytest.approx([1.0, 0.0, 0.0, 2 / 3])
+    for record in step_records:
+        assert float(record["train/loss_step"]) == pytest.approx(
+            0.7 * float(record["train/bce_step"])
+            + 0.3 * float(record["train/lovasz_step"])
+        )
+    for phase, phase_records in (("train", train_records), ("val", val_records)):
+        for record in phase_records:
+            assert float(record[f"{phase}/loss"]) == pytest.approx(
+                0.7 * float(record[f"{phase}/bce"])
+                + 0.3 * float(record[f"{phase}/lovasz"])
+            )
+        for name in ("bce", "lovasz"):
+            assert getattr(module, f"{phase}_{name}").update_count == 0
+    assert all(float(record["val/pixels"]) == 4 for record in val_records)
     assert not any(
-        name in records[0] for name in ("val_tn", "val_fp", "val_fn", "val_tp")
+        name in records[0] for name in ("val/tn", "val/fp", "val/fn", "val/tp")
     )
-    assert module.train_metrics["train_iou"].update_count == 0
-    assert module.val_metrics["val_iou"].update_count == 0
+    assert module.train_metrics["train/iou"].update_count == 0
+    assert module.val_metrics["val/iou"].update_count == 0
     assert module.train_loss.update_count == module.val_loss.update_count == 0
     assert module.val_pixels.update_count == 0
+
+
+def test_regional_validation_pools_pixels_and_resets(tmp_path):
+    import csv
+
+    from lightning.pytorch.loggers import CSVLogger
+
+    from kelpseg.training.run import collate_chips
+
+    config = settings()
+    config.learning_rate = config.min_lr = 0.0
+    model = nn.Conv2d(3, 1, 1)
+    nn.init.ones_(model.weight)
+    nn.init.zeros_(model.bias)
+    module = TrainingModule(config, model)
+    rows = [
+        dict(
+            region=region, source_id=str(i), row=0, col=0, kelp_pixels=1, payload=str(i)
+        )
+        for i, region in enumerate(["001", "001", "002"])
+    ]
+    module.configure_diagnostics(rows)
+    val = DataLoader(
+        [
+            dict(
+                image=torch.ones(3, 2, 2),
+                target=target,
+                valid_mask=target != -100,
+                metadata=metadata,
+            )
+            for target, metadata in zip(
+                [
+                    torch.tensor([[1, -100], [-100, -100]]),
+                    torch.tensor([[0, 0], [0, -100]]),
+                    torch.tensor([[1, 1], [-100, -100]]),
+                ],
+                rows,
+                strict=True,
+            )
+        ],
+        batch_size=2,
+        collate_fn=collate_chips,
+    )
+    logger = CSVLogger(tmp_path, name="regions")
+    fit = pl.Trainer(
+        accelerator="cpu",
+        devices=1,
+        max_epochs=2,
+        logger=logger,
+        enable_checkpointing=False,
+        enable_progress_bar=False,
+        enable_model_summary=False,
+        num_sanity_val_steps=0,
+    )
+    fit.fit(module, loader(2), val)
+    with open(logger.log_dir + "/metrics.csv") as stream:
+        records = [r for r in csv.DictReader(stream) if r["val_region_001/iou"]]
+    assert len(records) == 2
+    for record in records:
+        assert float(record["val_region_001/iou"]) == pytest.approx(0.25)
+        assert float(record["val_region_002/iou"]) == 1
+        assert float(record["val_region_001/pixels"]) == 4
+        assert float(record["val_region_002/pixels"]) == 2
+        assert float(record["val/iou"]) == pytest.approx(0.5)
+    assert module.region_pixels["001"].update_count == 0
+    assert module.region_metrics["001"]["val_region_001/iou"].update_count == 0

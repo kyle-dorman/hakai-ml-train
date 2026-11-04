@@ -20,6 +20,36 @@ implementation small; the legacy registry schema is not a compatibility target.
 Checkpoints, settings, dataset references, and compact results must be recoverable
 outside ephemeral compute, using Box as specified in `data_artifacts.md`.
 
+Metrics use one slash-separated phase prefix: `train/loss_step` for logged
+batch loss, `train/iou_step` for current-batch foreground IoU,
+`train/loss` and `val/loss` for epoch loss, and `train/iou`,
+`val/iou` (likewise precision, recall, F1 and accuracy) for pooled epoch metrics.
+Batch IoU uses the same .5 threshold, ignored -100 pixels and zero for undefined
+IoU as epoch metrics, without changing their accumulation. Step metrics log every
+optimizer update; with accumulation they describe its final microbatch.
+`train/bce`, `train/lovasz`, `val/bce` and `val/lovasz` record unweighted
+loss components with the same valid-pixel epoch weighting as combined loss.
+BCE includes 0.1 label smoothing; Lovasz remains batch-pooled. Thus epoch
+`loss = 0.7 * bce + 0.3 * lovasz` (up to rounding). `train/bce_step` and
+`train/lovasz_step` accompany step loss at the same logging cadence.
+CSV uses the same names. `val/pixels` records validation support and
+`trainer/optimizer_updates` records completed updates. Keep native Lightning
+`WandbLogger` global-step handling and existing logging frequency; do not mix in
+manual `wandb.log(step=...)` calls. This follows W&B guidance on
+[shared-prefix panel grouping](https://docs.coreweave.com/support/models/tags/experiments)
+and [Lightning logging](https://docs.coreweave.com/products/wandb/integrations/lightning).
+Checkpoint selection monitors `val/iou`; completed-epoch resume preserves the
+best score from preceding checkpoints that used `val_iou`. Existing W&B history
+retains its old names; a running process adopts new names only after restart.
+
+W&B prediction panels reuse existing forwards: a fixed validation sample across
+regions plus background chips, and four augmented training examples each epoch.
+The [quickstart](quickstart.md#prediction-panels-and-regional-metrics) describes
+the media and regional metrics. Captions retain source/window identities;
+ignored pixels stay explicit. Media are diagnostics, not a representative score.
+Regional `val_region_<code>/` metrics pool validation pixels within each region,
+with the same global metric semantics. They do not change checkpoint selection.
+
 ## Initialization, fine tuning, and resume
 
 Distinguish three operations:
@@ -116,11 +146,18 @@ paths, or an online tracking service. Completed-epoch resume uses the separate `
 the saved run identity and total schedule. The recipe and selected memberships
 must match; machine roots may relocate explicitly. Ordinary weights, optimizer,
 scheduler, progress, random/sampling state and EMA restore through native
-Lightning mechanisms. Training uses Lightning deterministic algorithms,
-including its CUDA workspace configuration. This avoids the pre-interruption GPU divergence observed in Task
-034; cross-device/software bitwise equivalence is not promised. Exact resume
-requires zero loader workers from the start;
-older Task 033E checkpoints and partial-epoch recovery are unsupported.
+Lightning mechanisms. `deterministic = true` (the default) enables native
+Lightning deterministic algorithms and its CUDA workspace configuration.
+`deterministic = false` permits faster GPU kernels with numerical variation.
+Both modes support completed-epoch continuation. With loader workers, worker
+augmentation streams restart and sample order may differ after continuation;
+the model, optimizer, scheduler, EMA and completed-epoch progress are restored.
+Exact replay requires zero workers and deterministic execution from the start;
+cross-device/software bitwise equivalence is not promised. A missing setting in zero-worker checkpoints is interpreted as `true`, matching
+the immediately preceding deterministic runner. Earlier nondeterministic GPU
+smoke artifacts have no exact-replay guarantee.
+Older Task 033E checkpoints and multiworker checkpoints written before this
+support lack the required resume metadata; partial-epoch recovery is unsupported.
 Bundle loading is model-only initialization and restores none of that training state.
 
 ## Legacy gut check
