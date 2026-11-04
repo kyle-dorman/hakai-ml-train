@@ -1,9 +1,10 @@
 # Set up the external GPU machine
 
-Task 034 is remote-first: use this checklist to reach the Linux instance, then
-validate and improve the setup there. This guide and bootstrap have local syntax
-and mock checks only; the Linux installation and CUDA workflow remain unverified.
-Commit and push this setup work before cloning it remotely.
+Use this checklist to reach the Linux instance and validate training there.
+The Ubuntu 20.04 / RTX 3090 installation, frozen environment, CUDA/bf16, Box
+data staging and tiny training have been checked on the allocated host.
+Deterministic EMA/resume and copied-model checks also pass; Task 034 records
+the measured sizing and production-launch evidence.
 
 ## 1. Log in to Tailscale — on your Mac
 
@@ -122,8 +123,8 @@ rclone lsd kelp-box:kelpseg/data
 Use `/home/sky/data` as the artifact root on this instance, outside the checkout.
 Allow space for **65.6 GB of chips**, the small controls/tiny example, the Python
 environment/model cache, and future checkpoints. Check available space with
-`df -h /home/sky`. Confirm with the lab what survives instance shutdown or deletion;
-this home-directory path is not a guarantee of persistent storage.
+`df -h /home/sky`. Treat this home-directory storage as temporary. Back up production outputs
+to Box before stopping or deleting the instance.
 
 The root may already exist, but each release destination below must be fresh.
 The copy block stops at the first error; for an incomplete transfer, inspect the
@@ -184,17 +185,112 @@ trainer uses `kdorman90-ucla/kelpseg`. See [experiment settings](experiments.md)
 
 ## Continue Task 034 on this machine
 
-Record the OS, GPU/driver, installed versions, revision and storage paths in the
-[Task 034 outcome](../tasks/034_gpu_machine_preparation_and_baseline_launch.md).
-Then validate CUDA/bf16, tiny training/validation, save/load and completed-epoch
-resume, and measure a representative training batch before launching one baseline.
-Preview all four spectral recipes and both variants without production fitting.
-Keep `num_workers=0`, `persistent_workers=false`, the same total schedule and the
-saved run identity for resume. The existing production examples need worker
-settings adjusted before that rehearsal.
+Use `paths.local.toml` from step 8. Generate tiny chips with the
+[split/chip walkthrough](quickstart.md#tiny-v2-split-chip-and-load-locally),
+using `/home/sky/data` and `example_name=my-tiny-v2-01`.
+Then run the checked eight-band CUDA/bf16 smoke:
 
-Write the tested GPU recipe and launch/monitor/backup commands here as we verify
-them remotely. Commit corrections before production, then keep the running job
-on that fixed checkout/environment. Bring those commits back locally and use a
-separate checkout for Task 035. Task 034 ends with a healthy first epoch and a
-clear monitoring handoff; inference/scoring belong to later tasks.
+```bash
+uv run kelpseg train --recipe configs/train/tiny_gpu.toml --dry-run
+uv run kelpseg train --recipe configs/train/tiny_gpu.toml
+```
+
+This uses ImageNet initialization, two epochs with two training batches and one
+validation batch each, and writes a fresh `tiny_gpu-*` folder under `runs_root`.
+It checks training, validation, best/last saving and portable model export;
+its scores are not scientific results. Its short budget does not reach EMA.
+Do not use its batch limits or schedule for production.
+
+The full-data launch recipe is `configs/train/planet8_gpu.toml`: native eight
+bands with BC (`augmented`), 70 epochs, microbatch 3 × accumulation 8, bf16,
+zero loader workers, and W&B at `kdorman90-ucla/kelpseg`. The trainer enables
+native deterministic algorithms for repeatable GPU continuation. Zero workers are
+required from the beginning for completed-epoch continuation. The original
+spectral examples remain available; this machine recipe makes those choices
+explicit. Metadata previews open no test arrays.
+
+```bash
+uv run kelpseg train --recipe configs/train/planet8_gpu.toml --dry-run
+```
+
+The RTX 3090 rehearsal passed EMA and completed-epoch resume comparison
+with maximum tensor difference zero (tolerance `atol=1e-5, rtol=1e-4`).
+The deterministic batch uses about 4 GiB; budget 25–30 hours for 70 epochs
+and 10 GiB for run files and backup snapshots. These are measured projections,
+not guarantees. Settle that budget before launch; the task record owns evidence. Commit corrections before production and
+keep the running job on that fixed checkout/environment. Use a separate checkout
+for Task 035. Never pull code changes into a running experiment.
+
+For completed-epoch continuation, keep the original recipe, total schedule and
+saved run identity. Replace the example path with the actual interrupted run:
+
+```bash
+uv run kelpseg train --recipe configs/train/planet8_gpu.toml --resume /home/sky/data/runs/ACTUAL_RUN/checkpoints/last.ckpt --dry-run
+uv run kelpseg train --recipe configs/train/planet8_gpu.toml --resume /home/sky/data/runs/ACTUAL_RUN/checkpoints/last.ckpt
+```
+
+This returns to the last completed epoch; partial-epoch work is discarded.
+Resume is for interrupted runs, not runs that already exported `model/`.
+CUDA agreement is bounded by the tolerance recorded in Task 034, not a promise
+of bitwise reproducibility on every GPU/software combination.
+
+## Launch and monitor the baseline
+
+After the checks above pass and the run budget is agreed, launch from the fixed
+checkout in tmux. This survives SSH disconnects, not instance deletion:
+
+```bash
+(
+  set -e
+  test ! -e /home/sky/data/runs/planet8-gpu-launch.log
+  tmux new-session -d -s kelp-baseline -c /home/sky/hakai-ml-train 'uv run --frozen kelpseg train --recipe configs/train/planet8_gpu.toml > /home/sky/data/runs/planet8-gpu-launch.log 2>&1'
+)
+tmux list-sessions
+tail -f /home/sky/data/runs/planet8-gpu-launch.log
+```
+
+Use a fresh log filename/session name for a different run. The trainer creates a
+unique `planet8-cabc-gpu-*` output folder. `run.json` records its identity,
+revision and resolved settings; `metrics/metrics.csv` and W&B show progress.
+The first validation should produce distinct `checkpoints/best.ckpt` and
+`checkpoints/last.ckpt`. `model/` is exported only when training completes.
+Check `nvidia-smi`, advancing log/CSV entries and the W&B run, not just whether
+the tmux session exists. A failed process needs inspection before continuation.
+
+## Back up completed outputs to Box
+
+Treat `/home/sky/data` as temporary. Just after an epoch completes and training
+moves into the next epoch, copy its stable checkpoints plus current records to
+a fresh snapshot directory. Use the actual run ID and completed epoch below;
+change the snapshot name for each backup. Do not copy a checkpoint while it is
+being saved. This is an explicit copy, not an automatic backup service.
+
+```bash
+(
+  set -e
+  run_id='ACTUAL_RUN'
+  run="/home/sky/data/runs/$run_id"
+  snapshot="/home/sky/data/backups/$run_id/epoch-001"
+  test ! -e "$snapshot"
+  mkdir -p "$snapshot"
+  cp "$run/settings.json" "$run/run.json" "$snapshot/"
+  cp -a "$run/checkpoints" "$run/metrics" "$snapshot/"
+  cp configs/train/planet8_gpu.toml "$snapshot/recipe.toml"
+  git rev-parse HEAD > "$snapshot/git-commit.txt"
+  cp /home/sky/data/runs/planet8-gpu-launch.log "$snapshot/launch.log"
+  rclone copy "$snapshot" "kelp-box:kelpseg/runs/$run_id/epoch-001" --immutable --size-only --ignore-checksum --transfers 1 --checkers 2
+  rclone size "$snapshot"
+  rclone size "kelp-box:kelpseg/runs/$run_id/epoch-001"
+)
+```
+
+At completion, make another fresh `final` snapshot and include `model/` along
+with settings, checkpoints, metrics and logs. Check local/Box file counts and
+sizes. Keep the fixed Git revision and machine roots with the handoff. Avoid
+copying the entire environment or regenerable chip data into each backup.
+
+To restore an interrupted run, choose a fresh `runs_root/<saved-run-id>` and
+copy the selected Box snapshot there. Keep the same run ID, original recipe and
+total epochs; set the recipe's `paths_file` to the new machine's settings.
+Restore the published data separately, then use the resume preview and command
+above. A completed final model is loaded directly for prediction, not resumed.

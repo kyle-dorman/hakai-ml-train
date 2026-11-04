@@ -175,6 +175,7 @@ def run_training(
         "git_commit": _git_commit(),
         "runtime": {name: version(name) for name in ("torch", "lightning", "kelpseg")},
         "python": platform.python_version(),
+        "deterministic_algorithms": True,
     }
     if dry_run:
         return report
@@ -247,6 +248,9 @@ def run_training(
             accelerator=settings.accelerator,
             devices=1,
             precision=settings.precision,
+            # CUDA backward kernels otherwise diverge even with identical seeds.
+            # Native Lightning also configures the deterministic cuBLAS workspace.
+            deterministic=True,
             max_epochs=settings.epochs,
             accumulate_grad_batches=settings.accumulate_grad_batches,
             gradient_clip_val=settings.gradient_clip_val,

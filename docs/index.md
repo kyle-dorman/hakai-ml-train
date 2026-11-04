@@ -30,7 +30,7 @@ preceding completed PS8B study.
 - [quickstart.md](quickstart.md): researcher setup, available commands, paths,
   output/errors, and reusable Python functions.
 - [gpu_setup.md](gpu_setup.md): remote-first Linux GPU setup checklist;
-  actual installation and CUDA validation remain pending.
+  verified host installation and tiny CUDA checks; Task 034 records launch readiness.
 - [product.md](product.md): research scope, experiments, scientific boundaries.
 - [architecture.md](architecture.md): current-to-target pipeline, identity,
   splitting, prediction and metric contracts.

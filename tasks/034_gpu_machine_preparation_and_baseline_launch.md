@@ -1,7 +1,8 @@
 # Task 034: GPU machine preparation and baseline launch
 
-Status: In progress — 2026-11-03. Local setup checklist/bootstrap authored;
-actual Linux installation, GPU validation and baseline launch remain pending.
+Status: In progress — 2026-11-03. Linux setup, CUDA/bf16, staged data,
+tiny training, portable loading and deterministic completed-epoch continuation
+pass. Production launch is pending final sizing/budget confirmation.
 The user selected remote-first implementation: finish the small entry checklist
 locally, then test and iterate on the external machine.
 Depends on: Completed Task 033A–G, published CA/BC chips and tiny v2.
@@ -223,3 +224,123 @@ The guide now uses that artifact root and `/home/sky/data/runs`, preserves the
 project-relative release layout, and permits an existing root while refusing
 existing release destinations before copying. Capacity and instance-lifecycle
 persistence still need confirmation on the host. No data was moved locally.
+
+## Remote execution plan — 2026-11-03
+
+User authorized completing the remote checks and preparing the baseline launch.
+Treat `/home/sky/data` as temporary and back up production outputs to Box, per
+the user's explicit choice. Starting revision is
+`f459a66798bde3e9cd290deacae21d66496a0eea`; checkout initially clean.
+
+Bounded work: generate tiny chips using existing commands; add ordinary GPU
+smoke/production TOML recipes under `configs/train/`; run metadata previews,
+real CUDA/bf16 train/validation, EMA after update 101, copied-bundle prediction,
+completed-epoch continuation comparison, and representative batch timing/VRAM.
+Evidence and disposable harnesses belong under
+`/home/sky/data/analyses/task034_gpu_v1`, outside Git, within the 4 GiB smoke
+artifact allowance. Fix demonstrated issues only; run focused tests/Ruff and
+pre-commit for code changes. Update this record, GPU guide and current routers;
+retire the two legacy setup scripts once replacements pass. Commit fixes before
+production. Present the measured launch recipe/resource budget to the user, then
+launch and verify the first epoch, with explicit stable-output Box backup.
+Stop before Task 035.
+
+## Remote validation evidence — 2026-11-03
+
+- Environment: Ubuntu 20.04.6 x86_64; RTX 3090, 24 GiB, driver 590.48.01;
+  Python 3.12.11, uv 0.8.15, Torch 2.12.0+cu130/CUDA 13.0, Lightning 2.6.1,
+  SMP 0.5.0. Frozen sync, CUDA allocation/matmul and bf16 support pass.
+  About 329 GiB was available at entry. User chose temporary-storage treatment
+  and explicit production backups to Box. No driver/OS update was repeated.
+- All four staged releases match documented file counts and aggregate sizes:
+  chips 26,577 / 65,565,628,953 bytes; splits 5 / 935,947; collection 1 / 539;
+  tiny v2 28 / 82,537,678. Box listing and authenticated W&B project read pass.
+  No new checksum/catalog machinery; no training/test payload audit.
+- Existing split/chip commands generated 54 tiny chips under
+  `/home/sky/data/examples/runs/my-tiny-v2-01-{splits,chips}`. This canonical
+  preparation includes declared tiny source TIFFs; all subsequent fitting and
+  prediction checks use training/validation selections only.
+- Added `configs/train/tiny_gpu.toml` and `planet8_gpu.toml`, reusing the same
+  strict schema. Tiny eight-band ImageNet-initialized CUDA/bf16 training passes
+  two epochs, save/export and copied-model validation-image prediction
+  (`max_abs_error=0`). ImageNet cache/download works. Tiny disposable weights
+  were removed after verification; logs/records and generated tiny data remain.
+- Eight full-release metadata-only previews pass. Eligible training counts are
+  8,518 with BC and 7,280 without; validation 933, test metadata 1,262. Native
+  eight-band with BC retains microbatch 3 × accumulation 8, 2,840 training and
+  311 validation batches per epoch, 355 updates/epoch and 24,850 total updates.
+  Final training microbatch has one sample; the final accumulation group has
+  eight microbatches. No memberships, preprocessing or scientific schedule changed.
+- Representative full-data sizing (64 training batches, 16 validation batches
+  over two smoke epochs) uses the production batch/accumulation, zero workers,
+  bf16 and real B3. Peak allocated 3.838 GiB, reserved 4.018 GiB; steady mean
+  0.351 seconds/microbatch. Training alone projects to 16.6 minutes/epoch and
+  19.4 hours/70 epochs. Allow roughly 20–25 hours including validation/saving;
+  this is a short-sample estimate, not a guarantee. Reserve 10 GiB for run files
+  and backup snapshots; measured pre-EMA best+last total 1.09 GB, bundle 179 MB;
+  EMA checkpoints are larger. Sizing weights removed after recording evidence.
+- External evidence: `/home/sky/data/analyses/task034_gpu_v1/` contains environment,
+  eight previews, tiny/sizing reports and logs, bounded rehearsal Python harnesses,
+  and verification logs. These harnesses call the installed runner; no new
+  training framework or repository script directory was added.
+- Removed `scripts/bootstrap_skypilot.sh` and
+  `scripts/prepare_remote_planet8b_dataset.sh` after their replacement setup and
+  Box staging were exercised. Historical task references remain historical.
+- Focused bootstrap/settings/runner/resume/loop/bundle tests: 74 passed.
+  Ruff format/check and all-file pre-commit passed; native warnings remain
+  warnings. No dependency change was needed; the later GPU comparison below required
+  enabling native deterministic training.
+
+### CUDA repeatability issue found during rehearsal
+
+The first 202-update full/interrupted comparison failed the predeclared
+`atol=1e-5, rtol=1e-4` weight tolerance (first tensor max difference 0.005703).
+Comparison of logs showed the runs diverged at batch 2, before interruption;
+first-epoch validation IoU differed .4250 versus .2415. Final Torch/CUDA/loader
+RNG, update count, schedule and EMA count agreed. This is not evidence that
+resume itself lost state. Failed comparison/logs are retained in
+`task034_gpu_v1`; its disposable weights were removed to preserve the 4 GiB
+smoke allowance. Production remains gated.
+
+Test native `Trainer(deterministic=True)` with the same real B3/CUDA/bf16
+rehearsal in `/home/sky/data/analyses/task034_gpu_deterministic_v1`. The minimal
+runner correction enables native deterministic algorithms and records the policy
+in `run.json`; no custom kernel, new recipe schema or scientific-policy change.
+Repeat full/interrupted/resumed comparison and production sizing before launch.
+
+### Deterministic GPU continuation passed
+
+The corrected real B3 run completed two epochs of 101 updates each, with a
+separate stop immediately after the epoch-0 last checkpoint and continuation
+under the same two-epoch budget and saved identity. All 2,936 compared tensors
+matched exactly (`max_abs_error=0`) within the predeclared `atol=1e-5, rtol=1e-4`.
+This includes ordinary/selected/EMA weights, optimizer, scheduler, loop state,
+Torch/CUDA/loader/augmentation RNG and EMA callback state. Final update count
+202, EMA count 102. Exported weights exactly match the selected EMA checkpoint;
+a copied bundle loads offline and predicts a 512×512 validation image.
+This bounded result does not promise bitwise equivalence across other devices
+or software versions. Failed nondeterministic evidence remains separately.
+
+The native deterministic setting is the sole training-code correction. After
+it, 67 focused settings/runner/resume/loop/bundle tests pass, Ruff passes and
+all-file pre-commit passes. The initial seven bootstrap tests also passed.
+External retained evidence/model/recovery pair is under
+`/home/sky/data/analyses/task034_gpu_deterministic_v1`; redundant reference and
+sizing weights are removed after verification to keep disposable smoke artifacts
+below 4 GiB. No held-out test arrays were used for these checks.
+
+Final deterministic sizing: 0.438 seconds per training
+microbatch, 3.815 GiB peak allocated and
+3.941 GiB reserved. Training alone projects to
+20.7 minutes/epoch and
+24.2 hours for 70 epochs. Budget 25–30 hours
+including validation/checkpointing and normal host variation, and 10 GiB
+for active run plus backup snapshots. The retained EMA best+last total
+1,448,110,138 bytes. Production recipe remains unchanged
+at batch 3 × accumulation 8. Review caught and fixed initial launch-log
+overwrite refusal; guide links/shell syntax and diff checks pass.
+
+Exact next action: confirm native-eight with BC, one RTX 3090, 70 epochs,
+25–30 hours and 10 GiB run/snapshot budget; launch the committed recipe in
+tmux, observe the first validation/checkpoints, back up a stable snapshot to
+Box, then close Task 034 with monitoring details.
