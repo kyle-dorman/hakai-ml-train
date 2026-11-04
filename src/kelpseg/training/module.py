@@ -1,5 +1,7 @@
 """Single-model Lightning training with pooled validation agreement."""
 
+from typing import Any
+
 import lightning.pytorch as pl
 import torch
 from lightning.pytorch.loggers import WandbLogger
@@ -8,9 +10,10 @@ from torchmetrics import MeanMetric, SumMetric
 from torchmetrics.functional.classification import binary_jaccard_index
 
 from kelpseg.models import build_model
-from kelpseg.training.loss import segmentation_loss_components
+from kelpseg.training.loss import BinaryObjective
 from kelpseg.training.metrics import build_metrics
 from kelpseg.training.scheduler import LinearWarmupCosineDecayLR
+from kelpseg.training.settings import TrainingSettings
 from kelpseg.training.visuals import EpochImages
 
 
@@ -53,7 +56,14 @@ def parameter_groups(model):
 class TrainingModule(pl.LightningModule):
     """Automatic optimization; fixed threshold and validation-only selection."""
 
-    def __init__(self, settings, model=None):
+    def __init__(
+        self, settings: TrainingSettings, model: nn.Module | None = None
+    ) -> None:
+        """Build the model, configured objective and phase metrics from settings.
+
+        An optional model replaces the SegFormer builder for small checks. This
+        registers modules only; training starts when passed to a Trainer.
+        """
         super().__init__()
         self.settings = settings
         self.model = (
@@ -70,10 +80,14 @@ class TrainingModule(pl.LightningModule):
         # preserves pixel-weighted sums over the full validation collection.
         self.train_loss = MeanMetric().set_dtype(torch.float64)
         self.val_loss = MeanMetric().set_dtype(torch.float64)
-        self.train_bce = MeanMetric().set_dtype(torch.float64)
-        self.val_bce = MeanMetric().set_dtype(torch.float64)
-        self.train_lovasz = MeanMetric().set_dtype(torch.float64)
-        self.val_lovasz = MeanMetric().set_dtype(torch.float64)
+        self.objective = BinaryObjective(settings.losses)
+        self.component_metrics = nn.ModuleDict(
+            {
+                f"{phase}_{term.name}": MeanMetric().set_dtype(torch.float64)
+                for phase in ("train", "val")
+                for term in settings.losses
+            }
+        )
         self.val_pixels = SumMetric().set_dtype(torch.float64)
         self.region_metrics = nn.ModuleDict()
         self.region_pixels = nn.ModuleDict()
@@ -116,16 +130,23 @@ class TrainingModule(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         return self._shared_step(batch, "val")
 
-    def _shared_step(self, batch, phase):
+    def _shared_step(self, batch: dict[str, Any], phase: str) -> torch.Tensor:
+        """Predict a train/val batch, log components and return weighted scalar loss.
+
+        batch contains image/target tensors and optional diagnostic metadata.
+        phase selects train or val metric accumulators; epoch component means
+        use valid-pixel weights. Predictions still use a fixed 0.5 threshold.
+        """
         logits = self(batch["image"])
         targets = batch["target"]
-        # Mixed precision applies to the model only; BCE/Lovasz stay float32.
-        with torch.autocast(device_type=logits.device.type, enabled=False):
-            bce, lovasz = segmentation_loss_components(logits.float(), targets)
-            loss = 0.7 * bce + 0.3 * lovasz
+        loss, components = self.objective(logits, targets)
         support = (targets != -100).sum()
-        for name, value in (("loss", loss), ("bce", bce), ("lovasz", lovasz)):
-            metric = getattr(self, f"{phase}_{name}")
+        for name, value in {"loss": loss, **components}.items():
+            metric = (
+                getattr(self, f"{phase}_loss")
+                if name == "loss"
+                else self.component_metrics[f"{phase}_{name}"]
+            )
             metric.update(value.detach().double(), weight=support.double())
             self.log(f"{phase}/{name}", metric, on_step=False, on_epoch=True)
             if phase == "train" and name != "loss":

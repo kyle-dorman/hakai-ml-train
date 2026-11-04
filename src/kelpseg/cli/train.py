@@ -11,7 +11,10 @@ from kelpseg.cli._logging import start_preparation_logging, stop_preparation_log
 
 def train_command(
     recipe: Annotated[
-        Path, typer.Option("--recipe", help="Flat training recipe TOML.")
+        Path,
+        typer.Option(
+            "--recipe", help="Training recipe TOML with optional [[losses]] terms."
+        ),
     ],
     resume: Annotated[
         Path | None,

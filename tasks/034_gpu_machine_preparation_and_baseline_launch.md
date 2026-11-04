@@ -694,3 +694,239 @@ found in reviewed logging paths; online dashboard appearance remains unverified.
 No training recipe changes, production launch, commit or push. Next action stays
 user review and selection of the longer-run recipe/checkpoint policy, with Box
 backup of stable outputs; Task 034 remains in progress.
+
+## Reviewed commit and seventy-epoch recipe — 2026-11-04
+
+User explicitly authorized committing reviewed changes. Created local commit
+`670ed06` for throughput/resume and training diagnostics; no push. Subsequently
+prepared `configs/train/planet8_gpu_70ep_fast.toml` with a distinct 70-epoch name,
+five warmup epochs, peak LR 3e-4 and minimum 3e-6. Remaining fast settings,
+with-BC native eight bands, ImageNet initialization and W&B are unchanged.
+The new recipe and handoff docs remain uncommitted for review. Best/last-only
+checkpoint retention is unchanged; epoch archive policy is not implemented.
+
+Metadata-only CLI preview passes: 710 train / 78 validation batches each epoch,
+355 optimizer updates per epoch and 24,850 total. No fitting or model download
+was started. Exact next action: user starts the direct command in the GPU guide
+inside tmux; no tee/tail/redirection needed. Back up stable outputs to Box.
+Task 034 remains in progress.
+
+## W&B image-size warning fix — 2026-11-04
+
+User reported the native W&B image-list size warning during the 70-epoch run.
+SDK inspection locates it in image-list serialization, not image/mask alignment.
+Existing media contain 512x512 and 512x511 images because visualization cropped
+partial validation windows. Keep the model canvas for media, with padding still
+gray/ignored; no resampling or changes to predictions/metrics. Add mixed-size
+source-window coverage to offline media tests. Do not restart the active run.
+
+Outcome: removed display-only validation cropping, preserving the original
+512-square model canvas and ignored padding without resizing. Four focused CPU
+media tests pass, including two epochs of native offline W&B logging with mixed
+true window sizes and an explicit absence-of-warning assertion. Ruff format,
+Ruff check and diff checks pass. Updated quickstart. No commit/push or restart;
+the active process retains old code and may continue warning until completion.
+The fix applies on the next process start; current training/metrics are unaffected.
+
+## Post-training validation report plan — 2026-11-04
+
+User requests a simple post-training diagnostic report, false-color-only views,
+no changes to active training and no commits. Add a separate validation-report
+command requiring completed run.json and its selected portable bundle; CPU by
+default. Reuse existing disjoint validation selection, join adjacent windows in
+original coordinates, retain gaps/ignore masks, and score validation only.
+Produce source/region area counts, threshold sweep and probability histograms,
+boundary precision/recall at 1/2/3 pixels, near-boundary/interior errors, and
+8-connected label-patch recall by size with coverage-truncated patches flagged
+and excluded from size summaries. Static HTML/CSV/JSON and bounded false-color
+examples; ordinary functions, no service, dependencies or training hooks.
+Test synthetic geometry and a tiny CPU end-to-end command with test payloads
+absent. No full GPU evaluation while the current run trains; no Task 035/036
+full-TIFF inference implementation or held-out scoring in this bounded extension.
+
+Post-training report outcome: added the independent installed `validation-report`
+CLI and three small report modules (orchestration, metric functions, static views).
+Requires completed run identity plus its exported selected bundle; defaults to
+CPU, leaves W&B/training untouched and refuses an existing output. Native model
+bundle inference uses float32 and the existing validation selection. Source
+canvases join adjacent observed windows with unknown gaps, then calculate pooled
+confusion/area, boundary tolerance scores, near/interior errors, patch-size recall
+with truncation flags, threshold sweep and probability histograms. Source/window
+identities and scoring support are retained in plain CSV/JSON. Static HTML links
+all tables and fixed false-color-only label/prediction/probability/error examples.
+No new dependencies, service, checkpoint-selection rule or training hooks.
+
+Validation: 26 focused report/package CLI tests passed; after adding explicit
+pixel error rates, all four report tests passed again. Tiny CPU command exercises
+real portable preprocessing/inference with a fixture model, excludes missing test
+payloads, writes plots/tables and rejects incomplete runs/overwrites. Geometry
+fixtures cover one-pixel boundary displacement, unknown borders, patch truncation,
+size recall and joining across adjacent chips. Ruff format/check, all-file
+pre-commit and diff checks pass. No full-data or GPU analysis performed while the
+70-epoch training runs. Changed report/CLI/tests and researcher documentation;
+existing uncommitted work preserved, no commit/push. Exact next action: after
+training exports model/, run the documented validation-report command into a fresh
+external directory and open report.html; back up run/report outputs to Box.
+Task 034 remains in progress; no full-TIFF/test evaluation task was started.
+
+## Validation report quality review — 2026-11-04
+
+Review metric arithmetic, source joins and static report simplicity without
+changing active training or committing. Fix boundary matching at scoring margins:
+score only safely interior contour pixels, but allow matches to every contour
+with a fully observed immediate neighborhood. Add hand-computed CPU regressions
+for that distinction, pooled confusion, threshold endpoints and patch connectivity.
+
+Review outcome: fixed boundary matching references near scoring margins and
+reused the two distance maps across tolerances. Consolidated patch-size bins into
+one definition with an explicit loop. Updated HTML/quickstart metric explanations.
+Reviewed canonical label mapping, native nodata, original-coordinate disjoint
+joins, affine area calculation, count pooling and validation-only selection.
+Added five independent regression cases: margin matches in both directions,
+Euclidean partial matches, exact confusion/threshold/histogram values and undefined
+ratios, pooled rather than mean-source metrics, and diagonal patch connectivity
+with pixel-weighted recall. All 31 report/package CLI tests pass on CPU. Ruff
+format/check, all-file pre-commit and diff checks pass after fixing a lint finding
+in the simplified bin loop. No production evaluation or GPU work; running
+training and its settings untouched, no commits. Exact next action remains the
+post-completion report command above; real-data report inspection is pending.
+
+## Report readability follow-up — 2026-11-04
+
+User clarifies that simplicity means readable, explicit code, including types and
+function documentation, rather than fewer lines. Add parameter/return annotations
+and docstrings explaining inputs, outputs and side effects throughout report and
+CLI functions. Preserve metric behavior, running training and uncommitted work.
+
+Readability outcome: all 21 report/CLI functions (including the table formatter)
+now have parameter/return annotations and purpose/input/output docstrings.
+Documented array dimensions, ignore/nodata conventions, pooling semantics and
+file-writing/list-mutation side effects. Added typed patch and analysis records;
+heterogeneous manifest/export tables retain ordinary dictionaries. Recorded the
+user's readability preference in AGENTS.md. No algorithm or training changes.
+All 31 focused CPU tests, Ruff format/check, pre-commit and diff checks pass.
+Exact next action: review these uncommitted changes, then run the report after
+training completes. No commit, GPU evaluation or running-process changes.
+
+## Configurable loss experiment support — 2026-11-04
+
+User requests standard binary loss families and weighted combinations, excluding
+distance-based boundary loss. Add explicit typed loss terms to recipes, validate
+parameters, reuse installed SMP implementations, preserve default smoothed BCE /
+Lovasz behavior, log active components and record resolved objective metadata.
+Keep scientific ignore masks, float32 loss arithmetic and validation selection.
+CPU arithmetic/gradient, recipe, logging and resume checks only; no active-run
+settings edits, training launch or commits. Clarify any missing earlier candidates.
+
+Configurable-loss outcome: user confirmed BCE, Lovasz, Dice, Jaccard, focal,
+Tversky, focal Tversky and boundary-weighted BCE. Added typed LossTerm settings
+and strict [[losses]] parsing in training/loss_settings.py/settings.py; literal
+positive weights and resolved per-term parameters. training/loss.py builds stock
+PyTorch/SMP modules once, masks ignored pixels before reduction, keeps float32
+arithmetic and returns named components. Boundary BCE uses an explicit square
+label-transition band, excludes unknown/chip-edge neighborhoods from boosts,
+and divides weighted BCE by valid weight sum. Focal Tversky uses the literal
+SMP-style exponent with finite zero-loss gradients for fractional gamma. No new
+dependencies or distance-map implementation. Public baseline helpers and omitted
+loss settings retain 0.7 BCE (smoothing 0.1) + 0.3 batch-pooled Lovasz.
+
+TrainingModule logs only configured component names; run.py records resolved
+terms. Existing resume identity now includes the loss settings, interpreting
+missing fields in older checkpoints as the historical default. Changing an
+objective requires a fresh run. Updated architecture, experiment contract,
+quickstart (parameter table, example and scientific conventions) and queue.
+No production config edited, no running-process interaction and no commits.
+
+Validation: 198 focused CPU tests passed across objective/settings, new losses,
+Lightning logging/reset, run metadata, resume, report and CLI. Tests cover hand
+formulas, every pairwise combination plus all eight together, valid/ignored and
+background-only support, boundary geometry/normalization, fractional exponent
+zero gradients, bfloat16 inputs with float32 losses, invalid settings and dynamic
+component logging. Ruff format/check, all-file pre-commit and git diff --check
+pass. The 63 warnings are Lightning tiny-loader/checkpoint/logging notices and
+Python multiprocessing fork deprecations; no test failures. No CUDA throughput
+or full-data loss experiment was run. Exact next action: review uncommitted code;
+after current training/report review, copy a recipe with a fresh name and chosen
+[[losses]] terms for the next controlled experiment. Task 034 remains in progress.
+
+## Loss configuration convention follow-up — 2026-11-04
+
+Separate implementation type from unique logging name, permit repeated types,
+and expose installed-library experimental options plus correct per-image pooling.
+Keep shared binary/logit/ignore/float32 contracts, typed settings and docstrings.
+Prepare individual full training recipes and matched combination controls for
+later sequential screening; no launch/scheduling, active recipe edits or commits.
+
+Convention follow-up outcome: LossTerm now separates type/name/weight/parameters;
+type is required, name defaults to type, names are unique and types may repeat.
+A small typed build_loss function constructs stock modules. Experimental options
+include per-image versus microbatch pooling, BCE positive weighting and scalar
+reduction, overlap smooth/epsilon/log loss, Tversky exponents, focal normalization
+and reduced focal, and boundary BCE normalization. Per-image grouping occurs
+before ignore filtering and averages valid images only. Independent loss-module
+and component-metric storage prevents custom logging names from replacing model
+attributes or phase metrics. Default objective remains unchanged and adds no
+new checkpoint tensor state. Distance-based boundary loss remains deferred.
+
+Added 13 standalone configs/train/losses/*.toml recipes: all eight single losses,
+a smoothed BCE/Lovasz baseline, an unsmoothed BCE/Lovasz control and three
+combinations (BCE/Dice, boundary BCE/Dice, focal/Dice). Draft budget is 10 epochs,
+five warmup epochs; otherwise matched to the current 70-epoch 8-band with-BC run,
+including 3e-4/3e-6 LR, batch12/accumulation2, seed42 and W&B. The optional budget
+question had no reply during implementation; 10 epochs is the stated assumption.
+Each recipe has a distinct run name. Existing production recipes are unchanged.
+Updated quickstart/experiment contract/queue and CLI recipe help. Quickstart
+contains the parameter table, pooling/reduction semantics, candidate descriptions,
+preview command and a manual sequential stop-on-failure sweep command for use
+only after the active training finishes. No scheduler or sweep was launched.
+
+Validation: 229 focused CPU tests pass (66 existing tiny-Trainer/fork/checkpoint
+warnings). Tests cover repeated/renamed types including name collisions, independent
+per-image versus batch calculations, ignored-image exclusion, exposed options
+against installed libraries, default checkpoint state, all candidate recipe
+settings and forward/backward results, phase logging/reset, resume and prior
+report/CLI behavior. Ruff format/check, all-file pre-commit and diff checks pass.
+No CUDA benchmarking, active-run modification or commits. Exact next action:
+review the uncommitted implementation and candidate/budget choices; after the
+current run completes, select the overnight comparison set and run it sequentially.
+Task 034 remains in progress.
+
+Budget clarification: user selected 70 epochs per comparison run. Updated all
+13 configs/train/losses recipes, run-name suffixes and quickstart budget text.
+Five warmup epochs and LR endpoints remain unchanged; cosine spans 65 epochs.
+The focused matched-recipe forward/backward test passes, all 13 parsed settings
+explicitly verify 70 epochs/5 warmup/-70ep names, and git diff --check passes.
+No code changes, launches, scheduling, commits or active-training modifications.
+Next action remains review/select the comparison set after current training ends.
+
+## Sequential comparison script plan — 2026-11-04
+
+User selects BCE/Dice, boundary BCE/Dice and focal/Dice and requests a Bash
+script: wait for current training completion, report that run, then train/report
+each selected 70-epoch candidate in sequence. Prepare only, no launch or commits.
+Keep interactive training output, stop on any failure, and use the returned run
+path rather than guessing the newest directory. Reports use fresh external paths.
+Test orchestration with fake commands only; no GPU/full-data evaluation now.
+
+Sequential-script outcome: added executable repository-root
+run_loss_comparisons.sh as explicitly requested. It polls the specified current
+run's JSON every 30 seconds, refuses unsuccessful statuses, reports the completed
+baseline, then trains/reports bce_dice, boundary_bce_dice and focal_dice in order.
+Uses installed run_training/settings/path helpers in a short Python invocation;
+only its exact returned run path is captured to a temporary file, while progress
+remains interactive. Each report runs as a separate CUDA CLI process after its
+training subprocess exits. Reports use a fresh external timestamped root and
+per-run subfolders; no newest-directory guessing, tee/tail, implicit resume,
+automatic backup or time-of-day stopping. Any failure prevents later stages.
+Optional current-run/report-root arguments and --help are documented in quickstart.
+Updated queue to the selected sequence rather than an all-13 sweep.
+
+Validation: bash -n and help pass. Eleven fake-command orchestration tests pass,
+covering the exact train/report order and returned paths, waiting for completion,
+failed initial status, existing-output refusal, and failure at each of seven
+stages. Tests compile embedded Python but perform no training, report inference,
+GPU work or production writes. Ruff format/check, all-file pre-commit and diff
+checks pass. Nothing launched, scheduled or committed; active training untouched.
+Exact next action: user starts bash run_loss_comparisons.sh in a separate tmux
+session (now to wait, or after completion). Inspect all four reports and back up
+stable external outputs to Box after the sequence. Task 034 remains in progress.

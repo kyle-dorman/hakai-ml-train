@@ -42,9 +42,9 @@ def test_media_uses_actual_augmented_input_and_aligned_ignore_mask():
     target = torch.tensor([[1, 0, -100], [0, 1, -100], [-100, -100, -100]])
     prediction = torch.ones_like(target)
     result = prediction_image(image, target, prediction, row(1), BAND_NAMES, "val", 0)
-    assert result["image"].shape == (2, 2, 3)
+    assert result["image"].shape == (3, 3, 3)
     np.testing.assert_array_equal(
-        result["masks"]["label"]["mask_data"], [[1, 0], [0, 1]]
+        result["masks"]["label"]["mask_data"], [[1, 0, 2], [0, 1, 2], [2, 2, 2]]
     )
     training = prediction_image(
         image, target, prediction, row(1), BAND_NAMES, "train", 1
@@ -81,7 +81,7 @@ def test_bounded_samples_reset_for_each_epoch():
     assert list(images.samples["val"]) == ["0"]
 
 
-def test_trainer_uploads_both_epoch_panels_offline(tmp_path, monkeypatch):
+def test_trainer_uploads_both_epoch_panels_offline(tmp_path, monkeypatch, caplog):
     wandb = pytest.importorskip("wandb")
     from lightning.pytorch import Trainer
     from lightning.pytorch.loggers import WandbLogger
@@ -94,7 +94,7 @@ def test_trainer_uploads_both_epoch_panels_offline(tmp_path, monkeypatch):
     monkeypatch.setenv("WANDB_MODE", "offline")
     monkeypatch.setenv("WANDB_SILENT", "true")
     settings = load_settings("configs/train/tiny_cpu.toml")
-    rows = [row(0), row(1, kelp=0)]
+    rows = [row(0), dict(row(1, kelp=0), true_height=3, true_width=3)]
     dataset = [
         dict(
             image=torch.ones(3, 3, 3),
@@ -104,6 +104,9 @@ def test_trainer_uploads_both_epoch_panels_offline(tmp_path, monkeypatch):
         )
         for i, metadata in zip([1, 0], rows, strict=True)
     ]
+    dataset[0]["target"][2, :] = -100
+    dataset[0]["target"][:, 2] = -100
+    dataset[0]["valid_mask"] = dataset[0]["target"] != -100
     loader = DataLoader(dataset, batch_size=1, collate_fn=collate_chips)
     module = TrainingModule(settings, torch.nn.Conv2d(3, 1, 1))
     module.configure_diagnostics(rows)
@@ -138,6 +141,11 @@ def test_trainer_uploads_both_epoch_panels_offline(tmp_path, monkeypatch):
         assert all("epoch 1" in caption for caption in logged[0]["caption"])
         assert all("epoch 2" in caption for caption in logged[2]["caption"])
         assert len(logged[0]["images"]) == len(logged[2]["images"]) == 2
+        assert all(
+            image.shape == (3, 3, 3) for call in logged for image in call["images"]
+        )
+        assert "Images sizes do not match" not in caplog.text
+        assert logged[0]["masks"][0]["prediction"]["mask_data"][2, 0] == 2
         assert not module.epoch_images.samples["train"]
         assert not module.epoch_images.samples["val"]
         assert logger.experiment.offline

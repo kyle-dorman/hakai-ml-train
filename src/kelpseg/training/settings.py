@@ -1,4 +1,4 @@
-"""Strict flat recipes for the selected baseline and bounded CPU checks."""
+"""Strict training recipes with explicit optional loss terms."""
 
 import math
 import re
@@ -7,6 +7,12 @@ from dataclasses import dataclass, fields, replace
 from pathlib import Path
 
 from kelpseg.preprocessing import BAND_NAMES, CLIP_VALUE, MEAN, STD
+from kelpseg.training.loss_settings import (
+    DEFAULT_LOSSES,
+    LossTerm,
+    parse_losses,
+    validate_losses,
+)
 
 
 @dataclass(frozen=True)
@@ -43,8 +49,11 @@ class TrainingSettings:
     limit_train_batches: int | float = 1.0
     limit_val_batches: int | float = 1.0
     wandb: bool = False
+    losses: tuple[LossTerm, ...] = DEFAULT_LOSSES
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """Validate recipe fields and loss terms; raise ValueError on input mistakes."""
+        validate_losses(self.losses)
         if not isinstance(self.name, str) or not re.fullmatch(
             r"[A-Za-z0-9][A-Za-z0-9._-]*", self.name
         ):
@@ -143,6 +152,8 @@ def load_settings(path: str | Path) -> TrainingSettings:
             document[name] = tuple(document[name])
     if document.get("encoder_weights") == "none":
         document["encoder_weights"] = None
+    if "losses" in document:
+        document["losses"] = parse_losses(document["losses"])
     settings = TrainingSettings(**document)
     paths_file = Path(settings.paths_file).expanduser()
     if not paths_file.is_absolute():

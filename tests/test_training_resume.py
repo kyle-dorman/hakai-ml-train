@@ -1,7 +1,7 @@
 """Native CPU continuation, with independent model and augmentation RNG streams."""
 
 import random
-from dataclasses import replace
+from dataclasses import asdict, replace
 
 import albumentations as A
 import lightning.pytorch as pl
@@ -13,6 +13,7 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from kelpseg.training.ema import DelayedEMA
+from kelpseg.training.loss_settings import DEFAULT_LOSSES, LossTerm
 from kelpseg.training.module import TrainingModule
 from kelpseg.training.resume import TrainingResume, build_resume_identity, load_resume
 from kelpseg.training.run import seed_worker
@@ -70,7 +71,14 @@ def fit_run(path, count, stop=False, checkpoint=None, workers=0, observed=None):
     )
     resume = TrainingResume(
         "saved-name",
-        {"settings": {"num_workers": workers, "epochs": 2, "deterministic": True}},
+        {
+            "settings": {
+                "num_workers": workers,
+                "epochs": 2,
+                "deterministic": True,
+                "losses": tuple(asdict(term) for term in DEFAULT_LOSSES),
+            }
+        },
         train,
         val,
     )
@@ -231,6 +239,13 @@ def test_resume_identity_and_boundary_errors(tmp_path):
     assert load_resume(checkpoint, identity)["run_id"] == "same"
     with pytest.raises(ValueError, match="recipe or selected memberships"):
         load_resume(
+            checkpoint,
+            build_resume_identity(
+                replace(settings, losses=(LossTerm("dice"),)), inputs
+            ),
+        )
+    with pytest.raises(ValueError, match="recipe or selected memberships"):
+        load_resume(
             checkpoint, build_resume_identity(replace(settings, epochs=71), inputs)
         )
     inputs["train"].source_band_names = ("blue", "green", "red")
@@ -252,7 +267,12 @@ def test_resume_rejects_exhausted_budget(tmp_path):
     checkpoint = tmp_path / "last.ckpt"
     for workers in (0, 2):
         identity = {
-            "settings": {"num_workers": workers, "epochs": 2, "deterministic": True}
+            "settings": {
+                "num_workers": workers,
+                "epochs": 2,
+                "deterministic": True,
+                "losses": tuple(asdict(term) for term in DEFAULT_LOSSES),
+            }
         }
         torch.save(
             {
@@ -270,7 +290,14 @@ def test_resume_rejects_exhausted_budget(tmp_path):
 
 def test_old_zero_worker_identity_defaults_to_deterministic(tmp_path):
     checkpoint = tmp_path / "last.ckpt"
-    identity = {"settings": {"num_workers": 0, "epochs": 2, "deterministic": True}}
+    identity = {
+        "settings": {
+            "num_workers": 0,
+            "epochs": 2,
+            "deterministic": True,
+            "losses": tuple(asdict(term) for term in DEFAULT_LOSSES),
+        }
+    }
     torch.save(
         {
             "epoch": 0,

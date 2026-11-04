@@ -1,0 +1,42 @@
+# Fresh 70-epoch loss comparison; full 8-band with-BC selections and W&B.
+# Same initialization, seed, five-epoch warmup and cosine schedule across candidates.
+# Run only after the current GPU training finishes.
+name = "planet8-cabc-loss-lovasz-70ep"
+experiment = "baseline"
+paths_file = "../../../paths.local.toml"
+variant = "augmented"
+
+# Machine paths are relative to this recipe; chips/assignments use data_root.
+# Fixed with-BC normalization reference; preserve band order.
+band_names = ["coastal_blue", "blue", "green_i", "green", "yellow", "red", "rededge", "nir"]
+mean = [323.64878219651854, 389.5317689154827, 438.39646268775465, 465.35795980452735, 459.9420472595575, 451.3045100567385, 536.2606342593172, 799.2215816851071]
+std = [294.97881315006885, 336.1495661091302, 401.6870189255488, 459.22170495895057, 541.9194107884493, 575.3320083210876, 637.0868757507536, 994.5695551762033]
+clip_value = 5000
+chips = "data/chips/ca_bc/v1"
+assignments = "data/splits/ca_bc/v1/assignments.csv"
+epochs = 70
+warmup_epochs = 5
+seed = 42
+learning_rate = 0.0003
+min_lr = 3e-06
+betas = [0.9, 0.95]
+weight_decay = 0.01
+batch_size = 12
+accumulate_grad_batches = 2
+gradient_clip_val = 0.8
+accelerator = "cuda"
+precision = "bf16-mixed"
+deterministic = false
+encoder_weights = "imagenet"
+num_workers = 8
+pin_memory = true
+persistent_workers = true
+limit_train_batches = 1.0
+limit_val_batches = 1.0
+wandb = true
+
+[[losses]]
+type = "lovasz"
+name = "lovasz"
+weight = 1.0
+parameters = { per_image = false }

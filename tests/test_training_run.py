@@ -2,7 +2,7 @@
 
 import csv
 import json
-from dataclasses import replace
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +11,7 @@ import torch
 
 from kelpseg.paths import PathSettings
 from kelpseg.training import run
+from kelpseg.training.loss_settings import DEFAULT_LOSSES, LossTerm
 from kelpseg.training.module import TrainingModule
 from kelpseg.training.settings import load_settings
 
@@ -90,10 +91,18 @@ def _inputs(tmp_path):
     return settings, paths
 
 
+@pytest.mark.parametrize(
+    "losses",
+    [
+        DEFAULT_LOSSES,
+        (LossTerm("boundary_bce", weight=0.7), LossTerm("dice", weight=0.3)),
+    ],
+)
 def test_preview_budget_no_arrays_no_outputs_and_initial_collision(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, losses
 ):
     settings, paths = _inputs(tmp_path)
+    settings = replace(settings, losses=losses)
 
     def forbidden(*args, **kwargs):
         raise AssertionError("Preview must not open arrays or construct a model")
@@ -103,6 +112,10 @@ def test_preview_budget_no_arrays_no_outputs_and_initial_collision(
     report = run.run_training(settings, paths, run_id="preview", dry_run=True)
     assert not (paths.runs_root / "preview").exists()
     assert report["budget"]["optimizer_updates_total"] == 4
+    assert report["loss"] == {
+        "reduction": "weighted_sum",
+        "terms": [asdict(term) for term in settings.losses],
+    }
     assert report["budget"]["final_accumulation_microbatches"] == 1
     assert report["counts"]["canonical_windows"] == 6
     assert report["counts"]["canonical_retained_payloads"] == 6

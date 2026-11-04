@@ -1170,7 +1170,7 @@ for four/eight it repeats the RGB input kernels cyclically and multiplies by
 3/channel-count. This positional initialization does not assign pretrained
 spectral meaning to the native eight-band order.
 
-The objective is 0.7 BCE with 0.1 label smoothing plus 0.3 batch-pooled Lovasz
+The default objective is 0.7 BCE with 0.1 label smoothing plus 0.3 batch-pooled Lovasz
 hinge on hard labels. Both ignore -100; all-ignored support returns a
 differentiable zero. TorchMetrics accumulates the confusion matrix, foreground
 IoU, precision, recall, F1 and accuracy over updates. Explicit integer predictions
@@ -1180,6 +1180,182 @@ metric ignores -100. Results are tensors; the confusion matrix is
 inspect `report["confusion_matrix"].sum()` for scored support, and never treat
 zero-support output as evidence of model performance. These helpers provide no
 epoch loop, optimizer policy or checkpoint selection.
+
+## Configurable loss experiments
+
+Recipes without `losses` retain 0.7 BCE with 0.1 smoothing + 0.3 Lovasz.
+For a new experiment, copy a training recipe, change its run `name`, and append
+`[[losses]]` tables **after all top-level settings**. Each term has:
+
+- `type`: the implementation to construct (required).
+- `name`: its independent logging identifier (defaults to type).
+- `weight`: a positive multiplier (defaults to 1.0).
+- `parameters`: options for that loss; omitted values use the defaults below.
+
+The list replaces the default objective. Names must be unique, but types can
+repeat with different parameters. Names use lowercase letters, digits and
+underscores; metric names such as `loss`/`iou` and names ending `_step` are reserved.
+Weights are literal multipliers, not automatically normalized; omit disabled terms.
+
+```toml
+[[losses]]
+type = "boundary_bce"
+name = "edge_bce"
+weight = 0.7
+parameters = { smoothing = 0.0, radius = 1, factor = 2.0, per_image = false }
+
+[[losses]]
+type = "dice"
+name = "foreground_dice"
+weight = 0.3
+parameters = { smooth = 0.0, eps = 1e-7, log_loss = false, per_image = true }
+```
+
+This logs `train/edge_bce`, `val/edge_bce`, `train/foreground_dice`,
+`val/foreground_dice`, and corresponding `train/<name>_step` values. Repeating
+`type = "dice"` under two different names can compare or combine different pooling
+choices. Component values are unweighted; total loss is the weighted sum.
+
+| Type | Loss-specific parameters and defaults |
+| --- | --- |
+| `bce` | `smoothing = 0.0`, `pos_weight = 1.0`, `reduction = "mean"` |
+| `boundary_bce` | BCE options plus `radius = 1`, `factor = 2.0`, `normalization = "weights"` |
+| `lovasz` | No extra options beyond `per_image` |
+| `dice` | `smooth = 0.0`, `eps = 1e-7`, `log_loss = false` |
+| `jaccard` | `smooth = 0.0`, `eps = 1e-7`, `log_loss = false` |
+| `focal` | `gamma = 2.0`, `normalized = false`, `reduction = "mean"`; omitted `alpha` and `reduced_threshold` disable those options |
+| `tversky` | Overlap options plus `alpha = 0.5`, `beta = 0.5`, `gamma = 1.0` |
+| `focal_tversky` | Same as Tversky with default `gamma = 2.0` |
+
+Every type also accepts `per_image = false`. False pools valid pixels within
+one actual microbatch. True preserves image identity, computes each image's loss
+separately, and takes their arithmetic mean. Entirely ignored images are excluded
+from that mean; valid background-only images remain included. Gradient accumulation
+does not enlarge the loss pooling group. All-ignored batches yield differentiable
+zero. Per-image evaluation can cost more time because it calls the loss per image.
+
+BCE smoothing maps targets to `(1-smoothing)*y + smoothing/2`; its default in an
+explicit term is zero, while the historical default recipe specifies 0.1.
+`pos_weight` multiplies the positive BCE term and must be positive. `reduction`
+accepts `mean` or `sum` for BCE, boundary BCE and focal. With per-image evaluation,
+it reduces pixels within each image; the final image aggregation is still a mean.
+Scalar outputs are required for optimization. `sum` changes the objective scale
+with valid-pixel count; the weights and learning rate may need reassessment.
+
+For Dice/Jaccard/Tversky, `smooth` adds to numerator/denominator, `eps` bounds
+the denominator, and `log_loss` selects negative log overlap instead of one minus
+overlap. Tversky alpha weights FP and beta weights FN (each in [0,1], not both
+zero). Balanced 0.5/0.5 with gamma 1 equals Dice. Tversky gamma is the literal
+exponent on its loss, not its reciprocal; positive fractional exponents are allowed
+with zero gradients defined at exactly zero loss. `focal_tversky` is the same
+implementation with a different default exponent.
+
+Focal alpha, if supplied, weights positives by alpha and negatives by 1-alpha.
+Gamma controls focusing; zero removes it. `normalized = true` uses SMP's focal
+normalization followed by the selected reduction. `reduced_threshold` must be
+in (0,1) and requires `reduction = "sum"`, following the installed SMP contract.
+
+Boundary BCE boosts pixels whose square radius neighborhood contains both supplied
+classes. Neighborhoods touching ignored support or the chip edge receive no boost.
+Radius is a positive integer; factor is at least 1. For mean reduction,
+`normalization = "weights"` divides weighted BCE by the valid weight sum;
+`"pixels"` divides by the valid pixel count. Sum reduction simply sums weighted
+BCE, so normalization has no effect. Factor 1 gives ordinary BCE with matching
+smoothing/positive weighting/reduction. No distance maps are computed;
+distance-based boundary loss remains deferred.
+
+The small construction function reuses PyTorch BCE and installed
+[SMP loss implementations](https://smp.readthedocs.io/en/v0.3.3/losses.html).
+Shared project rules remain binary logits, -100 ignore labels and float32 loss
+arithmetic. Ignore filtering happens within the selected image/batch group, which
+also supplies ignore support for installed SMP Jaccard. SMP overlap losses return
+zero for groups with no labeled foreground. Pair them with BCE, boundary BCE,
+focal or Lovasz to penalize false positives on such groups. Per-image averaging
+includes these valid zero-valued background images.
+
+Run/settings JSON, W&B config and resume identity store resolved types, names,
+weights and parameters. Changing any loss settings requires a fresh run. Older
+checkpoints with no loss settings retain the historical default on resume.
+Epoch logs remain valid-pixel-weighted means of scalar microbatch losses, including
+when a term uses per-image pooling or sum reduction. Compare experiments using
+unchanged validation IoU/precision/recall and post-training diagnostics, rather
+than comparing numeric losses across different objectives.
+
+### Loss screening recipes
+
+[configs/train/losses/](../configs/train/losses/) contains 13 standalone recipes:
+
+- Eight single-loss recipes: `bce`, `boundary_bce`, `lovasz`, `dice`, `jaccard`,
+  `focal`, `tversky`, and `focal_tversky` (each filename ends in `.toml`).
+- `baseline.toml`: the current smoothed BCE/Lovasz objective at the same 70-epoch budget.
+- `bce_lovasz_unsmoothed.toml`: matched control for removing BCE smoothing.
+- `bce_dice.toml`, `boundary_bce_dice.toml`, `focal_dice.toml`: 0.7/0.3 combinations.
+
+All use 70 epochs, five warmup epochs, full 8-band with-BC data, the current
+3e-4/3e-6 LR endpoints, batch 12/accumulation 2, seed 42, initialization,
+augmentation and W&B settings. Their paths resolve relative to each recipe.
+They use batch pooling for a matched first comparison. The Tversky candidates
+use alpha 0.3/beta 0.7, and focal Tversky uses gamma 0.75; these are candidate
+settings, not selected winners. Single overlap losses have the background-only
+behavior described above. Cosine decay spans the remaining 65 epochs.
+
+Nothing is scheduled or started. After the current GPU run finishes, preview a
+candidate before launching it:
+
+```bash
+uv run --frozen kelpseg train --recipe configs/train/losses/baseline.toml --dry-run
+```
+
+### Selected overnight sequence
+
+The selected comparisons are **BCE + Dice**, **boundary-weighted BCE + Dice**,
+and **focal + Dice**, each for 70 epochs. The current run supplies the baseline;
+other recipe files remain optional candidates and are not included in this sequence.
+
+The repository-root [run_loss_comparisons.sh](../run_loss_comparisons.sh) waits
+for the current run's `run.json` status to become `complete`, creates its validation
+report, then trains and reports each of those three recipes in that order.
+Training calls the installed Python runner and uses its returned output directory,
+so reports cannot accidentally pick a different run from a directory search.
+All four reports use CUDA sequentially; training/reporting output stays interactive.
+
+Start a separate tmux session:
+
+```bash
+tmux new -s loss-comparisons
+```
+
+Inside that session, from the repository root:
+
+```bash
+bash run_loss_comparisons.sh
+```
+
+You can start the script while the current run is active: it polls its status
+every 30 seconds and starts no GPU work until completion. The default current run
+is `/home/sky/data/runs/planet8-cabc-70ep-fast-20261104T203544160104Z`.
+It stops if the run reports failure or if any training/report command fails.
+If the current process is forcibly killed and leaves stale `running` metadata,
+interrupt the waiting script with Ctrl-C. It does not stop or resume another job.
+
+Reports go to a fresh `/home/sky/data/analyses/loss-comparisons-<UTC timestamp>/`
+folder, with one subfolder per exact run ID containing `report.html`, CSV/JSON
+and false-color figures. New training runs use the paths in their recipes and
+retain their usual W&B logging, checkpoints and portable exports. Back up stable
+run/report outputs to Box separately; this script does not perform transfers.
+
+Optional positional arguments select a different initial run and fresh report root:
+
+```bash
+bash run_loss_comparisons.sh /path/to/completed-or-running-run /path/to/new-report-root
+```
+
+Existing report roots are refused. The script has no partial-work resume or
+skip logic: after failure, inspect the error and run any remaining stages explicitly.
+Starting it again with a new report root repeats the sequence with fresh training
+IDs. Nothing is scheduled until you start it. Reports add time beyond the roughly
+four-hour training runs; the sequence runs to completion and does not impose a
+9 AM cutoff. Use `bash run_loss_comparisons.sh --help` for a short usage summary.
 
 ## Train and validate
 
@@ -1267,16 +1443,18 @@ The runner logs step metrics every optimizer update. With gradient accumulation,
 the logged batch is the final microbatch of that update, not the combined group.
 `train/loss_step` records each logged training batch loss; `train/loss` and
 `val/loss` are native TorchMetrics valid-pixel-weighted epoch means of batch
-BCE/Lovasz losses. Lovasz is pooled within each batch, not recalculated over the
-whole epoch. The scalar logger receives the collection directly; confusion
+configured losses. Overlap losses and Lovasz pool within each microbatch, not
+across accumulated gradients or the whole epoch. The scalar logger receives the collection directly; confusion
 matrices remain available through the Python metric helper, without hand-split
 TN/FP/FN/TP log columns. Validation uses fixed threshold .5.
 Aggregate foreground `val/iou` selects best weights, preserving the earliest tie.
-`train/bce`, `train/lovasz`, `val/bce` and `val/lovasz` record unweighted
-loss components with the same valid-pixel epoch weighting as combined loss.
-BCE includes 0.1 label smoothing; Lovasz remains batch-pooled. Thus epoch
-`loss = 0.7 * bce + 0.3 * lovasz` (up to rounding). `train/bce_step` and
-`train/lovasz_step` accompany step loss at the same logging cadence.
+Each configured term logs unweighted `train/<name>`, `val/<name>` and
+`train/<name>_step` values. Epoch components use the same valid-pixel weighting
+as combined loss, so `loss = sum(weight * component)` up to rounding. Default
+recipes still use `bce` (0.1 label smoothing) and batch-pooled `lovasz` with weights
+0.7 and 0.3. CSV and W&B use the same component names. See
+[loss experiments](quickstart.md#configurable-loss-experiments) for supported
+terms, parameter conventions and TOML examples.
 CSV and W&B share slash-separated names (`train/iou`, `val/iou`, `val/pixels`),
 so W&B groups training and validation panels separately. Update counters use
 `trainer/optimizer_updates`; native Lightning logging supplies the global step.
@@ -1311,7 +1489,8 @@ augmentation-masked pixels. Captions identify epoch, region, source/date and
 original source window; training imagery and masks show the transformed canvas.
 RGB displays use red/green/blue when available, otherwise NIR/red/green false
 color. Each image uses a 2–98 percentile display stretch; these display colors
-are not model inputs. Validation images remove bottom/right loading padding.
+are not model inputs. All panel images retain the common model canvas; loading padding is gray and
+marked ignored so partial edge chips display correctly in W&B image lists.
 Media uploads use the existing W&B run and logger; offline runs retain media
 for later W&B synchronization. No media are built when W&B logging is disabled.
 
@@ -1322,6 +1501,54 @@ background-only chips. Zero-denominator scores are zero; inspect `pixels` for
 support and avoid interpreting empty foreground IoU as evidence of poor quality.
 Only validation regions appear; training-only BC regions do not acquire validation
 scores. Global `val/iou` remains the checkpoint-selection metric.
+
+
+## Post-training validation diagnostics
+
+After training finishes and exports `model/`, run an independent report:
+
+```bash
+uv run --frozen kelpseg validation-report \
+  --run /home/sky/data/runs/planet8-cabc-70ep-fast-20261104T203544160104Z \
+  --output /home/sky/data/analyses/planet8-cabc-70ep-validation-v1 \
+  --device cuda
+```
+
+Omit `--device cuda` to use CPU. This command refuses incomplete runs and existing
+output directories. It does not modify training, W&B, checkpoints or thresholds.
+Use a fresh output directory after a failure; there is no partial-report resume.
+The run's saved chip/assignment paths must be accessible on this machine.
+
+Open `report.html` in a browser, keeping its `examples/` directory and
+`diagnostics.png` alongside it. The report includes:
+
+- Global/source/region confusion counts and signed kelp-area bias in square metres,
+  plus separate false positives/misses and background-only chip results.
+- Validation-only threshold sweep from 0.1 to 0.9, and probability histograms
+  split by supplied kelp/background labels. Threshold 0.5 stays the primary result.
+- Boundary precision/recall/F1 at Euclidean tolerances of 1, 2 and 3 pixels.
+- Error rates within 3 pixels of labeled boundaries versus interiors.
+- Pixel recall and fraction of wholly missed label components in size bins
+  1–10, 11–100, 101–1000 and >1000 pixels. Connectivity is eight-neighbor;
+  these label fragments are not necessarily biological kelp beds.
+- Fixed NIR/red/green false-color views, labels, predictions, probability maps
+  and TP/FP/FN panels. No RGB views. Selection is one positive chip per region
+  when available plus up to two background chips, not a random sample.
+
+Adjacent disjoint validation chips are joined in original-source coordinates
+before geometric scoring. Nodata, ignored pixels and coverage gaps stay unknown.
+Boundary scores exclude unknown/image edges by tolerance + 1 pixels for scored
+contour pixels. Matching references include all contours with an observed 3×3
+neighborhood; near-boundary error scoring uses a four-pixel exclusion. Patches touching unknown support or
+image edges are flagged in `patches.csv` and excluded from patch-size summaries.
+`summary.json` records scored/retained window coverage and scope; CSVs retain
+source/date/region and original patch coordinates. Undefined ratios are blank
+in CSV, null in JSON and a dash in HTML. Areas require projected metre units.
+
+This uses the validation-selected exported weights in float32 inference, which
+may differ slightly from bf16 training validation. It scores observed validation
+windows, not a full-TIFF reconstruction or held-out test performance. No test
+payloads are opened. Large reports belong outside Git and should be backed up to Box.
 
 ## Copy and use a portable model
 

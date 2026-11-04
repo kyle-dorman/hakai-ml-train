@@ -27,11 +27,16 @@ batch loss, `train/iou_step` for current-batch foreground IoU,
 Batch IoU uses the same .5 threshold, ignored -100 pixels and zero for undefined
 IoU as epoch metrics, without changing their accumulation. Step metrics log every
 optimizer update; with accumulation they describe its final microbatch.
-`train/bce`, `train/lovasz`, `val/bce` and `val/lovasz` record unweighted
-loss components with the same valid-pixel epoch weighting as combined loss.
-BCE includes 0.1 label smoothing; Lovasz remains batch-pooled. Thus epoch
-`loss = 0.7 * bce + 0.3 * lovasz` (up to rounding). `train/bce_step` and
-`train/lovasz_step` accompany step loss at the same logging cadence.
+Each configured term has an implementation `type`, independent unique logging
+`name`, positive `weight` and loss-specific `parameters`. Types may repeat; names
+may not. Pooling and supported library options are explicit recipe choices.
+Each configured term logs unweighted `train/<name>`, `val/<name>` and
+`train/<name>_step` values. Epoch components use the same valid-pixel weighting
+as combined loss, so `loss = sum(weight * component)` up to rounding. Default
+recipes still use `bce` (0.1 label smoothing) and batch-pooled `lovasz` with weights
+0.7 and 0.3. CSV and W&B use the same component names. See
+[loss experiments](quickstart.md#configurable-loss-experiments) for supported
+terms, parameter conventions and TOML examples.
 CSV uses the same names. `val/pixels` records validation support and
 `trainer/optimizer_updates` records completed updates. Keep native Lightning
 `WandbLogger` global-step handling and existing logging frequency; do not mix in
@@ -49,6 +54,13 @@ the media and regional metrics. Captions retain source/window identities;
 ignored pixels stay explicit. Media are diagnostics, not a representative score.
 Regional `val_region_<code>/` metrics pool validation pixels within each region,
 with the same global metric semantics. They do not change checkpoint selection.
+
+The separate `validation-report` command runs only after completion against the
+exported selected model and saved validation membership. It reports boundary,
+patch-size, probability/threshold and area diagnostics on observed source pixels,
+with false-color examples. It does not tune thresholds or read test payloads.
+See [post-training diagnostics](quickstart.md#post-training-validation-diagnostics)
+for definitions, coverage exclusions and the float32 inference distinction.
 
 ## Initialization, fine tuning, and resume
 

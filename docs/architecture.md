@@ -12,7 +12,9 @@ loads kelp-positive training rows and representative validation; test rows stay
 metadata only. Shared preprocessing and the approved stock augmentation factory
 feed float32 tensors through an Albumentations Compose ending in Normalize
 and ToTensorV2. `training/loss.py` and `training/metrics.py` implement the
-selected objective and native TorchMetrics accumulation. Training uses
+configured weighted binary objectives (default smoothed BCE/Lovasz) and native
+TorchMetrics accumulation. Typed loss terms live in `training/loss_settings.py`;
+all terms share ignore masking and float32 reduction. Training uses
 PyTorch Lightning Trainer/LightningModule and native callbacks/loggers.
 Portable bundles support image-array probabilities; completed-epoch resume
 uses native Trainer checkpoints with explicit random/sampling state.

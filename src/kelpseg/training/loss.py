@@ -1,8 +1,17 @@
-"""The approved binary objective, with explicit ignored-pixel support."""
+"""Weighted standard binary objectives with one shared ignored-pixel contract."""
 
 import torch
 import torch.nn.functional as F
-from segmentation_models_pytorch.losses import LovaszLoss
+from segmentation_models_pytorch.losses import (
+    DiceLoss,
+    FocalLoss,
+    JaccardLoss,
+    LovaszLoss,
+    TverskyLoss,
+)
+from torch import nn
+
+from kelpseg.training.loss_settings import DEFAULT_LOSSES, LossTerm, validate_losses
 
 
 def binary_targets(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
@@ -18,29 +27,152 @@ def binary_targets(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     return targets
 
 
+def boundary_weights(targets: torch.Tensor, radius: int, factor: float) -> torch.Tensor:
+    """Return BHW BCE weights emphasizing observed foreground/background transitions.
+
+    targets is BHW with 0/1/-100. Pixels whose square radius neighborhood contains
+    both classes get factor; others get 1. Neighborhoods touching ignored pixels
+    or image edges receive no boost, so nodata/padding cannot invent boundaries.
+    The caller masks ignored pixels and normalizes by the sum of valid weights.
+    """
+    kernel = 2 * radius + 1
+    foreground = (targets == 1).float()[:, None]
+    background = (targets == 0).float()[:, None]
+    near_foreground = F.max_pool2d(foreground, kernel, stride=1, padding=radius) > 0
+    near_background = F.max_pool2d(background, kernel, stride=1, padding=radius) > 0
+    unknown = F.pad((targets == -100).float()[:, None], (radius,) * 4, value=1)
+    observed = F.max_pool2d(unknown, kernel, stride=1) == 0
+    edge = (near_foreground & near_background & observed)[:, 0]
+    return 1 + (factor - 1) * edge.float()
+
+
+def build_loss(term: LossTerm) -> nn.Module:
+    """Construct one PyTorch/SMP loss from its type and library-specific options.
+
+    Shared binary/logit conventions stay fixed. Pooling, BCE weighting and
+    Tversky's safe exponent are applied by BinaryObjective, outside the module.
+    """
+    parameters = dict(term.parameters)
+    parameters.pop("per_image")
+    if term.type in ("bce", "boundary_bce"):
+        return nn.BCEWithLogitsLoss(
+            reduction="none",
+            pos_weight=None
+            if parameters["pos_weight"] == 1
+            else torch.tensor(parameters["pos_weight"]),
+        )
+    if term.type == "lovasz":
+        return LovaszLoss(mode="binary", per_image=False)
+    if term.type == "dice":
+        return DiceLoss(mode="binary", **parameters)
+    if term.type == "jaccard":
+        return JaccardLoss(mode="binary", **parameters)
+    if term.type == "focal":
+        return FocalLoss(mode="binary", **parameters)
+    parameters.pop("gamma")
+    return TverskyLoss(mode="binary", **parameters)
+
+
+class BinaryObjective(nn.Module):
+    """Weighted scalar losses with independent names and explicit pooling choices."""
+
+    def __init__(self, terms: tuple[LossTerm, ...] = DEFAULT_LOSSES) -> None:
+        """Build loss modules once in term order; names are independent log identifiers."""
+        super().__init__()
+        validate_losses(terms)
+        self.terms = terms
+        self.components = nn.ModuleList([build_loss(term) for term in terms])
+
+    def _component(
+        self,
+        term: LossTerm,
+        module: nn.Module,
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+    ) -> torch.Tensor:
+        """Return one scalar for a nonempty BHW group using term's reduction.
+
+        Inputs retain image geometry until boundary weights are computed. Only
+        valid pixels then enter SMP/PyTorch. Caller chooses a whole microbatch
+        or one image; no input is modified. Arithmetic is already float32.
+        """
+        valid = targets != -100
+        prediction = logits[valid].reshape(1, 1, 1, -1)
+        truth = targets[valid].float().reshape_as(prediction)
+        parameters = term.parameters
+        target = truth
+        if term.type in ("bce", "boundary_bce"):
+            smoothing = parameters["smoothing"]
+            target = truth * (1 - smoothing) + smoothing / 2
+        value = module(prediction, target)
+        if term.type in ("bce", "boundary_bce"):
+            weights = torch.ones_like(value)
+            if term.type == "boundary_bce":
+                weights = boundary_weights(
+                    targets, parameters["radius"], parameters["factor"]
+                )[valid].reshape_as(value)
+            value = (value * weights).sum()
+            if parameters["reduction"] == "mean":
+                denominator = (
+                    weights.sum()
+                    if parameters.get("normalization", "weights") == "weights"
+                    else weights.numel()
+                )
+                value = value / denominator
+        elif term.type in ("tversky", "focal_tversky"):
+            # SMP uses gamma itself, not 1/gamma. Define zero-loss gradients
+            # as zero, including fractional exponents with a singular derivative.
+            positive = value > 0
+            base = torch.where(positive, value, torch.ones_like(value))
+            value = torch.where(positive, base ** parameters["gamma"], value)
+        return value
+
+    def forward(
+        self, logits: torch.Tensor, targets: torch.Tensor
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        """Return weighted total and named unweighted components from binary tensors.
+
+        logits is B1HW; targets is BHW/B1HW with 0/1/-100. Each term either pools
+        the whole microbatch or averages separately reduced image losses, excluding
+        all-ignored images. Preserve image identity before masking. All arithmetic
+        is float32; an entirely ignored batch returns differentiable zero. Loss
+        weights are literal multipliers. Neither input is modified.
+        """
+        targets = binary_targets(logits, targets)
+        with torch.autocast(device_type=logits.device.type, enabled=False):
+            values = logits[:, 0].float()
+            if not (targets != -100).any():
+                zero = values.sum() * 0
+                return zero, {term.name: zero for term in self.terms}
+            components = {}
+            for term, module in zip(self.terms, self.components, strict=True):
+                if term.parameters["per_image"]:
+                    image_losses = [
+                        self._component(term, module, image[None], target[None])
+                        for image, target in zip(values, targets, strict=True)
+                        if (target != -100).any()
+                    ]
+                    value = torch.stack(image_losses).mean()
+                else:
+                    value = self._component(term, module, values, targets)
+                components[term.name] = value
+            total = sum(term.weight * components[term.name] for term in self.terms)
+        return total, components
+
+
 def segmentation_loss_components(
     logits: torch.Tensor, targets: torch.Tensor
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Return unweighted BCE (0.1 smoothing) and batch-pooled Lovasz hinge.
+    """Return the historical unweighted BCE/Lovasz pair for B1HW logits and labels.
 
-    Ignore -100 in both terms. Entirely ignored batches return differentiable
-    zero with zero gradients; they contribute no evidence to the objective.
-    Lovasz uses hard binary labels, matching the retained baseline objective.
+    This convenience helper retains the baseline API. Configured training uses
+    BinaryObjective directly, with the same ignore and float32 behavior.
     """
-    targets = binary_targets(logits, targets)
-    valid = targets != -100
-    if not valid.any():
-        zero = logits.sum() * 0
-        return zero, zero
-    smoothed = targets[valid].to(logits.dtype) * 0.9 + 0.05
-    bce = F.binary_cross_entropy_with_logits(logits[:, 0][valid], smoothed)
-    lovasz = LovaszLoss(mode="binary", ignore_index=-100, per_image=False)(
-        logits, targets
-    )
-    return bce, lovasz
+    _, components = BinaryObjective()(logits, targets)
+    return components["bce"], components["lovasz"]
 
 
 def segmentation_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-    """Return the approved 0.7 BCE + 0.3 Lovasz objective."""
-    bce, lovasz = segmentation_loss_components(logits, targets)
-    return 0.7 * bce + 0.3 * lovasz
+    """Return default 0.7 smoothed BCE + 0.3 Lovasz for binary logits and targets."""
+    loss, _ = BinaryObjective()(logits, targets)
+    return loss

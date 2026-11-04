@@ -10,6 +10,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from kelpseg.training.ema import DelayedEMA
+from kelpseg.training.loss_settings import DEFAULT_LOSSES, DEFAULT_PARAMETERS, LossTerm
 from kelpseg.training.module import TrainingModule, parameter_groups
 from kelpseg.training.scheduler import LinearWarmupCosineDecayLR
 
@@ -24,6 +25,7 @@ def settings(epochs=2):
         weight_decay=0.01,
         band_names=("nir", "red", "green"),
         encoder_weights=None,
+        losses=DEFAULT_LOSSES,
     )
 
 
@@ -271,7 +273,23 @@ def test_validation_loss_weights_batch_objective_by_valid_pixels():
     assert recorded["val/iou"].compute().item() == pytest.approx(1 / 3)
 
 
-def test_native_metric_logging_pools_and_resets_train_and_validation(tmp_path):
+@pytest.mark.parametrize(
+    "terms",
+    [
+        DEFAULT_LOSSES,
+        tuple(LossTerm(name, weight=0.2) for name in DEFAULT_PARAMETERS),
+        (
+            LossTerm("bce", name="metrics", weight=0.5),
+            LossTerm(
+                "bce",
+                name="smooth_bce",
+                weight=0.5,
+                parameters={"smoothing": 0.2, "per_image": True},
+            ),
+        ),
+    ],
+)
+def test_native_metric_logging_pools_and_resets_train_and_validation(tmp_path, terms):
     import csv
 
     from lightning.pytorch.loggers import CSVLogger
@@ -284,6 +302,7 @@ def test_native_metric_logging_pools_and_resets_train_and_validation(tmp_path):
 
     run_settings = settings()
     run_settings.learning_rate = run_settings.min_lr = 0.0
+    run_settings.losses = terms
     module = TrainingModule(run_settings, nn.Conv2d(3, 1, 1))
     image = torch.tensor([[[1.0, -1.0], [-1.0, -1.0]]]).repeat(3, 1, 1)
     train = DataLoader(
@@ -328,8 +347,7 @@ def test_native_metric_logging_pools_and_resets_train_and_validation(tmp_path):
             "f1",
             "accuracy",
             "loss",
-            "bce",
-            "lovasz",
+            *(term.name for term in terms),
         ):
             assert all(record[f"{phase}/{name}"] for record in phase_records)
     step_records = [record for record in records if record["train/iou_step"]]
@@ -338,17 +356,20 @@ def test_native_metric_logging_pools_and_resets_train_and_validation(tmp_path):
     ] == pytest.approx([1.0, 0.0, 0.0, 2 / 3])
     for record in step_records:
         assert float(record["train/loss_step"]) == pytest.approx(
-            0.7 * float(record["train/bce_step"])
-            + 0.3 * float(record["train/lovasz_step"])
+            sum(
+                term.weight * float(record[f"train/{term.name}_step"]) for term in terms
+            )
         )
     for phase, phase_records in (("train", train_records), ("val", val_records)):
         for record in phase_records:
             assert float(record[f"{phase}/loss"]) == pytest.approx(
-                0.7 * float(record[f"{phase}/bce"])
-                + 0.3 * float(record[f"{phase}/lovasz"])
+                sum(
+                    term.weight * float(record[f"{phase}/{term.name}"])
+                    for term in terms
+                )
             )
-        for name in ("bce", "lovasz"):
-            assert getattr(module, f"{phase}_{name}").update_count == 0
+        for name in (term.name for term in terms):
+            assert module.component_metrics[f"{phase}_{name}"].update_count == 0
     assert all(float(record["val/pixels"]) == 4 for record in val_records)
     assert not any(
         name in records[0] for name in ("val/tn", "val/fp", "val/fn", "val/tp")

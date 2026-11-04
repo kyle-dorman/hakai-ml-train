@@ -19,7 +19,9 @@ support the ongoing replacement. The installed `train` command provides Lightnin
 training, validation, EMA, portable models and completed-epoch resume. Python
 bundle loading predicts supplied image arrays; the
 [installed tiny walkthrough](quickstart.md#tiny-v2-installed-training-walkthrough)
-covers all four spectral recipes and both variants.
+covers all four spectral recipes and both variants. The separate
+[validation report](quickstart.md#post-training-validation-diagnostics) adds
+post-training boundary/patch/probability diagnostics and false-color examples.
 [Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) is in progress
 for remote-first GPU setup and baseline launch; tiled/georeferenced
 prediction follows in Task 035. Tasks 000–023 describe the

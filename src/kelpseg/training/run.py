@@ -159,7 +159,10 @@ def run_training(
         "selection": "maximum pooled validation foreground IoU, earliest ties, threshold 0.5",
         "validation_weights": "current before optimizer update 101; EMA thereafter",
         "ema": {"decay": 0.999, "first_optimizer_update": 101},
-        "loss": {"bce_weight": 0.7, "lovasz_weight": 0.3, "smoothing": 0.1},
+        "loss": {
+            "reduction": "weighted_sum",
+            "terms": [asdict(term) for term in settings.losses],
+        },
         "budget": {
             "epochs": settings.epochs,
             "training_batches_per_epoch": train_batches,

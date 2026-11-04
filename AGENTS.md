@@ -33,6 +33,9 @@ full task contracts when selected; split them further when needed.
   `src/kelpseg/` package with `uv_build` as the target.
 - The final repository has no `scripts/` directory. Expose a small installed
   command and short explicit recipes; do not move complexity into a framework.
+- Keep parameter and return type annotations and function docstrings describing
+  purpose, inputs, outputs and relevant side effects. Simplicity means readable,
+  explicit code, not minimizing line count.
 - Favor plain functions, familiar geospatial/ML libraries, and actionable error
   messages for researchers with limited Python/ML experience. The current
   one-pass cleaner is an upper bound on file complexity, not a target to grow

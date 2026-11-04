@@ -347,3 +347,22 @@ copy the selected Box snapshot there. Keep the same run ID, original recipe and
 total epochs; set the recipe's `paths_file` to the new machine's settings.
 Restore the published data separately, then use the resume preview and command
 above. A completed final model is loaded directly for prediction, not resumed.
+
+## Seventy-epoch fast baseline
+
+After reviewing the twenty-epoch pilot, use
+`configs/train/planet8_gpu_70ep_fast.toml` for a fresh eight-band with-BC run.
+It retains batch 12 × accumulation 2, eight workers, bf16 and EMA. Five warmup
+epochs reach LR 0.0003, followed by 65 cosine-decay epochs ending at 0.000003.
+W&B is enabled, including loss components, epoch image panels and regional metrics.
+Checkpoint retention remains best and last; intermediate epochs are not archived.
+
+Run directly inside your tmux session to retain the interactive progress display:
+
+```bash
+uv run --frozen kelpseg train --recipe configs/train/planet8_gpu_70ep_fast.toml
+```
+
+This starts from ImageNet weights with a fresh run identity, not from the completed
+pilot. Metadata preview expects 710 training / 78 validation batches per epoch
+and 24,850 optimizer updates. The run creates its own timestamped output folder.

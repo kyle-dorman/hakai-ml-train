@@ -49,9 +49,8 @@ def prediction_image(image, target, prediction, metadata, band_names, phase, epo
     rgb = rgb * np.array(STD)[native] + np.array(MEAN)[native]
     label = target.detach().cpu().numpy().copy()
     pred = prediction.detach().cpu().numpy().copy()
-    if phase == "val":
-        h, w = metadata["true_height"], metadata["true_width"]
-        rgb, label, pred = rgb[:h, :w], label[:h, :w], pred[:h, :w]
+    # W&B image lists require a common canvas. Keep loading padding in the
+    # display; ignored targets make it gray and exclude it from both overlays.
     valid = label != -100
     if valid.any():
         low, high = np.percentile(rgb[valid], [2, 98], axis=0)

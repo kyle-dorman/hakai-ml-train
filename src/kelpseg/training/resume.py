@@ -9,6 +9,8 @@ import numpy as np
 import torch
 from lightning.pytorch.callbacks import Callback, ModelCheckpoint
 
+from kelpseg.training.loss_settings import DEFAULT_LOSSES
+
 
 def build_resume_identity(settings, inputs):
     """Compare ordinary settings and selected metadata, allowing root relocation."""
@@ -34,8 +36,14 @@ def build_resume_identity(settings, inputs):
     }
 
 
-def load_resume(path, identity):
-    """Only the last completed epoch from this implementation can resume."""
+def load_resume(path: str | Path, identity: dict) -> dict:
+    """Read a completed-epoch checkpoint and return its saved resume metadata.
+
+    path identifies last.ckpt; identity contains current settings/memberships.
+    Earlier missing loss settings mean the historical BCE/Lovasz default.
+    Changed recipes or exhausted epoch budgets raise ValueError; files are not
+    modified and restoring model/optimizer state remains Lightning's job.
+    """
     checkpoint = torch.load(Path(path), map_location="cpu", weights_only=False)
     saved = checkpoint.get("training_resume")
     if saved is None or not saved["completed_epoch"]:
@@ -44,6 +52,11 @@ def load_resume(path, identity):
     # its missing field that way; earlier GPU smokes have no replay guarantee.
     saved_identity = copy.deepcopy(saved["identity"])
     saved_identity["settings"].setdefault("deterministic", True)
+    # Earlier runs used exactly this hardcoded objective. Preserve their resume
+    # meaning; a changed configured loss still requires a fresh run.
+    saved_identity["settings"].setdefault(
+        "losses", tuple(asdict(term) for term in DEFAULT_LOSSES)
+    )
     if saved_identity != identity:
         raise ValueError(
             "Resume recipe or selected memberships changed; start a fresh run."
