@@ -2,7 +2,7 @@
 
 Status: In progress — 2026-11-03. Linux setup, CUDA/bf16, staged data,
 tiny training, portable loading and deterministic completed-epoch continuation
-pass. Production launch is pending final sizing/budget confirmation.
+pass. Final sizing passes; production launch awaits baseline/budget confirmation.
 The user selected remote-first implementation: finish the small entry checklist
 locally, then test and iterate on the external machine.
 Depends on: Completed Task 033A–G, published CA/BC chips and tiny v2.
@@ -344,3 +344,19 @@ Exact next action: confirm native-eight with BC, one RTX 3090, 70 epochs,
 25–30 hours and 10 GiB run/snapshot budget; launch the committed recipe in
 tmux, observe the first validation/checkpoints, back up a stable snapshot to
 Box, then close Task 034 with monitoring details.
+
+### Committed prelaunch handoff
+
+Implementation and evidence were committed as
+`e76722327dc550a5f82ee860070a6e27d6dc49ab` on
+`codex/task034-gpu-validation` and pushed to origin. The fresh host lacked a Git
+identity; repository-local identity was set to match the existing commit author.
+Two pushes failed with SSH broken pipe despite successful authentication; the
+push succeeded with `git -c core.sshCommand='ssh -o IPQoS=none -o ControlMaster=no'`.
+No global SSH configuration was changed. Fetch this branch on the Mac to bring
+back the remote corrections; no main-branch merge or Task 035 work was performed.
+
+An explicit launch choice is pending: recommended Planet eight-band with BC,
+one RTX 3090, 70 epochs, 25–30 hours, 10 GiB for run/snapshots, and Box backup.
+No production process has started. Task 034 remains in progress until its first
+epoch, stable-output backup and monitoring handoff are verified.

@@ -76,7 +76,7 @@ are authorized by Task 024.
 | [033E](033e_training_validation_and_ema.md) | Local training/validation | Complete | Lightning, four spectral recipes, update-101 EMA, native best/last checkpoints; next 033F |
 | [033F](033f_portable_models_and_resume.md) | Local bundle/recovery | Complete | Offline copied bundles and exact zero-worker completed-epoch resume; next 033G |
 | [033G](033g_tiny_walkthrough_and_handoff.md) | Installed rehearsal/docs | Complete | Eight tiny CPU cases and metadata-only production previews; copied bundle/resume pair; next Task 034 |
-| [034](034_gpu_machine_preparation_and_baseline_launch.md) | Remote-first setup/validation/launch | In progress | Local checklist/bootstrap drafted; install and refine on actual GPU host; start baseline independently of later inference/scoring |
+| [034](034_gpu_machine_preparation_and_baseline_launch.md) | Remote-first setup/validation/launch | In progress | RTX 3090 setup, tiny/EMA/resume and sizing pass; deterministic CUDA fix committed; awaiting baseline/budget confirmation before launch |
 
 Tasks 035–039 remain roadmap slots in [docs/todo.md](../docs/todo.md). Task 034
 owns initial GPU setup/launch; the final researcher handoff reuses it.
