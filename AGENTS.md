@@ -62,6 +62,8 @@ full task contracts when selected; split them further when needed.
 - Remove unrelated dataset/model families and unused dependencies within the
   selected task. Preserve useful correctness tests as implementations change.
 - Preserve user changes and unrelated work in a dirty checkout.
+- Do not commit or push changes unless explicitly requested. Leave changes for
+  the user to review and commit/push themselves.
 - Never describe a planned replacement command as already implemented.
 - Apply the cross-task usability acceptance in `docs/todo.md`: simple settings,
   portable models, clear outputs/errors, and researcher instructions that grow

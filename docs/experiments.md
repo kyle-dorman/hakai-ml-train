@@ -116,7 +116,10 @@ paths, or an online tracking service. Completed-epoch resume uses the separate `
 the saved run identity and total schedule. The recipe and selected memberships
 must match; machine roots may relocate explicitly. Ordinary weights, optimizer,
 scheduler, progress, random/sampling state and EMA restore through native
-Lightning mechanisms. Exact resume requires zero loader workers from the start;
+Lightning mechanisms. Training uses Lightning deterministic algorithms,
+including its CUDA workspace configuration. This avoids the pre-interruption GPU divergence observed in Task
+034; cross-device/software bitwise equivalence is not promised. Exact resume
+requires zero loader workers from the start;
 older Task 033E checkpoints and partial-epoch recovery are unsupported.
 Bundle loading is model-only initialization and restores none of that training state.
 

@@ -59,9 +59,12 @@ copied bundles and zero-worker completed-epoch resume pass offline CPU checks.
 installed tiny CPU checks cover all eight recipe/variant cases, copied models and
 completed-epoch resume; eight production metadata previews pass.
 **[Task 034: GPU machine preparation and baseline launch](../tasks/034_gpu_machine_preparation_and_baseline_launch.md)
-is in progress.** The [entry checklist](gpu_setup.md) and bootstrap are drafted
-locally; install, test and refine them on the external GPU host. A baseline may train there while
-Task 035 proceeds locally. No production training has run.
+is in progress.** The [entry checklist](gpu_setup.md) has been followed on the RTX 3090 host.
+Frozen installation, CUDA/bf16, staged-data inventory, tiny training, copied
+bundle prediction, eight metadata previews and deterministic GPU EMA/resume
+checks pass. The user selected a ten-epoch eight-band with-BC pilot with W&B, and will
+review/commit changes and launch it themselves. The recipe is prepared; no
+production or pilot training has started.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
