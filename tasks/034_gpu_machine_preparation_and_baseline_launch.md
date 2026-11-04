@@ -2,7 +2,8 @@
 
 Status: In progress — 2026-11-03. Linux setup, CUDA/bf16, staged data,
 tiny training, portable loading and deterministic completed-epoch continuation
-pass. Final sizing passes; production launch awaits baseline/budget confirmation.
+pass. Final sizing passes; user will launch a ten-epoch with-BC pilot before the
+full baseline. Changes remain uncommitted for user review.
 The user selected remote-first implementation: finish the small entry checklist
 locally, then test and iterate on the external machine.
 Depends on: Completed Task 033A–G, published CA/BC chips and tiny v2.
@@ -360,3 +361,27 @@ An explicit launch choice is pending: recommended Planet eight-band with BC,
 one RTX 3090, 70 epochs, 25–30 hours, 10 GiB for run/snapshots, and Box backup.
 No production process has started. Task 034 remains in progress until its first
 epoch, stable-output backup and monitoring handoff are verified.
+
+## User-selected ten-epoch pilot — 2026-11-04
+
+The user superseded the proposed immediate 70-epoch launch with a ten-epoch
+native-eight-band with-BC pilot. Added `configs/train/planet8_gpu_10ep.toml`,
+with W&B enabled and distinct `planet8-cabc-10ep` identity. Preserve full
+training/validation selections, batch 3 × accumulation 8, zero workers,
+ImageNet initialization, preprocessing and five warmup epochs; cosine decay now
+covers the remaining five epochs. This is its own ten-epoch schedule, not a
+70-epoch run stopped early. The user will start training and share the log if
+needed. Do not launch it from this chat. The user also requested no future
+commits/pushes without explicit instruction; recorded in AGENTS.md.
+
+Exact next action: user reviews these uncommitted changes and launches the
+pilot using the GPU guide. Assess training/validation behavior before deciding
+on the longer baseline. No pilot or production fitting was started here.
+
+Pilot validation: installed metadata-only dry-run passes with 8,518 eligible
+training chips, 933 validation chips and 3,550 optimizer updates over ten epochs.
+W&B is enabled. Preview saved to
+`/home/sky/data/analyses/task034_gpu_deterministic_v1/pilot-10ep-preview.log`.
+Ruff format/check, guide shell syntax and `git diff --check` pass. No new
+behavioral tests needed for this recipe/documentation-only change. All changes
+remain uncommitted and unpushed.

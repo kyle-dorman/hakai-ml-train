@@ -234,6 +234,35 @@ Resume is for interrupted runs, not runs that already exported `model/`.
 CUDA agreement is bounded by the tolerance recorded in Task 034, not a promise
 of bitwise reproducibility on every GPU/software combination.
 
+## Ten-epoch pilot
+
+The user selected a ten-epoch native-eight-band pilot with BC before the full
+baseline. Use `configs/train/planet8_gpu_10ep.toml`: W&B enabled, all selected
+training/validation batches, batch 3 × accumulation 8, and zero workers.
+It retains five warmup epochs and decays over the remaining five. This is a
+separate ten-epoch schedule, not the first ten epochs of the 70-epoch schedule.
+Expect roughly four hours on the measured RTX 3090. Review changes before launch;
+the user handles Git commits/pushes and starts this run.
+
+From the checkout, run inside tmux to survive SSH disconnects:
+
+```bash
+tmux new -s kelp-pilot
+```
+
+Then in that session:
+
+```bash
+cd /home/sky/hakai-ml-train
+set -o noclobber
+uv run --frozen kelpseg train --recipe configs/train/planet8_gpu_10ep.toml > /home/sky/data/runs/planet8-cabc-10ep.log 2>&1
+```
+
+Detach with Ctrl-b, then d. Monitor from another terminal with
+`tail -f /home/sky/data/runs/planet8-cabc-10ep.log`, or use W&B. The run creates
+its own `planet8-cabc-10ep-*` output folder. Choose a fresh log filename if
+repeating the pilot; `noclobber` refuses an existing log.
+
 ## Launch and monitor the baseline
 
 After the checks above pass and the run budget is agreed, launch from the fixed

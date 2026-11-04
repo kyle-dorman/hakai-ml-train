@@ -62,8 +62,9 @@ completed-epoch resume; eight production metadata previews pass.
 is in progress.** The [entry checklist](gpu_setup.md) has been followed on the RTX 3090 host.
 Frozen installation, CUDA/bf16, staged-data inventory, tiny training, copied
 bundle prediction, eight metadata previews and deterministic GPU EMA/resume
-checks pass. Production launch remains pending final budget confirmation.
-No production training has run.
+checks pass. The user selected a ten-epoch eight-band with-BC pilot with W&B, and will
+review/commit changes and launch it themselves. The recipe is prepared; no
+production or pilot training has started.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
