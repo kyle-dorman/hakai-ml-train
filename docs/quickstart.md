@@ -1191,7 +1191,7 @@ spectral meaning to the native eight-band order.
 The default objective is 0.7 BCE with 0.1 label smoothing plus 0.3 batch-pooled Lovasz
 hinge on hard labels. Both ignore -100; all-ignored support returns a
 differentiable zero. TorchMetrics accumulates the confusion matrix, foreground
-IoU, precision, recall, F1 and accuracy over updates. Explicit integer predictions
+IoU, precision, recall and F1 over updates. Explicit integer predictions
 use probability >= 0.5 and avoid automatic logits/probability guessing. Each
 metric ignores -100. Results are tensors; the confusion matrix is
 `[[tn, fp], [fn, tp]]`. Undefined ratios use TorchMetrics' zero convention;
@@ -1450,9 +1450,16 @@ Lightning divides each microbatch loss by the configured accumulation factor,
 including that final group. The preview reports actual update budget and
 partial groups; effective batch 24 describes complete groups only.
 
-Training and validation each log IoU, precision, recall, F1 and accuracy through
+Training and validation each log IoU, precision, recall, F1, AUROC and calibration
+error through
 native TorchMetrics collections. Lightning computes pooled epoch metrics and
-resets their state; these are not averages of per-batch IoUs. Training metrics
+resets their state; these are not averages of per-batch IoUs. `train/auroc` and
+`val/auroc` use sigmoid probabilities with 257 uniform thresholds; higher is
+better. `train/calibration_error` and `val/calibration_error` use 15 uniform
+probability bins and L1 expected calibration error; lower is better. Both exclude
+ignored pixels and log only at epoch end, using fixed-size running state.
+Accuracy is no longer logged. These diagnostics do not change IoU checkpoint
+selection. Training metrics
 measure the augmented training pass with changing current weights, so they are
 diagnostics, not directly comparable to deterministic validation with EMA.
 `train/iou_step` records current-batch foreground IoU (threshold .5, ignoring
@@ -1513,13 +1520,24 @@ Media uploads use the existing W&B run and logger; offline runs retain media
 for later W&B synchronization. No media are built when W&B logging is disabled.
 
 `val_region_001/iou` (and each represented region) logs pooled epoch metrics,
-including precision, recall, F1, accuracy and `pixels`, to both CSV and W&B.
+including precision, recall, F1, AUROC, calibration error and `pixels`, to both CSV and W&B.
 These use the same threshold/ignored pixels as global validation, including
 background-only chips. Zero-denominator scores are zero; inspect `pixels` for
 support and avoid interpreting empty foreground IoU as evidence of poor quality.
 Only validation regions appear; training-only BC regions do not acquire validation
 scores. Global `val/iou` remains the checkpoint-selection metric.
 
+
+## Early stopping
+
+`early_stopping_patience = 10` stops after ten validation checks without a new
+best `val/iou`; `early_stopping_min_delta = 0.0` accepts any strict improvement.
+The default patience is 0 (disabled). The BCE/Dice recipe enables patience 10.
+Keep `epochs = 70`, warmup and LR settings unchanged: early stopping truncates
+execution, not the planned cosine schedule. Validation runs once per epoch.
+The best checkpoint is still exported, and `run.json` records `stopped_early`.
+Changing stopping settings requires a fresh run rather than resuming a run with
+a different policy. See [Lightning early stopping](https://lightning.ai/docs/pytorch/stable/common/early_stopping.html).
 
 ## Post-training validation diagnostics
 
@@ -1537,12 +1555,23 @@ output directories. It does not modify training, W&B, checkpoints or thresholds.
 Use a fresh output directory after a failure; there is no partial-report resume.
 The run's saved chip/assignment paths must be accessible on this machine.
 
+For a fixed unaugmented training diagnostic, add `--split train`,
+`--sources-per-region 3` and `--seed 42` and choose a separate fresh output directory.
+This samples original training TIFFs uniformly within each region, without
+looking at labels, then applies the same disjoint-window selection and model
+inference as validation. It includes background-only windows, even though those
+are excluded from optimization. It never changes the saved assignments.
+`selected_windows.csv` records the exact sample and source/window identities.
+Compare common regions separately: training-only BC regions have no validation
+counterpart. A sampled train–validation gap also reflects source/date/patch-size
+composition, so it is not a pure measurement of overfitting.
+
 Open `report.html` in a browser, keeping its `examples/` directory and
 `diagnostics.png` alongside it. The report includes:
 
 - Global/source/region confusion counts and signed kelp-area bias in square metres,
   plus separate false positives/misses and background-only chip results.
-- Validation-only threshold sweep from 0.1 to 0.9, and probability histograms
+- Diagnostic threshold sweep from 0.1 to 0.9 on the selected report split, and probability histograms
   split by supplied kelp/background labels. Threshold 0.5 stays the primary result.
 - Boundary precision/recall/F1 at Euclidean tolerances of 1, 2 and 3 pixels.
 - Error rates within 3 pixels of labeled boundaries versus interiors.

@@ -2,7 +2,6 @@
 
 from torchmetrics import MetricCollection
 from torchmetrics.classification import (
-    BinaryAccuracy,
     BinaryConfusionMatrix,
     BinaryF1Score,
     BinaryJaccardIndex,
@@ -30,7 +29,6 @@ def build_metrics(*, include_confusion: bool = True) -> MetricCollection:
         "precision": BinaryPrecision(ignore_index=-100),
         "recall": BinaryRecall(ignore_index=-100),
         "f1": BinaryF1Score(ignore_index=-100, zero_division=0),
-        "accuracy": BinaryAccuracy(ignore_index=-100),
     }
     if include_confusion:
         metrics["confusion_matrix"] = BinaryConfusionMatrix(ignore_index=-100)

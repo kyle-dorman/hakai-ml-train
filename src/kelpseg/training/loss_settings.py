@@ -44,7 +44,17 @@ DEFAULT_PARAMETERS: dict[str, dict[str, LossParameter]] = {
     "focal_tversky": {**OVERLAP_PARAMETERS, "alpha": 0.5, "beta": 0.5, "gamma": 2.0},
 }
 # Avoid collisions with existing phase metrics and their step counterparts.
-RESERVED_NAMES = {"loss", "iou", "precision", "recall", "f1", "accuracy", "pixels"}
+RESERVED_NAMES = {
+    "loss",
+    "iou",
+    "precision",
+    "recall",
+    "f1",
+    "accuracy",
+    "pixels",
+    "auroc",
+    "calibration_error",
+}
 
 
 @dataclass(frozen=True)

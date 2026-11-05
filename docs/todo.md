@@ -76,8 +76,15 @@ Configurable losses use type/name/weight/parameters; standalone recipes live in
 `configs/train/losses/`. `run_loss_comparisons.sh` performs the selected sequential
 train/report sequence. The four runs show similar validation IoU with modest
 boundary/patch differences. Gaussian noise strength is now reduced fourfold for
-future runs. Next: visually review the fixed-seed training-only noise galleries;
-no retraining is needed for this check. Noise changes remain uncommitted.
+future runs (committed as `d301909`). The probability-metrics follow-up adds
+pooled train/validation/regional AUROC and calibration error and removes accuracy;
+these changes remain uncommitted. A fixed unaugmented training report and targeted
+validation gallery confirm a generalization gap plus small-component difficulty
+on both splits. BCE/Dice now enables patience-10 early stopping with its original
+LR schedule. The code-quality pass verified metric parity and GPU update costs,
+reused source identity helpers, and fixed report progress logging. Correction: the completed BCE/Dice run used smoothing=0, not smoothed
+BCE. Next: inspect priority region 001/004/006/008 examples and confirm smoothing
+before a future experiment; no new production fitting or commit.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in

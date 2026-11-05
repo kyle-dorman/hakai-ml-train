@@ -965,3 +965,152 @@ next action: user reviews Gaussian noise in isolated/index.html at 0.0005 versus
 0.002 and the reduced-strength combined pipeline, then decides whether further
 adjustment is needed. Task 034 follow-up complete; broader run/artifact review
 and Box backup remain outside this visual check.
+
+## Probability metrics follow-up — 2026-11-05
+
+User requests binary calibration error/AUROC and removal of accuracy. Keep
+thresholded metrics separate from probability metrics to retain >=0.5 semantics.
+Use bounded-memory bins for full segmentation epochs; check parity against
+TorchMetrics. Log train/val and regional epoch values with native reset; no
+training launch, history rewrite or commit.
+
+
+### Probability metrics outcome
+
+Added `training/probability_metrics.py`: 257-threshold BinaryAUROC with histogram
+updates and 15-bin L1 BinaryCalibrationError-equivalent running totals. Both use
+sigmoid probabilities and ignore -100; memory is independent of epoch size.
+AUROC is binned/approximate, not exact rank AUROC. Calibration retains the
+installed library's endpoint bin definition. Empty calibration support returns
+NaN; single-class AUROC follows TorchMetrics. Thresholded IoU/precision/recall/F1
+and IoU checkpoint selection remain unchanged. Accuracy is removed from the
+active metric collection. The module logs train/val and regional probability
+metrics once per epoch; new log names are reserved against loss-name collisions.
+
+Updated the quickstart and experiments contracts, metric/objective/loop tests,
+and queue. Validation: 167 focused probability/objective/loop/resume/run/loss
+tests pass on CPU, including parity against TorchMetrics, known values, unequal
+batches, endpoints, ignored pixels, regional probability calculations and native
+epoch reset. Ruff format/check, all-file pre-commit and diff checks pass. Test
+warnings concern existing Lightning worker/logging/resume guidance and library
+deprecations. No production training, checkpoint edits, history backfill, commits
+or external artifacts. GPU throughput has not been measured for these metrics.
+Exact next action: review this change; the next training process will log the new
+metrics to CSV and W&B. Broader Task 034 artifact backup remains separate.
+
+
+## Clean training comparison, error review and early stopping — 2026-11-05
+
+User requests all three: fixed unaugmented training inference, validation error
+breakdown/visual inspection, and early stopping with an unchanged LR schedule.
+No production fitting or commits. Preserve the preceding uncommitted probability
+metrics changes. Corrected earlier conversational baseline description: saved
+BCE/Dice run settings explicitly use BCE smoothing=0.0, not smoothed BCE.
+
+Implemented `validation-report --split train --sources-per-region 3 --seed 42`:
+label-blind seeded original-source sampling within each training region, followed
+by the exact validation disjoint-grid selection using an in-memory assignment
+copy. Persist selected_windows.csv. No original assignments or test payloads
+are modified/read respectively; background windows are retained for comparable
+scoring. Existing report inference and geometric metrics are reused. Updated
+HTML scope, CLI help, selection/CLI tests and researcher docs.
+
+Native Lightning EarlyStopping is optional via typed recipe fields
+`early_stopping_patience` (0 disabled) and `early_stopping_min_delta` (0 default).
+BCE/Dice recipe enables patience10; monitor val/iou max after validation. The
+70-epoch LR schedule, optimizer, warmup and loss parameters stay unchanged.
+Best checkpoint export remains, run.json records stopped_early, and old resume
+identities default to disabled stopping. Tiny CPU tests exercise actual stopping,
+identical LR prefix, best export and saved callback state.
+
+Evaluated `/home/sky/data/runs/planet8-cabc-loss-bce-dice-70ep-20261105T004320758369Z/model`
+(epoch18 EMA) using unaugmented float32 CUDA inference, threshold0.5. Output:
+`/home/sky/data/analyses/task034_generalization_20261105/index.html`; train/report.html
+has full tables; worst_validation/index.html has22 targeted false-color panels.
+External inspect_sources.py and summarize.py reproduce targeted outputs from the
+existing run/report. Original validation report is reused at
+`/home/sky/data/analyses/loss-comparisons-20261104T230454Z/planet8-cabc-loss-bce-dice-70ep-20261105T004320758369Z/`.
+All outputs are local, not yet backed up to Box.
+
+36 training sources/718 disjoint windows/164,651,958 valid pixels: IoU0.778331,
+precision0.882291, recall0.868518. Training sample restricted to validation regions
+001–010: IoU0.789902, precision0.891689, recall0.873735. Validation53 sources/933
+windows/215,524,030 valid pixels: IoU0.689803, precision0.826596, recall0.806511.
+Verified selected windows belong to original training assignments and have no
+spatial overlap per original TIFF. Source/date/component-size mix differs;
+this is a diagnostic gap, not a controlled causal estimate of overfitting.
+
+Region004/006 validation recalls0.670544/0.475324 versus sampled train0.832663/
+0.752353; they supply37.4% of validation FN. Region008 supplies31.1% of FP.
+87.3% of all validation errors lie in the scored within-three-pixel label-boundary
+zone. Interior IoU0.892304 versus boundary-zone0.580133. Complete1–10px components
+have validation recall0.157308 (83.0% entirely missed), and train recall0.136212;
+11–100px recall0.493333 validation/0.389191 train; >1000px0.841690/0.903076.
+This shows small-component difficulty on training too; not all failure is an
+overfitting effect. Coverage-truncated components are excluded from size tables.
+
+Visually inspected8 targeted panels: region001 porous boundaries versus smooth
+predicted masses; region004 extensive nearshore misses on May25/June11;
+region006 small detected cores in dark-water labeled patches Sep23/Oct11;
+region008 hole-filling and extensions, some along reddish NIR structures. Priority
+review paths are linked in the external index. Condition/label hypotheses are
+not established errors: no coastline mask, acquisition-condition annotation or
+new cross-date registration exists. Do not relabel based on these views alone.
+
+Historical patience10/min_delta0 replay would stop BCE/Dice at epoch28, retaining
+its true best epoch18 and avoiding42 epochs. Boundary/Dice would stop37/best27;
+focal/Dice27/best17. These are retrospective savings, not predictions for new runs.
+Exact next action: user reviews the four linked example groups, then confirms
+future smoothing and experiment settings. No training launch, commit or push.
+
+Validation outcome: 186 distinct focused report/probability/loss/objective/loop/
+runner/resume tests pass across the combined run and corrected loss-recipe test
+rerun. The first combined run found an obsolete assertion that every candidate
+had identical stopping policy; it now explicitly expects patience10 only for the
+selected BCE/Dice baseline while still checking all LR/optimizer settings match.
+Ruff format/check, all-file pre-commit and git diff --check pass. Existing Lightning
+worker/logging/checkpoint guidance and dependency deprecations remain warnings.
+
+
+## Code-quality review of metrics and diagnostics — 2026-11-05
+
+Reviewed the recent probability metrics, training-sample report and early-stopping
+changes against the installed TorchMetrics implementation. Native binned AUROC
+already has bounded state; our update override is a speed optimization, not a
+memory requirement. Stock BinaryCalibrationError retains float32 probabilities
+and int64 targets (12 bytes/pixel), about2.59GB for215,524,030 validation pixels
+before regional copies and compute concatenations. Its n_bins setting does not
+bound retained state. Keep the small streaming L1 adapter to preserve full-pixel
+epoch calibration without those buffers; no sampling or per-batch averaging.
+
+Benchmarked metric update only on idle RTX3090: synthetic12×512×512, ~1.2%
+foreground, seed42, five trials/reset each time, first trial discarded, median
+of four, synchronized CUDA timing. Stock257-threshold AUROC76.32ms versus
+histogram1.38ms for uniform probabilities; peaked sigmoid(N(0,1)*3-6)76.65ms
+versus1.68ms; constant-zero75.52ms versus2.02ms (last two no ignored row).
+Uniform calibration stock update1.18ms versus streaming4.69ms: the custom
+calibration is justified by epoch memory, not update speed. These are synthetic
+metric microbenchmarks, not end-to-end training-speed measurements. Additional
+GPU checks at batch12 verify exact AUROC confusion-state parity for peaked and
+constant predictions, including -100, and ECE agreement with a float64 library
+reference. Earlier small CPU cases retain endpoint/batch/reset parity coverage.
+The original optimization was introduced without benchmarking; this review now
+supplies evidence rather than claiming the library could not do binned AUROC.
+
+Simplified the AUROC update to derive state dimensions from its threshold tensor;
+documented the inherited state-layout dependency and upgrade tests. Added explicit
+metric-state types and explained the calibration memory tradeoff in its docstring.
+Training sample selection now reuses the existing original_key helper instead of
+repeating identity tuples. Fixed a demonstrated report progress issue: the CLI
+previously enabled only kelpseg.prepare logging, hiding report inference messages.
+The typed logging helper accepts an optional logger name; report commands use
+kelpseg so selection and source inference progress appear, with original logger
+settings restored afterward. Existing preparation defaults are unchanged. CLI
+report tests assert source progress for both validation and training samples.
+
+Validation:56 focused probability/report/training-loop/runner/resume tests pass;
+GPU parity checks pass; Ruff format/check, all-file pre-commit and diff checks
+pass. No production training, commit, push or changes to stored run artifacts.
+Early stopping remains the standard Lightning callback with no custom logic.
+Exact next action remains user review of the priority visual examples and future
+experiment settings; this quality pass is complete.

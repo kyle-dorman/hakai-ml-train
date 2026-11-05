@@ -12,6 +12,7 @@ from torchmetrics.functional.classification import binary_jaccard_index
 from kelpseg.models import build_model
 from kelpseg.training.loss import BinaryObjective
 from kelpseg.training.metrics import build_metrics
+from kelpseg.training.probability_metrics import build_probability_metrics
 from kelpseg.training.scheduler import LinearWarmupCosineDecayLR
 from kelpseg.training.settings import TrainingSettings
 from kelpseg.training.visuals import EpochImages
@@ -76,6 +77,9 @@ class TrainingModule(pl.LightningModule):
         metrics = build_metrics(include_confusion=False)
         self.train_metrics = metrics.clone(prefix="train/")
         self.val_metrics = metrics.clone(prefix="val/")
+        probabilities = build_probability_metrics()
+        self.train_probability_metrics = probabilities.clone(prefix="train/")
+        self.val_probability_metrics = probabilities.clone(prefix="val/")
         # Metric objects let Lightning own epoch computation/reset. Float64
         # preserves pixel-weighted sums over the full validation collection.
         self.train_loss = MeanMetric().set_dtype(torch.float64)
@@ -91,6 +95,7 @@ class TrainingModule(pl.LightningModule):
         self.val_pixels = SumMetric().set_dtype(torch.float64)
         self.region_metrics = nn.ModuleDict()
         self.region_pixels = nn.ModuleDict()
+        self.region_probability_metrics = nn.ModuleDict()
         self.epoch_images = None
         self.image_logger = None
 
@@ -107,6 +112,14 @@ class TrainingModule(pl.LightningModule):
         )
         self.region_pixels = nn.ModuleDict(
             {region: SumMetric().double() for region in regions}
+        )
+        self.region_probability_metrics = nn.ModuleDict(
+            {
+                region: build_probability_metrics().clone(
+                    prefix=f"val_region_{region}/"
+                )
+                for region in regions
+            }
         )
         self.epoch_images = EpochImages(validation_rows, self.settings.band_names)
 
@@ -156,6 +169,10 @@ class TrainingModule(pl.LightningModule):
         metrics = getattr(self, f"{phase}_metrics")
         predictions = (logits[:, 0] >= 0).long()
         metrics.update(predictions, targets)
+        probabilities = logits[:, 0].detach().float().sigmoid()
+        probability_metrics = getattr(self, f"{phase}_probability_metrics")
+        probability_metrics.update(probabilities, targets)
+        self.log_dict(probability_metrics, on_step=False, on_epoch=True)
         if phase == "train":
             batch_iou = binary_jaccard_index(
                 predictions, targets, ignore_index=-100, zero_division=0
@@ -174,6 +191,9 @@ class TrainingModule(pl.LightningModule):
                 indices = [i for i, value in enumerate(regions) if value == region]
                 regional = self.region_metrics[region]
                 regional.update(predictions[indices], targets[indices])
+                regional_probabilities = self.region_probability_metrics[region]
+                regional_probabilities.update(probabilities[indices], targets[indices])
+                self.log_dict(regional_probabilities, on_step=False, on_epoch=True)
                 self.log_dict(regional, on_step=False, on_epoch=True)
                 pixels = self.region_pixels[region]
                 pixels.update((targets[indices] != -100).sum().double())

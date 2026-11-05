@@ -13,7 +13,11 @@ from pathlib import Path
 
 import torch
 from lightning.pytorch import Trainer, seed_everything
-from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
+from lightning.pytorch.callbacks import (
+    EarlyStopping,
+    LearningRateMonitor,
+    ModelCheckpoint,
+)
 from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from torch.utils.data import DataLoader, default_collate
 
@@ -252,6 +256,23 @@ def run_training(
             replace(settings, encoder_weights=None) if resume is not None else settings
         )
         model.configure_diagnostics(inputs["val"].rows)
+        callbacks = [
+            DelayedEMA(),
+            TrainingResume(run_id, identity, train_loader, val_loader),
+            LearningRateMonitor(logging_interval="step"),
+            checkpoint,
+            last_checkpoint,
+        ]
+        early_stopping = None
+        if settings.early_stopping_patience:
+            early_stopping = EarlyStopping(
+                monitor="val/iou",
+                mode="max",
+                patience=settings.early_stopping_patience,
+                min_delta=settings.early_stopping_min_delta,
+                check_on_train_epoch_end=False,
+            )
+            callbacks.append(early_stopping)
         trainer = Trainer(
             default_root_dir=output,
             accelerator=settings.accelerator,
@@ -263,13 +284,7 @@ def run_training(
             accumulate_grad_batches=settings.accumulate_grad_batches,
             gradient_clip_val=settings.gradient_clip_val,
             gradient_clip_algorithm="norm",
-            callbacks=[
-                DelayedEMA(),
-                TrainingResume(run_id, identity, train_loader, val_loader),
-                LearningRateMonitor(logging_interval="step"),
-                checkpoint,
-                last_checkpoint,
-            ],
+            callbacks=callbacks,
             logger=loggers,
             num_sanity_val_steps=0,
             check_val_every_n_epoch=1,
@@ -290,6 +305,8 @@ def run_training(
         )
         report.update(
             status="complete",
+            stopped_early=early_stopping is not None
+            and early_stopping.stopped_epoch > 0,
             model_bundle=str(bundle),
             optimizer_updates_actual=trainer.global_step,
             best_checkpoint=checkpoint.best_model_path,

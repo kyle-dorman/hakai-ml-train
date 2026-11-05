@@ -16,6 +16,10 @@ chips = "data/chips/ca_bc/v1"
 assignments = "data/splits/ca_bc/v1/assignments.csv"
 epochs = 70
 warmup_epochs = 5
+# Stop after ten validation checks without improved IoU; zero disables stopping.
+# The full 70-epoch LR schedule remains unchanged even when stopping early.
+early_stopping_patience = 10
+early_stopping_min_delta = 0.0
 seed = 42
 learning_rate = 0.0003
 min_lr = 3e-06

@@ -23,7 +23,17 @@ outside ephemeral compute, using Box as specified in `data_artifacts.md`.
 Metrics use one slash-separated phase prefix: `train/loss_step` for logged
 batch loss, `train/iou_step` for current-batch foreground IoU,
 `train/loss` and `val/loss` for epoch loss, and `train/iou`,
-`val/iou` (likewise precision, recall, F1 and accuracy) for pooled epoch metrics.
+`val/iou` (likewise precision, recall and F1) for pooled epoch metrics.
+`train/auroc`, `val/auroc` and corresponding `calibration_error` metrics use
+sigmoid probabilities, excluding -100 labels, pooled over the epoch. AUROC uses
+257 uniform thresholds (a bounded-memory approximation); calibration error uses
+15 uniform bins and L1 expected calibration error, with running bin totals
+matching TorchMetrics BinaryCalibrationError. The calibration adapter avoids
+retaining every epoch probability/label. AUROC inherits TorchMetrics computation
+but uses histogram updates to avoid scanning each pixel once per threshold;
+parity tests protect that dependency when the library is upgraded. Higher AUROC and lower calibration
+error are better. Background prevalence influences both, so keep foreground IoU,
+precision and recall alongside them. Accuracy is no longer logged.
 Batch IoU uses the same .5 threshold, ignored -100 pixels and zero for undefined
 IoU as epoch metrics, without changing their accumulation. Step metrics log every
 optimizer update; with accumulation they describe its final microbatch.
@@ -43,6 +53,10 @@ CSV uses the same names. `val/pixels` records validation support and
 manual `wandb.log(step=...)` calls. This follows W&B guidance on
 [shared-prefix panel grouping](https://docs.coreweave.com/support/models/tags/experiments)
 and [Lightning logging](https://docs.coreweave.com/products/wandb/integrations/lightning).
+Optional native early stopping also monitors `val/iou` (mode max): patience counts
+validation checks, min_delta requires a strictly larger gain. Default patience 0
+disables it; BCE/Dice enables patience 10 and min_delta 0. The configured total
+epoch budget still defines the LR schedule, and best-model export is retained.
 Checkpoint selection monitors `val/iou`; completed-epoch resume preserves the
 best score from preceding checkpoints that used `val_iou`. Existing W&B history
 retains its old names; a running process adopts new names only after restart.
@@ -56,7 +70,10 @@ Regional `val_region_<code>/` metrics pool validation pixels within each region,
 with the same global metric semantics. They do not change checkpoint selection.
 
 The separate `validation-report` command runs only after completion against the
-exported selected model and saved validation membership. It reports boundary,
+exported selected model and saved validation membership. Optional `--split train`
+uses a seeded sample of training sources with the same disjoint evaluation grid;
+selection is label-blind and recorded in `selected_windows.csv`. Training-only
+regions and differing source composition must be stated when comparing scores. It reports boundary,
 patch-size, probability/threshold and area diagnostics on observed source pixels,
 with false-color examples. It does not tune thresholds or read test payloads.
 See [post-training diagnostics](quickstart.md#post-training-validation-diagnostics)
