@@ -1325,57 +1325,6 @@ candidate before launching it:
 uv run --frozen kelpseg train --recipe configs/train/losses/baseline.toml --dry-run
 ```
 
-### Selected overnight sequence
-
-The selected comparisons are **BCE + Dice**, **boundary-weighted BCE + Dice**,
-and **focal + Dice**, each for 70 epochs. The current run supplies the baseline;
-other recipe files remain optional candidates and are not included in this sequence.
-
-The repository-root [run_loss_comparisons.sh](../run_loss_comparisons.sh) waits
-for the current run's `run.json` status to become `complete`, creates its validation
-report, then trains and reports each of those three recipes in that order.
-Training calls the installed Python runner and uses its returned output directory,
-so reports cannot accidentally pick a different run from a directory search.
-All four reports use CUDA sequentially; training/reporting output stays interactive.
-
-Start a separate tmux session:
-
-```bash
-tmux new -s loss-comparisons
-```
-
-Inside that session, from the repository root:
-
-```bash
-bash run_loss_comparisons.sh
-```
-
-You can start the script while the current run is active: it polls its status
-every 30 seconds and starts no GPU work until completion. The default current run
-is `/home/sky/data/runs/planet8-cabc-70ep-fast-20261104T203544160104Z`.
-It stops if the run reports failure or if any training/report command fails.
-If the current process is forcibly killed and leaves stale `running` metadata,
-interrupt the waiting script with Ctrl-C. It does not stop or resume another job.
-
-Reports go to a fresh `/home/sky/data/analyses/loss-comparisons-<UTC timestamp>/`
-folder, with one subfolder per exact run ID containing `report.html`, CSV/JSON
-and false-color figures. New training runs use the paths in their recipes and
-retain their usual W&B logging, checkpoints and portable exports. Back up stable
-run/report outputs to Box separately; this script does not perform transfers.
-
-Optional positional arguments select a different initial run and fresh report root:
-
-```bash
-bash run_loss_comparisons.sh /path/to/completed-or-running-run /path/to/new-report-root
-```
-
-Existing report roots are refused. The script has no partial-work resume or
-skip logic: after failure, inspect the error and run any remaining stages explicitly.
-Starting it again with a new report root repeats the sequence with fresh training
-IDs. Nothing is scheduled until you start it. Reports add time beyond the roughly
-four-hour training runs; the sequence runs to completion and does not impose a
-9 AM cutoff. Use `bash run_loss_comparisons.sh --help` for a short usage summary.
-
 ## Train and validate
 
 Preview each run before fitting. The preview reads manifests only and does not
@@ -1529,6 +1478,26 @@ Only validation regions appear; training-only BC regions do not acquire validati
 scores. Global `val/iou` remains the checkpoint-selection metric.
 
 
+## Increased weight-decay experiment
+
+`configs/train/regularization/bce_dice_wd005.toml` changes weight decay from
+0.01 to 0.05 with a distinct run name. It uses unsmoothed BCE, Dice, W&B and the same 70-epoch LR schedule.
+Its stopping patience is 20 (the first attempt used 10). The completed experiment
+selected epoch 19 and stopped after epoch 39. Its reduced-noise augmentation also
+differs from the historical baseline, so the comparison does not isolate weight
+decay alone. The one-off weight-decay launcher has been removed.
+
+To repeat this recipe as a fresh experiment, use the installed command:
+
+```bash
+uv run --frozen kelpseg train --recipe configs/train/regularization/bce_dice_wd005.toml
+```
+
+Use `predict-chips` followed by `report` for post-training diagnostics, as
+[documented below](#post-training-validation-diagnostics). The next controlled
+LR comparison is recorded in the [Task 034 sidecar](../tasks/034_lr_followup_notes.md);
+it is a plan, not a prepared training recipe.
+
 ## Early stopping
 
 `early_stopping_patience = 10` stops after ten validation checks without a new
@@ -1537,8 +1506,14 @@ The default patience is 0 (disabled). The BCE/Dice recipe enables patience 10.
 Keep `epochs = 70`, warmup and LR settings unchanged: early stopping truncates
 execution, not the planned cosine schedule. Validation runs once per epoch.
 The best checkpoint is still exported, and `run.json` records `stopped_early`.
-Changing stopping settings requires a fresh run rather than resuming a run with
-a different policy. See [Lightning early stopping](https://lightning.ai/docs/pytorch/stable/common/early_stopping.html).
+Resume permits increasing an existing positive patience, while retaining the
+saved best score and elapsed wait count. Other stopping/scientific settings must
+match. For a completed early-stopped run, the previous model, validation report
+and run/settings JSON move into `completed-patience-<old patience>/` only when
+resumed fitting starts. The best/last checkpoints continue normally; this archive
+preserves selected inference outputs, not a second recovery checkpoint. Dry-run
+leaves all artifacts untouched. CSV continues in a separate resume directory and
+W&B retains the run ID. See [Lightning early stopping](https://lightning.ai/docs/pytorch/stable/common/early_stopping.html).
 
 ## Post-training validation diagnostics
 

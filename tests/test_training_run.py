@@ -486,6 +486,51 @@ def test_early_stopping_preserves_schedule_and_saves_best(
     stopped_lr = [row[lr_name] for row in stopped_rows if row[lr_name]]
     assert stopped_lr == full_lr[: len(stopped_lr)]
 
+    # Continue the completed run, preserving previous results and the wait count.
+    old_report = Path(stopped["output"]) / "validation-report"
+    old_report.mkdir()
+    (old_report / "report.html").write_text("previous report")
+    extended_settings = replace(settings, early_stopping_patience=4)
+    preview = run.run_training(
+        extended_settings, paths, resume=stopped["last_checkpoint"], dry_run=True
+    )
+    archive = Path(preview["previous_result"])
+    assert not archive.exists() and Path(stopped["model_bundle"]).exists()
+    with pytest.raises(ValueError, match="Only an early-stopped"):
+        run.run_training(
+            replace(settings, early_stopping_patience=2),
+            paths,
+            resume=stopped["last_checkpoint"],
+            dry_run=True,
+        )
+    continued = run.run_training(
+        extended_settings, paths, resume=stopped["last_checkpoint"]
+    )
+    assert continued["run_id"] == stopped["run_id"]
+    assert (archive / "model/weights.pt").exists()
+    assert (archive / "validation-report/report.html").read_text() == "previous report"
+    assert (
+        json.loads((archive / "settings.json").read_text())["early_stopping_patience"]
+        == 2
+    )
+    continued_state = torch.load(continued["last_checkpoint"], weights_only=False)
+    state = next(
+        v
+        for k, v in continued_state["callbacks"].items()
+        if k.startswith("EarlyStopping")
+    )
+    assert state["patience"] == state["wait_count"] == 4
+    assert continued_state["epoch"] == 4
+    assert continued_state["global_step"] == full_state["global_step"]
+    assert continued["best_validation_iou"] == stopped["best_validation_iou"]
+    assert continued_state["lr_schedulers"] == full_state["lr_schedulers"]
+    with Path(continued["validation_csv"]).open() as stream:
+        continued_rows = list(csv.DictReader(stream))
+    assert min(int(row["epoch"]) for row in continued_rows if row["epoch"]) == 3
+    assert [row[lr_name] for row in continued_rows if row[lr_name]] == full_lr[
+        len(stopped_lr) :
+    ]
+
 
 def test_legacy_resume_defaults_to_disabled_early_stopping(tmp_path: Path) -> None:
     """Load a pre-stopping checkpoint only under the unchanged disabled policy."""
@@ -510,3 +555,35 @@ def test_legacy_resume_defaults_to_disabled_early_stopping(tmp_path: Path) -> No
     current["settings"]["early_stopping_patience"] = 10
     with pytest.raises(ValueError, match="recipe or selected memberships"):
         run.load_resume(checkpoint, current)
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"early_stopping_patience": 1},
+        {"early_stopping_patience": 0},
+        {"early_stopping_patience": 4, "early_stopping_min_delta": 0.01},
+        {"early_stopping_patience": 4, "learning_rate": 0.01},
+    ],
+)
+def test_resume_patience_exception_does_not_allow_other_recipe_changes(
+    tmp_path: Path, change: dict
+) -> None:
+    """Reject reduced/disabled stopping or scientific changes alongside an increase."""
+    settings = replace(
+        load_settings("configs/train/tiny_cpu.toml"), early_stopping_patience=2
+    )
+    checkpoint = tmp_path / "last.ckpt"
+    torch.save(
+        {
+            "epoch": 0,
+            "training_resume": {
+                "run_id": "saved",
+                "completed_epoch": True,
+                "identity": {"settings": asdict(settings)},
+            },
+        },
+        checkpoint,
+    )
+    with pytest.raises(ValueError, match="recipe"):
+        run.load_resume(checkpoint, {"settings": asdict(replace(settings, **change))})

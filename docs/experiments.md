@@ -57,6 +57,12 @@ Optional native early stopping also monitors `val/iou` (mode max): patience coun
 validation checks, min_delta requires a strictly larger gain. Default patience 0
 disables it; BCE/Dice enables patience 10 and min_delta 0. The configured total
 epoch budget still defines the LR schedule, and best-model export is retained.
+Resume can increase an existing positive patience while keeping the saved best
+score and wait count. Other recipe and membership changes remain rejected.
+A completed early-stopped run can continue under that increase; its model/report
+and settings/run metadata are moved into `completed-patience-<old patience>/`
+before fitting, preserving prior selected outputs. Current best/last checkpoints
+remain working recovery files and may be replaced normally. Dry-run is read-only.
 Checkpoint selection monitors `val/iou`; completed-epoch resume preserves the
 best score from preceding checkpoints that used `val_iou`. Existing W&B history
 retains its old names; a running process adopts new names only after restart.

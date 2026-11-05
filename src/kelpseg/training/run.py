@@ -110,10 +110,26 @@ def run_training(
         raise ValueError(
             "Resume from <runs_root>/<saved-run-id>/checkpoints/last.ckpt; copy the complete run folder when relocating."
         )
+    previous_result = None
     if resume is not None and (output / "model").exists():
-        raise ValueError(
-            "This run already exported model/. Resume is for interrupted training only."
+        previous = json.loads((output / "run.json").read_text())
+        previous_patience = saved["identity"]["settings"].get(
+            "early_stopping_patience", 0
         )
+        if not (
+            previous["status"] == "complete"
+            and previous.get("stopped_early", False)
+            and 0 < previous_patience < settings.early_stopping_patience
+        ):
+            raise ValueError(
+                "This run already exported model/. Only an early-stopped run with "
+                "increased patience can continue; otherwise start a fresh run."
+            )
+        previous_result = output / f"completed-patience-{previous_patience}"
+        if previous_result.exists():
+            raise ValueError(
+                f"Previous-result directory already exists: {previous_result}."
+            )
     if not len(inputs["val"]):
         raise ValueError("No validation windows; check the collection and assignments.")
     if inputs["train"].chip_size != 512:
@@ -189,10 +205,20 @@ def run_training(
             else "main-process and augmentation random states restored"
         ),
     }
+    if previous_result is not None:
+        report["previous_result"] = str(previous_result)
     if dry_run:
         return report
     seed_everything(settings.seed, workers=True)
     output.mkdir(parents=True, exist_ok=resume is not None)
+    if previous_result is not None:
+        # Preserve the completed export/report before native resume replaces the
+        # working metadata and best/last checkpoints. Dry-run never moves files.
+        previous_result.mkdir()
+        for name in ("model", "validation-report", "run.json", "settings.json"):
+            source = output / name
+            if source.exists():
+                source.rename(previous_result / name)
     report["status"] = "running"
     _write_json(output / "settings.json", asdict(settings))
     _write_json(output / "run.json", report)

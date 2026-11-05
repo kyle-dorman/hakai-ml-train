@@ -1114,3 +1114,145 @@ pass. No production training, commit, push or changes to stored run artifacts.
 Early stopping remains the standard Lightning callback with no custom logic.
 Exact next action remains user review of the priority visual examples and future
 experiment settings; this quality pass is complete.
+
+
+## Increased weight-decay recipe — 2026-11-05
+
+User requests a TOML and tmux launch command, leaving launch to the user. Added
+configs/train/regularization/bce_dice_wd005.toml with weight_decay0.05 (baseline0.01)
+and unique name planet8-cabc-bce-dice-wd005-70ep. Parsed settings comparison
+confirms name and weight_decay are the only differences from current bce_dice.toml.
+Keeps unsmoothed BCE/Dice, W&B, fresh ImageNet initialization, seed42, LR3e-4→3e-6,
+five-epoch warmup, maximum70 epochs and patience10 on val/iou. Current reduced
+Gaussian noise applies, so historical comparisons are not a weight-decay-only
+ablation. No automatic training/report/backup launch or tmux session creation.
+
+Validation: installed train --dry-run succeeds against full data metadata;
+settings comparison verifies only intended differences; git diff --check passes.
+Quickstart includes interactive tmux launch/detach/reattach instructions. Exact
+next action: user starts the new recipe in tmux, then evaluates its selected
+checkpoint after completion. No commit or push.
+
+
+User follow-up: run validation automatically after this experiment. Added root
+run_weight_decay.sh: interactive training subprocess writes its exact completed
+run path to a temporary file; only after success a separate CUDA validation-report
+process writes <run>/validation-report. Separate processes release training GPU
+memory before inference. No newest-directory guessing, captured progress, implicit
+resume or additional training candidates. Updated quickstart launch command.
+Bash syntax and embedded Python compilation pass; fake-uv checks confirm exact
+paths (including spaces), successful train/report order and no report on training
+failure. No real training/report launched. Next: user runs bash run_weight_decay.sh
+inside the prepared tmux session instead of the training-only command.
+
+
+## Retire completed loss-comparison launcher — 2026-11-05
+
+At user request, removed run_loss_comparisons.sh and its dedicated fake-command
+tests. Removed obsolete launch instructions from quickstart and updated the
+queue to the current run_weight_decay.sh launcher. Historical task evidence and
+all loss recipes, runs and reports remain. No running process or new launcher
+was changed. Validation: current references checked and git diff --check passes.
+No commit or push. Next: let the user's weight-decay train/report sequence finish.
+
+
+## Weight-decay run review — 2026-11-05
+
+Reviewed completed planet8-cabc-bce-dice-wd005-70ep-20261105T135526525111Z and its
+automatic validation-report. Early stopping succeeded:15 epochs/5325 updates,
+selected epoch5 EMA. No new training or model/settings edits. Compared existing
+float32 reports at threshold0.5; exact source keys, positive/negative support
+match across53 sources/933 windows/215,524,030 pixels.
+
+Baseline wd0.01 epoch18 vs new wd0.05 epoch5: IoU0.689803→0.669781,
+precision0.826596→0.776041, recall0.806511→0.830266; FP435603→616904,
+FN498163→437003. Extra181301 FP outweigh61160 recovered kelp pixels; total
+errors+12.9%. Background-only FP6177→38989. Relative area bias-2.43%→+6.99%.
+Eight regions lose IoU;006 improves0.450222→0.486080;005 improves slightly.
+Largest declines009(-5.75pp),003(-4.70pp),008(-3.12pp). Boundary F1 worsens
+at1/2/3px; at3px0.752898→0.684221. Interior IoU0.892304→0.838962.
+Small-component recall changes are mixed:1–10px0.157308→0.176957,
+11–100px0.493333→0.455847, >1000px0.841690→0.869836.
+
+Important qualification: new val IoU recovered0.63276→0.64946→0.66069 at
+13–15, but patience10 stopped since epoch5 remained best0.66967. Old run also
+dipped after5 and recovered above that peak at13. At matching epoch5 new is
+only0.47pp lower; at15 it is2.86pp lower. Train IoU at15 is effectively identical
+(~0.7678). Stopping may have been premature for this trajectory; future performance
+is unknown. Reduced Gaussian noise and nondeterministic updates also confound a
+weight-decay-only attribution. New val AUROC0.99765→0.99092 (5→15), ECE
+0.00335→0.00249; no old baseline probability metrics exist. Global ECE is strongly
+background-weighted, not proof of foreground quality.
+
+External review: /home/sky/data/analyses/task034_wd005_review_20261105/index.html,
+curves.png, global/regions/sources_comparison.csv and reproducible review.py.
+Visually inspected matching region009 fixed panels: extra foreground in new
+prediction; illustrative, not a worst-source claim. Validation: record/support
+assertions and report generation succeed; no inference or test payload access.
+Outputs remain local. Next: retain prior selected model; consider longer stopping
+patience/minimum epoch budget before declaring wd0.05 conclusively inferior, and
+keep augmentation fixed for any controlled follow-up. No commit or push.
+
+
+## Resume early-stopped weight-decay run with patience20 — 2026-11-05
+
+User requests continuation with longer patience. Updated wd005 TOML from10 to20;
+all other recipe settings retained. Resume identity allows only increasing an
+existing positive patience; disabled/reduced patience, changed min_delta, LR,
+losses, epoch budget or memberships still fail. Lightning normally restores its
+saved patience over the constructor, so TrainingResume updates that in-memory
+callback field before native restore, clearing old stopped status but retaining
+best_score/wait_count. Model, EMA, optimizer and original70-epoch LR schedule
+continue from last.ckpt; multiworker randomness restarts as previously documented.
+
+Completed early-stopped runs with increased patience can now continue. On actual
+launch, model/, validation-report/, run.json and settings.json move into
+completed-patience-10/ before training writes new metadata/export/report. Native
+best/last checkpoints remain working files and may be replaced; prior selected
+model weights and reports are retained. Ordinary interrupted resume remains
+unchanged. Dry-run performs no archive or other mutation. The same W&B ID and
+separate resume CSV directory are preserved. Root run_weight_decay.sh accepts an
+optional checkpoint argument and automatically reports the resumed selected model.
+
+Validation:33 runner/resume tests pass, including a real tiny CPU plateau→resume,
+patience restoration, retained wait count/best score, next-epoch continuation,
+matching full-run LR/step counts and archived outputs. Tests reject unrelated
+setting changes, smaller/disabled patience and unchanged-policy completed resume.
+Real wd005 last.ckpt dry-run succeeds and names completed-patience-10 as the future
+archive. Actual files remain untouched and production training has not started.
+At epoch15 the saved wait is10: patience20 allows10 more non-improving checks,
+not20 extra epochs; new records reset the wait. Next: user runs bash
+run_weight_decay.sh <exact-run>/checkpoints/last.ckpt in tmux. No commit or push.
+
+
+## Completed continuation and full-TIFF handoff — 2026-11-05
+
+The wd005 patience-20 continuation completed at epoch 39 and selected epoch 19
+(epochs count from 1). Its selected EMA report IoU is 68.64%, versus 68.98% for
+the original BCE/Dice epoch-18 EMA model. Precision and recall are slightly
+lower; reduced Gaussian noise and resumed worker randomness limit attribution
+to weight decay. Keep the original BCE/Dice model as the working baseline.
+
+Task 035/036 code is now present on the GPU host. Stash conflicts were resolved
+by retaining deletion of the retired loss-comparison launcher and test. The
+completed weight-decay launcher was also removed. The temporary four-scene
+comparison checkout/viewer and its Box backup were deleted at user request;
+cleaned input TIFFs and training runs were preserved.
+
+Full-TIFF prediction and shared reporting completed for 53 validation sources
+using the original BCE/Dice best EMA model. Artifacts:
+`/home/sky/data/analyses/full_tiff_bce_dice_validation_20261105`, backed up to
+`kelp-box:kelpseg/analyses/full_tiff_bce_dice_validation_20261105`.
+All 142 relative file paths and sizes match Box (882,448,583 bytes). Prediction
+covers 234,786,210 valid pixels, leaving 6,699 valid pixels uncovered by the
+window-validity filter. Full-TIFF IoU is 69.80%; its coverage/context differs
+from disjoint-chip validation. No held-out test scoring was performed.
+
+The [LR follow-up sidecar](034_lr_followup_notes.md) records the requested
+controlled LR comparison and diagnostic evidence to retain. Those additional
+runs and recording features are planned, not implemented. Next: inspect the
+full-TIFF report on the Mac, then prepare that controlled follow-up.
+
+Commit validation: 27 training-run tests pass, including increased-patience
+resume and archived prior results. Ruff format/check, all-file pre-commit, and
+Git whitespace checks pass. No production training or inference was launched.

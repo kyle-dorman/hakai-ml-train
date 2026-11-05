@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from lightning.pytorch.callbacks import Callback, ModelCheckpoint
+from lightning.pytorch.callbacks import Callback, EarlyStopping, ModelCheckpoint
 
 from kelpseg.training.loss_settings import DEFAULT_LOSSES
 
@@ -41,6 +41,7 @@ def load_resume(path: str | Path, identity: dict) -> dict:
 
     path identifies last.ckpt; identity contains current settings/memberships.
     Earlier missing loss settings mean the historical BCE/Lovasz default.
+    A positive early-stopping patience may increase; all other settings must match.
     Changed recipes or exhausted epoch budgets raise ValueError; files are not
     modified and restoring model/optimizer state remains Lightning's job.
     """
@@ -64,6 +65,10 @@ def load_resume(path: str | Path, identity: dict) -> dict:
     ):
         if name in identity["settings"]:
             saved_identity["settings"].setdefault(name, default)
+    previous_patience = saved_identity["settings"].get("early_stopping_patience", 0)
+    patience = identity["settings"].get("early_stopping_patience", 0)
+    if 0 < previous_patience < patience:
+        saved_identity["settings"]["early_stopping_patience"] = patience
     if saved_identity != identity:
         raise ValueError(
             "Resume recipe or selected memberships changed; start a fresh run."
@@ -136,6 +141,21 @@ class TrainingResume(Callback):
         }
 
     def on_load_checkpoint(self, trainer, pl_module, checkpoint):
+        # Lightning restores patience from its saved callback state, overriding
+        # the constructor. Apply the permitted increase to the in-memory state;
+        # retain best_score and wait_count so patience still counts since best.
+        previous_patience = checkpoint["training_resume"]["identity"]["settings"].get(
+            "early_stopping_patience", 0
+        )
+        patience = self.identity["settings"].get("early_stopping_patience", 0)
+        if 0 < previous_patience < patience:
+            for callback in trainer.callbacks:
+                if isinstance(callback, EarlyStopping):
+                    state = checkpoint["callbacks"][callback.state_key]
+                    state["patience"] = patience
+                    state["stopped_epoch"] = 0
+                    state["stopping_reason"] = callback.state_dict()["stopping_reason"]
+                    state["stopping_reason_message"] = None
         # A copied complete run may live under a new runs_root. Native
         # ModelCheckpoint otherwise drops its best score when dirpath changes.
         for callback in trainer.callbacks:
