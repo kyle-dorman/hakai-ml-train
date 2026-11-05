@@ -15,6 +15,7 @@ from kelpseg.cli.predict import predict_command
 from kelpseg.cli.predict_chips import predict_chips_command
 from kelpseg.cli.report import report_command
 from kelpseg.cli.split import split_command
+from kelpseg.cli.temporal_report import temporal_report_command
 from kelpseg.cli.train import train_command
 
 app = typer.Typer(
@@ -56,3 +57,5 @@ app.command("predict-chips")(predict_chips_command)
 app.command("report")(report_command)
 
 app.command("predict")(predict_command)
+
+app.command("temporal-report")(temporal_report_command)

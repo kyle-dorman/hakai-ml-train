@@ -27,8 +27,8 @@ for remote-first GPU setup and baseline launch; tiled/georeferenced
 prediction is implemented by `predict` in [Task 035](../tasks/035_image_only_tiled_inference.md).
 [Task 036](../tasks/036_shared_scoring_and_reports.md) implements `predict-chips`
 and one shared `report` command for saved chip/TIFF predictions;
-[Task 036B](../tasks/036b_temporal_error_analysis.md) remains planned for temporal
-analysis. Tasks 000–023 describe the
+[Task 036B](../tasks/036b_temporal_error_analysis.md) adds `temporal-report`
+for labeled percentage-change comparisons and dated summaries. Tasks 000–023 describe the
 preceding completed PS8B study.
 
 ## Read by task

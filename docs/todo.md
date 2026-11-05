@@ -129,9 +129,13 @@ installed image-only tiled prediction and local spatial/copied-model checks pass
 separate `predict-chips` and shared `report` commands preserve the existing chip
 diagnostics and score saved TIFF predictions with unique-pixel coverage.
 Installed local checks, reference parity and the maintainability review pass.
-Next local action: select
-[Task 036B](../tasks/036b_temporal_error_analysis.md) for temporal analysis when
-requested; it remains planned and unstarted. Task 034 remote work stays separate.
+[Task 036B](../tasks/036b_temporal_error_analysis.md#outcome--2026-11-05) is complete:
+`temporal-report` compares short/long interval percentage changes against labels
+on common valid footprints. Installed checks and bounded report smokes pass.
+Next: select and write Task 037 for LORO and matching-TIFF comparisons.
+The completed full 53-TIFF validation predictions have now been analyzed with
+Task 036B: 62 spatially supported pairs, 61 with defined percentage errors.
+See its task record for results and coverage limits. Task 034 remote work stays separate.
 
 ## Ordered roadmap
 
@@ -166,7 +170,7 @@ selected; split further if needed.
 | [034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) | GPU machine preparation and baseline launch — in progress | Local entry checklist/bootstrap; remote-first installation and CUDA/data/resume checks and one healthy baseline launch; local 035 can proceed while training runs |
 | [035](../tasks/035_image_only_tiled_inference.md) | Image-only tiled inference — complete | Copied bundle and cleaned TIFFs; shifted edge windows, explicit sparse-window coverage, georeferenced probabilities/masks; no label dependency |
 | [036](../tasks/036_shared_scoring_and_reports.md) | Separate inference and shared labeled reports — complete | Saved chip/TIFF predictions; one report command; existing diagnostic parity, unique-pixel scoring and explicit coverage |
-| [036B](../tasks/036b_temporal_error_analysis.md) | Temporal error and change analysis — planned | Region/date/year/month support, signed bias and explicit supported common-footprint pairs; reuse 036 outputs |
+| [036B](../tasks/036b_temporal_error_analysis.md) | Temporal error and change analysis — complete | Region/date/year/month support, signed bias and explicit supported common-footprint pairs; reuse 036 outputs |
 | 037 | LORO runner and matching-TIFF comparisons | Ten 001–010 folds; paired with/without-011/012 CA/Baja results; temporal-consistency and later-date scopes reported separately; tiny suite checks |
 | 038 | New-region experiment recipes | Use prepared regional and combined collection versions; four cases, fixed test scopes, explicit initialization and reset/resume behavior |
 | 039 | Final researcher handoff and complete-workflow rehearsal | Another researcher follows the finished preparation/train/predict/score/transfer recipes; reuse 034 setup; finish no-scripts cleanup; no repeated GPU bootstrap or first-launch gate |

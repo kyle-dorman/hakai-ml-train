@@ -1,0 +1,17 @@
+# A completed Task 036 report; referenced rasters/payloads must stay available.
+# No weights, training run or inference execution is needed.
+report = "/path/to/labeled-report"
+output = "/path/to/fresh-temporal-report"
+# Inclusive elapsed-day ranges. Same-day pairs are listed separately, not scored.
+short_min_days = 1
+short_max_days = 13
+long_min_days = 29
+long_max_days = 47
+# Primary error is predicted minus labeled percentage change, in percentage points.
+# Each series uses its own starting count; zero gives an undefined percentage.
+# Flag positive starting counts <= this value; do not exclude or alter them.
+# Set to 0 to disable small-baseline flags.
+small_baseline_pixels = 10
+# Optional restriction: CSV earlier_source,later_source using exact source_keys
+# from the report's sources.csv. Omit for all eligible within-region pairs.
+# pairs = "/path/to/selected-pairs.csv"

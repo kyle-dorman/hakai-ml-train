@@ -364,6 +364,16 @@ need not match. Record actual inference offsets, avoid duplicate windows, and
 retain explicit padding/inversion for sources smaller than the input window.
 Apply the same image-only window rules during labeled scoring.
 
+The installed `temporal-report` reads one completed labeled report and its saved
+prediction/label references. It reuses original-source reconstruction and compares
+configured elapsed-day pairs on common scoreable pixels without resampling.
+Percentage changes use each series' own earlier kelp count; the primary error is
+predicted minus labeled percentage change in percentage points. Zero baselines
+remain undefined and small baselines are flagged without exclusion. Source
+calendar summaries are observation totals, not unique date-area mosaics. See
+[the temporal recipe](quickstart.md#temporal-canopy-change) for interval and
+pair-selection settings.
+
 ## Local verification
 
 Exercise cleaning, chipping, band selection, splitting, loading, a tiny optimizer

@@ -249,22 +249,38 @@ and evaluation coverage matched. Declare the sampling and training budget so
 extra BC data and extra optimization are distinguishable experiment choices;
 those recipe details are selected in the training task.
 
-Task [036B](../tasks/036b_temporal_error_analysis.md) owns temporal-consistency
-reporting from Task 036 outputs; Task 037 reuses it for comparisons. Include:
+Task [036B](../tasks/036b_temporal_error_analysis.md) implements temporal reporting
+from one saved Task 036 report; Task 037 reuses it for comparisons. The primary
+measure is agreement with the labels' proportional canopy change, not constant
+predictions or constant absolute area error.
 
-- Retain per-source/date confusion counts, scoreable/covered area and labeled
-  kelp prevalence; summarize by region, represented year and represented month.
-  Report precision, recall, F1/IoU and absolute false-positive/negative counts
-  or area, including zero-kelp cases and explicit undefined metrics.
-- Show signed area error (predicted minus labeled kelp) across dates within
-  each location. Compare changes across dates on common valid labeled footprints
-  where supported, resolving overlapping observations before calling an area
-  unique. Report available pairs, season/date gaps and coverage; unsupported
-  comparisons remain unavailable rather than fabricated.
-- Use both pooled source-pixel metrics and region/date summaries, keeping
-  California and Baja scope explicit. Examine shared temporal shifts in error
-  where dates/months overlap; changing region composition must not masquerade
-  as a statewide annual bias. Sparse support limits trend conclusions.
+- Default pair intervals are 1–13 days and 29–47 days inclusive, configurable in
+  the recipe. Pair only within dataset/release/region; retain same-day observations
+  separately without temporal scoring. Optional explicit pairs restrict this
+  date-based selection. Do not infer region/date metadata from filenames.
+- Measure labels and predictions at both dates on the same common valid labeled
+  and predicted footprint. Each percentage uses its own earlier kelp count:
+  `100 * (after - before) / before`. Primary error is predicted minus labeled
+  percentage change in percentage points. Equal +10% changes give zero error
+  even when a model has constant multiplicative area bias.
+- Zero earlier kelp makes that series' percentage undefined; percentage-point
+  error needs both percentages. Preserve counts/areas and absolute change/error.
+  Flag small nonzero baselines (default at most 10 pixels), without exclusions,
+  pseudocounts or clipping. Labels may change over either interval.
+- Compare only matching projected-metre grids with integer-aligned origins.
+  Report unavailable comparisons, elapsed days, coverage and both starting
+  counts. Pairwise footprints may differ; no fixed-footprint trend is inferred.
+  Regional interval summaries give support plus median signed and mean/median
+  absolute percentage-point error. Repeated pairs are not independent samples;
+  uneven region composition must not masquerade as a statewide temporal result.
+- Retain per-source/date confusion counts, scoreable area, labeled prevalence,
+  signed area bias and separate false-positive/negative counts or area. Group
+  by represented date, year, year-month and calendar month, pooling confusion
+  counts before ratios. These are observation totals, not unique geographic area
+  across acquisitions. Same-day overlapping observations are not silently mosaicked.
+  Keep California and Baja regions explicit; preserve zero-kelp cases and
+  undefined metrics. The [researcher recipe](quickstart.md#temporal-canopy-change)
+  describes outputs and the separate no-inference command.
 
 Do not choose favorable test dates or remove low-kelp periods to increase F1.
 Audit label support before fixing a scientifically declared split, and preserve

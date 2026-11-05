@@ -28,7 +28,10 @@ image arrays offline. [Tiled prediction](docs/quickstart.md#predict-cleaned-sour
 writes georeferenced probabilities and masks from cleaned imagery without labels.
 `predict-chips` saves disjoint evaluation-chip predictions; both paths feed the
 shared [`report` command](docs/quickstart.md#post-training-validation-diagnostics),
-which produces labeled diagnostics without rerunning inference. Retained legacy Planet code/tests
+which produces labeled diagnostics without rerunning inference.
+[`temporal-report`](docs/quickstart.md#temporal-canopy-change) compares proportional
+canopy change against labels on common valid footprints using saved reports.
+Retained legacy Planet code/tests
 support the ongoing rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
 starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
 

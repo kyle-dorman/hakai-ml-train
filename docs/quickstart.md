@@ -1650,13 +1650,85 @@ Saved predictions use float32 inference, which may differ slightly from bf16
 training validation. Reports measure agreement with supplied labels on their
 recorded scope. `input_sources.csv` preserves input paths and identities;
 `source_keys` links merged report rows to their constituent prediction inputs. Large predictions and reports belong outside Git and should be
-backed up to Box. Temporal analysis remains a separate future command.
+backed up to Box. The separate [temporal report](#temporal-canopy-change) uses
+these saved outputs for comparisons across dates.
 
 Reporting holds one original source's imagery, labels, probabilities and diagnostic
 arrays in RAM. Overlapping crop inputs also remain in memory while that original
 is assembled. Boundary/patch operations allocate additional arrays; reports are
 not a streaming solution for mosaics larger than available memory. `max_examples`
 limits figure output, not the scoring footprint or peak raster memory.
+
+## Temporal canopy change
+
+Run `temporal-report` on one completed labeled report; it does not run inference
+or require model weights:
+
+```bash
+uv run --frozen kelpseg temporal-report --recipe /path/to/temporal.toml
+```
+
+Copy [the temporal recipe](../configs/report/temporal.toml) and edit its paths:
+
+```toml
+report = "/path/to/completed-labeled-report"
+output = "/path/to/fresh-temporal-report"
+short_min_days = 1
+short_max_days = 13
+long_min_days = 29
+long_max_days = 47
+small_baseline_pixels = 10
+```
+
+The day endpoints are inclusive. By default, the command considers every source
+pair within the same dataset, release and region at either interval. Same-day
+observations are recorded separately and are not scored as temporal changes;
+other gaps are omitted. Unknown dates/regions appear in `source_exclusions.csv`.
+To restrict the comparison, set `pairs = "/path/to/pairs.csv"` with columns
+`earlier_source,later_source`, using exact `source_keys` values from the labeled
+report's `sources.csv`. A merged original's key may contain semicolons; use the
+complete value. Invalid joins or reversed dates fail with an error; unsupported
+spatial comparisons remain in `pairs.csv` with their reason.
+
+Both dates are measured on exactly the same pixels: valid imagery, valid labels,
+and finite saved predictions at both dates. Grids must have the same projected
+metre CRS and pixel basis with integer-aligned origins; there is no reprojection.
+Keep the labeled report's referenced predictions, labels and imagery/chip payloads
+available. Processing holds the two source canvases and comparison arrays in RAM,
+not the entire collection. Each output directory must be fresh; failures stop
+without resuming partial work.
+
+The primary comparison is proportional change relative to the labels:
+
+```text
+label change (%)      = 100 × (label_after − label_before) / label_before
+prediction change (%) = 100 × (prediction_after − prediction_before) / prediction_before
+change error (pp)     = prediction change − label change
+```
+
+Each series uses its own earlier kelp count. Thus +10% in the labels and +10% in
+the predictions gives zero percentage-point error, even with constant
+multiplicative area bias. Labels can change during the short interval too;
+stability does not mean constant canopy. Zero starting kelp makes that series'
+percentage undefined; change error needs both percentages. Counts and absolute
+changes remain available. Small nonzero starting counts up to
+`small_baseline_pixels` are flagged, never excluded or replaced by an epsilon;
+set this value to 0 to disable the flag.
+
+Open `report.html` with `changes.png` and `observations.png` alongside it.
+`pairs.csv` records counts, proportional/absolute changes, support and reasons.
+`pair_summaries.csv` gives regional interval support and median signed and
+mean/median absolute percentage-point error. Reused observations make pairs
+non-independent; uneven regional support remains explicit. Different pairs can
+have different common footprints, so they do not form a single fixed-footprint
+trend. `dates.csv`, `years.csv`, `year_months.csv` and `months.csv` describe pooled
+observation counts/areas and coverage, not unique geographic area across dates.
+
+A one-source report is a valid smoke input: it produces descriptive tables and
+an explicit no-pairs display. The saved full-TIFF validation sample currently
+has only one date, so it cannot demonstrate real temporal agreement. Run the
+full validation inference separately when requested, then generate its labeled
+report and use that report here; `temporal-report` never starts that inference.
 
 ## Copy and use a portable model
 

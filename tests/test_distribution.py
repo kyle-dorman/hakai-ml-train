@@ -92,6 +92,15 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             assert "kelpseg/cli/predict.py" in names
             for module in ("settings", "windows", "predict", "chips"):
                 assert f"kelpseg/prediction/{module}.py" in names
+            assert "kelpseg/cli/temporal_report.py" in names
+            for module in (
+                "temporal",
+                "temporal_inputs",
+                "temporal_pairs",
+                "temporal_summary",
+                "temporal_views",
+            ):
+                assert f"kelpseg/reporting/{module}.py" in names
             assert "kelpseg/cli/report.py" in names
             assert "kelpseg/cli/predict_chips.py" in names
             assert "kelpseg/validation_report/__init__.py" not in names
@@ -301,6 +310,52 @@ assert result.exit_code == 0, result.output
 chip_summary = json.loads(Path('chip-report/summary.json').read_text())
 assert chip_summary['global'] == report_summary['global']
 assert Path('chip-report/report.html').is_file()
+
+# Two synthetic saved acquisition rasters establish +10%/+10% = zero pp error
+# through the installed report and temporal-report CLIs, without any weights.
+temporal_inputs = Path('temporal-inputs')
+temporal_inputs.mkdir()
+shutil.copy('predicted/settings.json', temporal_inputs / 'settings.json')
+(temporal_inputs / 'summary.json').write_text(json.dumps(dict(status='complete')))
+source_rows, label_rows, window_rows = [], [], []
+for key, day, label_count, prediction_count in [('before', '2021-01-01', 10, 20), ('after', '2021-01-10', 11, 22)]:
+    target = np.zeros((7, 9), np.uint8)
+    target.flat[1:label_count+1] = 1
+    probability = np.full((7, 9), 0.1, np.float32)
+    probability.flat[1:prediction_count+1] = 0.9
+    probability[0, 0] = np.nan
+    for path, values, nodata in [(temporal_inputs / (key+'.tif'), probability, np.nan),
+                                (Path(key+'-label.tif'), target, 3)]:
+        with rasterio.open(path, 'w', driver='GTiff', height=7, width=9, count=1,
+                           dtype=values.dtype, crs='EPSG:32610', transform=grid, nodata=nodata) as dataset:
+            dataset.write(values, 1)
+    source_rows.append(dict(source_key=key, image=str(Path('image.tif').resolve()), probability=key+'.tif',
+                            band_names=';'.join(BAND_NAMES), dataset_id='synthetic', release_id='v1',
+                            original_source_id=key, region_id='001', acquisition_date=day,
+                            row_offset=0, col_offset=0))
+    label_rows.append(dict(source_key=key, label=key+'-label.tif'))
+    window_rows.append(dict(source_key=key, row=0, col=0, height=7, width=9))
+for path, rows in [(temporal_inputs/'sources.csv', source_rows), (temporal_inputs/'windows.csv', window_rows), (Path('temporal-labels.csv'), label_rows)]:
+    with path.open('w', newline='') as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+Path('temporal-base.toml').write_text(chr(10).join([
+    'predictions = "temporal-inputs"', 'output = "temporal-base"',
+    'labels = "temporal-labels.csv"', 'label_root = "."',
+    'external_scope = "synthetic validation"', 'split = "val"', 'max_examples = 0', '',
+]))
+result = CliRunner().invoke(app, ['report', '--recipe', 'temporal-base.toml'])
+assert result.exit_code == 0, result.output
+Path('temporal.toml').write_text('report = "temporal-base"'+chr(10)+'output = "temporal-report"'+chr(10))
+with patch('kelpseg.model_bundle.load_model_bundle', side_effect=AssertionError('no temporal inference')):
+    result = CliRunner().invoke(app, ['temporal-report', '--recipe', 'temporal.toml'])
+assert result.exit_code == 0, result.output
+with Path('temporal-report/pairs.csv').open() as stream:
+    pair = next(csv.DictReader(stream))
+assert float(pair['label_change_pct']) == float(pair['prediction_change_pct']) == 10
+assert float(pair['change_error_pp']) == 0
+assert Path('temporal-report/report.html').is_file()
 """,
             cwd=unrelated,
         )
