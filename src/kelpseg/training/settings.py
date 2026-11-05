@@ -17,7 +17,12 @@ from kelpseg.training.loss_settings import (
 
 @dataclass(frozen=True)
 class TrainingSettings:
-    """Machine-adjustable training settings; scientific preprocessing is fixed."""
+    """Machine-adjustable training settings; scientific preprocessing is fixed.
+
+    early_stopping_patience=0 disables stopping; positive values count validation
+    checks without a val/iou gain greater than early_stopping_min_delta. Epochs
+    still defines the entire LR schedule even when stopping is enabled.
+    """
 
     name: str = "baseline"
     experiment: str = "baseline"
@@ -31,6 +36,8 @@ class TrainingSettings:
     assignments: str = "data/splits/ca_bc/v1/assignments.csv"
     epochs: int = 70
     warmup_epochs: int = 5
+    early_stopping_patience: int = 0
+    early_stopping_min_delta: float = 0.0
     seed: int = 42
     learning_rate: float = 3e-4
     min_lr: float = 3e-5
@@ -89,13 +96,19 @@ class TrainingSettings:
             value = getattr(self, name)
             if type(value) is not int or value < 1:
                 raise ValueError(f"{name} must be a positive integer.")
-        for name in ("warmup_epochs", "num_workers", "seed"):
+        for name in ("warmup_epochs", "num_workers", "seed", "early_stopping_patience"):
             value = getattr(self, name)
             if type(value) is not int or value < 0:
                 raise ValueError(f"{name} must be a nonnegative integer.")
         if self.warmup_epochs >= self.epochs:
             raise ValueError("warmup_epochs must be smaller than epochs.")
-        for name in ("learning_rate", "min_lr", "weight_decay", "gradient_clip_val"):
+        for name in (
+            "learning_rate",
+            "min_lr",
+            "weight_decay",
+            "gradient_clip_val",
+            "early_stopping_min_delta",
+        ):
             value = getattr(self, name)
             if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
                 raise ValueError(f"{name} must be a finite nonnegative number.")

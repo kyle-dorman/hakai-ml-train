@@ -43,7 +43,8 @@ def build_training_augmentation(seed: int = 33) -> A.Compose:
                     ),
                     A.GaussianBlur(blur_limit=0, sigma_limit=(0.5, 1.5), p=1),
                     A.GaussNoise(
-                        std_range=(0, 0.002),
+                        # Full uint16 scale: maximum sigma ~33 raw units.
+                        std_range=(0, 0.0005),
                         mean_range=(0, 0),
                         per_channel=True,
                         noise_scale_factor=1,

@@ -17,6 +17,13 @@ def validation_report_command(
         str,
         typer.Option(help="cpu (default) or cuda; use CUDA after training finishes."),
     ] = "cpu",
+    split: Annotated[
+        str, typer.Option(help="val or a fixed unaugmented train sample.")
+    ] = "val",
+    sources_per_region: Annotated[
+        int, typer.Option(help="Training sample TIFFs per region.")
+    ] = 3,
+    seed: Annotated[int, typer.Option(help="Training source sampling seed.")] = 42,
 ) -> None:
     """Write validation diagnostics from run into a fresh output directory.
 
@@ -25,14 +32,21 @@ def validation_report_command(
     """
     from kelpseg.validation_report import validation_report
 
-    handler, previous = start_preparation_logging()
+    handler, previous = start_preparation_logging("kelpseg")
     try:
         if device not in ("cpu", "cuda"):
             raise ValueError("device must be cpu or cuda.")
-        result = validation_report(run, output, device=device)
+        result = validation_report(
+            run,
+            output,
+            device=device,
+            split=split,
+            sources_per_region=sources_per_region,
+            seed=seed,
+        )
         typer.echo(str(result))
     except (OSError, ValueError, RuntimeError) as error:
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(code=1) from None
     finally:
-        stop_preparation_logging(handler, previous)
+        stop_preparation_logging(handler, previous, "kelpseg")

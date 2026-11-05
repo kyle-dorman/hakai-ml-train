@@ -335,6 +335,7 @@ def test_native_metric_logging_pools_and_resets_train_and_validation(tmp_path, t
     fit.fit(module, train, val)
     with open(logger.log_dir + "/metrics.csv", newline="") as stream:
         records = list(csv.DictReader(stream))
+    assert "train/accuracy" not in records[0] and "val/accuracy" not in records[0]
     train_records = [record for record in records if record["train/iou"]]
     val_records = [record for record in records if record["val/iou"]]
     assert [float(record["train/iou"]) for record in train_records] == [0.25, 0.5]
@@ -345,7 +346,8 @@ def test_native_metric_logging_pools_and_resets_train_and_validation(tmp_path, t
             "precision",
             "recall",
             "f1",
-            "accuracy",
+            "auroc",
+            "calibration_error",
             "loss",
             *(term.name for term in terms),
         ):
@@ -378,6 +380,8 @@ def test_native_metric_logging_pools_and_resets_train_and_validation(tmp_path, t
     assert module.val_metrics["val/iou"].update_count == 0
     assert module.train_loss.update_count == module.val_loss.update_count == 0
     assert module.val_pixels.update_count == 0
+    assert module.train_probability_metrics["train/auroc"].update_count == 0
+    assert module.val_probability_metrics["val/calibration_error"].update_count == 0
 
 
 def test_regional_validation_pools_pixels_and_resets(tmp_path):
@@ -442,5 +446,23 @@ def test_regional_validation_pools_pixels_and_resets(tmp_path):
         assert float(record["val_region_001/pixels"]) == 4
         assert float(record["val_region_002/pixels"]) == 2
         assert float(record["val/iou"]) == pytest.approx(0.5)
+        probability = torch.tensor(3.0).sigmoid().item()
+        assert float(record["val_region_001/calibration_error"]) == pytest.approx(
+            probability - 0.25
+        )
+        assert float(record["val_region_002/calibration_error"]) == pytest.approx(
+            1 - probability
+        )
+        assert float(record["val_region_001/auroc"]) == pytest.approx(0.5)
     assert module.region_pixels["001"].update_count == 0
     assert module.region_metrics["001"]["val_region_001/iou"].update_count == 0
+    assert (
+        module.region_probability_metrics["001"]["val_region_001/auroc"].update_count
+        == 0
+    )
+    assert (
+        module.region_probability_metrics["002"][
+            "val_region_002/calibration_error"
+        ].update_count
+        == 0
+    )

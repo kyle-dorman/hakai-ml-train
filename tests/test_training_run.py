@@ -13,7 +13,7 @@ from kelpseg.paths import PathSettings
 from kelpseg.training import run
 from kelpseg.training.loss_settings import DEFAULT_LOSSES, LossTerm
 from kelpseg.training.module import TrainingModule
-from kelpseg.training.settings import load_settings
+from kelpseg.training.settings import TrainingSettings, load_settings
 
 
 def _inputs(tmp_path):
@@ -420,3 +420,93 @@ def test_completed_epoch_runner_resume_and_recipe_cli_preview(
         assert resumed["training_resume"]["run_id"] == "same-run"
     finally:
         torch.set_num_threads(threads)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("early_stopping_patience", -1),
+        ("early_stopping_patience", True),
+        ("early_stopping_patience", 1.5),
+        ("early_stopping_min_delta", -0.01),
+        ("early_stopping_min_delta", float("nan")),
+        ("early_stopping_min_delta", True),
+    ],
+)
+def test_early_stopping_settings_reject_invalid_values(
+    field: str, value: object
+) -> None:
+    """Reject invalid patience/delta inputs before any run is created."""
+    with pytest.raises(ValueError, match=field):
+        replace(load_settings("configs/train/tiny_cpu.toml"), **{field: value})
+
+
+def test_early_stopping_preserves_schedule_and_saves_best(
+    tmp_path, monkeypatch
+) -> None:
+    """Fit a CPU plateau with/without stopping; check LR, support and checkpoint state."""
+    settings, paths = _inputs(tmp_path)
+    settings = replace(settings, epochs=5, learning_rate=1e-9, min_lr=1e-10)
+
+    def constant_positive_model(config: TrainingSettings) -> TrainingModule:
+        """Return a tiny trainable model whose hard decisions stay positive."""
+        model = torch.nn.Conv2d(3, 1, 1)
+        torch.nn.init.zeros_(model.weight)
+        torch.nn.init.ones_(model.bias)
+        return TrainingModule(config, model)
+
+    monkeypatch.setattr(run, "TrainingModule", constant_positive_model)
+    full = run.run_training(settings, paths, run_id="full-budget")
+    stopped = run.run_training(
+        replace(settings, early_stopping_patience=2), paths, run_id="plateau"
+    )
+    assert full["stopped_early"] is False and stopped["stopped_early"] is True
+    full_state = torch.load(full["last_checkpoint"], weights_only=False)
+    stopped_state = torch.load(stopped["last_checkpoint"], weights_only=False)
+    assert full_state["epoch"] == 4 and stopped_state["epoch"] == 2
+    assert stopped["best_validation_iou"] == full["best_validation_iou"] == 0.5
+    assert Path(stopped["model_bundle"]).is_dir()
+    assert Path(stopped["best_checkpoint"]).is_file()
+    assert (
+        stopped_state["lr_schedulers"][0]["total_steps"]
+        == full_state["lr_schedulers"][0]["total_steps"]
+    )
+    callback = next(
+        value
+        for key, value in stopped_state["callbacks"].items()
+        if key.startswith("EarlyStopping")
+    )
+    assert callback["wait_count"] == 2 and callback["stopped_epoch"] == 2
+    with Path(full["validation_csv"]).open() as stream:
+        full_rows = list(csv.DictReader(stream))
+    with Path(stopped["validation_csv"]).open() as stream:
+        stopped_rows = list(csv.DictReader(stream))
+    lr_name = next(name for name in full_rows[0] if name.startswith("lr-"))
+    full_lr = [row[lr_name] for row in full_rows if row[lr_name]]
+    stopped_lr = [row[lr_name] for row in stopped_rows if row[lr_name]]
+    assert stopped_lr == full_lr[: len(stopped_lr)]
+
+
+def test_legacy_resume_defaults_to_disabled_early_stopping(tmp_path: Path) -> None:
+    """Load a pre-stopping checkpoint only under the unchanged disabled policy."""
+    settings = load_settings("configs/train/tiny_cpu.toml")
+    current = {"settings": asdict(settings)}
+    historical = {"settings": asdict(settings)}
+    historical["settings"].pop("early_stopping_patience")
+    historical["settings"].pop("early_stopping_min_delta")
+    checkpoint = tmp_path / "last.ckpt"
+    torch.save(
+        {
+            "epoch": 0,
+            "training_resume": {
+                "run_id": "legacy",
+                "completed_epoch": True,
+                "identity": historical,
+            },
+        },
+        checkpoint,
+    )
+    assert run.load_resume(checkpoint, current)["run_id"] == "legacy"
+    current["settings"]["early_stopping_patience"] = 10
+    with pytest.raises(ValueError, match="recipe or selected memberships"):
+        run.load_resume(checkpoint, current)

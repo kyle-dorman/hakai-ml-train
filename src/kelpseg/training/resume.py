@@ -57,6 +57,13 @@ def load_resume(path: str | Path, identity: dict) -> dict:
     saved_identity["settings"].setdefault(
         "losses", tuple(asdict(term) for term in DEFAULT_LOSSES)
     )
+    # Old runs did not have early stopping; these defaults preserve that policy.
+    for name, default in (
+        ("early_stopping_patience", 0),
+        ("early_stopping_min_delta", 0.0),
+    ):
+        if name in identity["settings"]:
+            saved_identity["settings"].setdefault(name, default)
     if saved_identity != identity:
         raise ValueError(
             "Resume recipe or selected memberships changed; start a fresh run."

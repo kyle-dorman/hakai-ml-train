@@ -53,7 +53,7 @@ def test_metrics_pool_pixels_not_chip_ratios_and_ignore():
     assert result["precision"].item() == pytest.approx(10 / 11)
     assert result["recall"].item() == pytest.approx(10 / 11)
     assert result["f1"].item() == pytest.approx(20 / 22)
-    assert result["accuracy"].item() == pytest.approx(11 / 13)
+    assert "accuracy" not in result
     assert result["confusion_matrix"].sum().item() == 13
     torch.testing.assert_close(
         result["confusion_matrix"], torch.tensor([[1, 1], [1, 10]])
@@ -65,7 +65,7 @@ def test_metrics_pool_pixels_not_chip_ratios_and_ignore():
         torch.zeros((1, 5), dtype=torch.long), torch.zeros((1, 5), dtype=torch.long)
     )
     background = metrics.compute()
-    assert background["accuracy"].item() == 1
+    assert "accuracy" not in background
     assert background["confusion_matrix"].sum().item() == 5
     assert all(
         background[key].item() == 0 for key in ("iou", "precision", "recall", "f1")
@@ -77,10 +77,7 @@ def test_metrics_all_ignored_have_zero_support_and_library_zero_ratios():
     metrics.update(torch.ones((1, 5), dtype=torch.long), torch.full((1, 5), -100))
     result = metrics.compute()
     assert result["confusion_matrix"].sum().item() == 0
-    assert all(
-        result[key].item() == 0
-        for key in ("iou", "precision", "recall", "f1", "accuracy")
-    )
+    assert all(result[key].item() == 0 for key in ("iou", "precision", "recall", "f1"))
 
 
 @pytest.mark.parametrize("shape", [(1, 2, 4, 4), (1, 4, 4)])

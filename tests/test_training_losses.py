@@ -366,6 +366,9 @@ def test_loss_screen_recipes_are_matched_and_cover_all_types():
         names.add(settings.name)
         budgets.add(settings.epochs)
         expected = asdict(baseline)
+        # The selected baseline now stops on plateaus; LR schedule stays matched.
+        if path.stem == "bce_dice":
+            expected["early_stopping_patience"] = 10
         actual = asdict(settings)
         for key in ("name", "epochs", "losses"):
             expected.pop(key)

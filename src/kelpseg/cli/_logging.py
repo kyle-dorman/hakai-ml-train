@@ -1,12 +1,16 @@
-"""Set up ordinary workflow logs for one command, then restore the caller."""
+"""Set up ordinary preparation logs for one command, then restore the caller."""
 
 import logging
 
 
 def start_preparation_logging(
     logger_name: str = "kelpseg.prepare",
-) -> tuple[logging.StreamHandler, tuple[int, bool]]:
-    """Return the handler and old settings needed by the command's finally block."""
+) -> tuple[logging.Handler, tuple[int, bool]]:
+    """Enable progress for logger_name; return handler and settings for restoration.
+
+    Defaults to preparation commands. Reports use the kelpseg parent to include
+    preparation selection and report inference messages in the same stream.
+    """
     logger = logging.getLogger(logger_name)
     previous = (logger.level, logger.propagate)
     handler = logging.StreamHandler()
@@ -20,11 +24,11 @@ def start_preparation_logging(
 
 
 def stop_preparation_logging(
-    handler: logging.StreamHandler,
+    handler: logging.Handler,
     previous: tuple[int, bool],
     logger_name: str = "kelpseg.prepare",
 ) -> None:
-    """Remove this command's handler, including when it failed or was interrupted."""
+    """Remove handler and restore logger_name from previous; close the stream handler."""
     logger = logging.getLogger(logger_name)
     logger.removeHandler(handler)
     logger.setLevel(previous[0])

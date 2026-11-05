@@ -164,11 +164,11 @@ def write_html(
     )
     text = f"""<!doctype html><html><head><meta charset="utf-8"><title>Validation report</title>
 <style>body{{font:16px system-ui;margin:2rem;max-width:1500px}}table{{border-collapse:collapse;font-size:13px}}td,th{{padding:8px;border:1px solid #ddd;text-align:right}}.scroll{{overflow-x:auto}}img{{max-width:100%}}p{{line-height:1.5}}</style></head><body>
-<h1>Post-training validation report</h1>
+<h1>Post-training {html.escape(summary.get("split", "val"))} report</h1>
 <p>Run: {html.escape(summary["run_id"])}. Selected checkpoint epoch {summary["checkpoint_epoch"]}.
-{summary["sources"]} sources, {summary["chips"]} disjoint validation chips.
+{summary["sources"]} sources, {summary["chips"]} disjoint {html.escape(summary.get("split", "val"))} chips.
 Float32 inference; no changes to threshold, model or training. Scores describe agreement
-with supplied labels on observed validation pixels, not full-TIFF or held-out test performance.</p>
+with supplied labels on observed {html.escape(summary.get("split", "val"))} pixels, not full-TIFF or held-out test performance.</p>
 <p>Adjacent windows are joined in source coordinates. Coverage gaps, nodata and ignored pixels
 are excluded. Boundary comparisons exclude a tolerance-plus-one pixel neighborhood of unknown
 areas and image edges for scored pixels. Matches may use contours outside that margin

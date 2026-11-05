@@ -5,6 +5,7 @@ import json
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 from typer.testing import CliRunner
 
 from kelpseg.cli import app
@@ -73,6 +74,7 @@ def test_adjacent_windows_join_without_splitting_patch(tmp_path):
                 height=8,
                 width=8,
                 source_id="source",
+                source_key="source",
                 region="001",
             )
         )
@@ -88,7 +90,8 @@ def test_adjacent_windows_join_without_splitting_patch(tmp_path):
     assert not patches[0]["truncated"]
 
 
-def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch):
+@pytest.mark.parametrize("split", ["val", "train"])
+def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch, split):
     import kelpseg.validation_report as report
 
     chips = tmp_path / "chips"
@@ -108,6 +111,7 @@ def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch):
             release_id="v1",
             original_tiff="source.tif",
             source_id="source",
+            source_key="source",
             region="001",
             acquisition_date="2021-01-01",
             row=0,
@@ -123,6 +127,9 @@ def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch):
         for split in ["val", "test"]
     ]
     monkeypatch.setattr(report, "select_windows", lambda *a, **kw: rows)
+    monkeypatch.setattr(
+        report, "training_sample", lambda *a: [dict(rows[0], split="train")]
+    )
     # Tiny actual portable model, offline CPU, no pretrained fetch.
     import torch
 
@@ -152,7 +159,15 @@ def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch):
         json.dumps(dict(run_id="test", checkpoint_epoch=4, weight_kind="ema"))
     )
     output = tmp_path / "report"
-    args = ["validation-report", "--run", str(run), "--output", str(output)]
+    args = [
+        "validation-report",
+        "--run",
+        str(run),
+        "--output",
+        str(output),
+        "--split",
+        split,
+    ]
     result = CliRunner().invoke(app, args)
     assert result.exit_code == 1 and "completed run" in result.output
     assert not output.exists()
@@ -161,6 +176,8 @@ def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch):
     result = CliRunner().invoke(app, args)
     assert result.exit_code == 0, result.output
     summary = json.loads((output / "summary.json").read_text())
+    assert f"Report {split} source 1/1" in result.output
+    assert summary["split"] == split
     assert summary["global"]["pixels"] == 400
     assert summary["global"]["fn"] == 36
     with (output / "sources.csv").open() as stream:
@@ -252,3 +269,50 @@ def test_diagonal_patch_connectivity_and_pixel_weighted_size_recall():
     assert summary["patches"] == 2
     assert summary["pixel_recall"] == 2 / 10
     assert summary["fraction_without_overlap"] == 1 / 2
+
+
+def test_training_sample_is_fixed_label_blind_and_preserves_assignments(
+    tmp_path, monkeypatch
+):
+    import kelpseg.validation_report.selection as selection
+    from kelpseg.validation_report.selection import training_sample
+
+    path = tmp_path / "assignments.csv"
+    assignments = [
+        dict(
+            dataset_id="d",
+            release_id="v",
+            source_id=f"{region}-{i}",
+            region=region,
+            experiment="baseline",
+            variant="augmented",
+            split=split,
+        )
+        for region in ("001", "002")
+        for i, split in enumerate(["train"] * 6 + ["val", "test"])
+    ]
+    with path.open("w") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(assignments[0]))
+        writer.writeheader()
+        writer.writerows(assignments)
+    original = path.read_bytes()
+
+    def select(chips, copied, **kwargs):
+        # Only original training identities can be passed to the evaluation grid.
+        chosen = [r for r in copied if r["split"] == "val"]
+        assert len(chosen) == 6
+        assert all(int(r["source_id"].split("-")[1]) < 6 for r in chosen)
+        return copied
+
+    monkeypatch.setattr(selection, "select_windows", select)
+    run = dict(
+        assignments=str(path),
+        chips="unused",
+        experiment="baseline",
+        variant="augmented",
+    )
+    first = training_sample(run, 3, 42)
+    assert first == training_sample(run, 3, 42)
+    assert first != training_sample(run, 3, 1)
+    assert all(row["split"] == "train" for row in first)
+    assert path.read_bytes() == original

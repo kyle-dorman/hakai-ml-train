@@ -22,6 +22,7 @@ from kelpseg.validation_report.metrics import (
     patch_summary,
     scores,
 )
+from kelpseg.validation_report.selection import training_sample
 from kelpseg.validation_report.views import diagnostic_plot, example, write_html
 
 logger = logging.getLogger(__name__)
@@ -113,13 +114,22 @@ def source_canvas(
 
 
 def validation_report(
-    run_directory: str | Path, output_directory: str | Path, *, device: str = "cpu"
+    run_directory: str | Path,
+    output_directory: str | Path,
+    *,
+    device: str = "cpu",
+    split: str = "val",
+    sources_per_region: int = 3,
+    seed: int = 42,
 ) -> Path:
     """Write validation diagnostics for a completed run and return report.html.
 
     run_directory supplies run.json and the selected model bundle; output_directory
     must not exist. device selects CPU or CUDA inference. Writes HTML, CSV, JSON
-    and false-color PNGs, reading validation payloads only. Invalid run identities,
+    and false-color PNGs. split="train" evaluates a fixed source sample with the
+    same disjoint grid and inference; sources_per_region and seed control it.
+    The default split="val" reads all validation payloads. No test payloads are read.
+    Invalid run identities,
     incomplete runs and unsupported imagery raise ValueError. Does not train,
     alter the run or select a new checkpoint/threshold.
     """
@@ -136,18 +146,23 @@ def validation_report(
     metadata = json.loads((run_directory / "model/model.json").read_text())
     if metadata["run_id"] != run["run_id"]:
         raise ValueError("Model bundle and run.json have different run identities.")
-    rows = [
-        row
-        for row in select_windows(
-            run["chips"],
-            run["assignments"],
-            experiment=run["experiment"],
-            variant=run["variant"],
-        )
-        if row["split"] == "val"
-    ]
+    if split not in ("val", "train"):
+        raise ValueError("Report split must be val or train; test is excluded.")
+    if split == "train":
+        rows = training_sample(run, sources_per_region, seed)
+    else:
+        rows = [
+            row
+            for row in select_windows(
+                run["chips"],
+                run["assignments"],
+                experiment=run["experiment"],
+                variant=run["variant"],
+            )
+            if row["split"] == "val"
+        ]
     if not rows:
-        raise ValueError("No validation chips selected.")
+        raise ValueError("No report chips selected.")
     bands = json.loads((Path(run["chips"]) / "recipe.json").read_text())[
         "source_band_names"
     ]
@@ -164,6 +179,29 @@ def validation_report(
     model = load_model_bundle(run_directory / "model", device=device)
     output.mkdir(parents=True)
     (output / "examples").mkdir()
+    write_csv(
+        output / "selected_windows.csv",
+        [
+            {
+                key: row[key]
+                for key in (
+                    "dataset_id",
+                    "release_id",
+                    "original_tiff",
+                    "region",
+                    "acquisition_date",
+                    "source_key",
+                    "original_row",
+                    "original_col",
+                    "height",
+                    "width",
+                    "payload",
+                    "split",
+                )
+            }
+            for row in rows
+        ],
+    )
     selected = fixed_validation_samples(rows)
     groups = defaultdict(list)
     for row in rows:
@@ -178,7 +216,8 @@ def validation_report(
     examples = []
     for number, (key, windows) in enumerate(sorted(groups.items()), 1):
         logger.info(
-            "Validation source %d/%d: %s (%d chips)",
+            "Report %s source %d/%d: %s (%d chips)",
+            split,
             number,
             len(groups),
             key[2],
@@ -268,7 +307,10 @@ def validation_report(
         threshold=0.5,
         sources=len(sources),
         chips=len(rows),
-        scope="Observed disjoint validation windows; not full-TIFF or test scoring",
+        split=split,
+        sample_seed=seed if split == "train" else None,
+        sources_per_region=sources_per_region if split == "train" else None,
+        scope=f"Observed disjoint {split} windows; not full-TIFF or test scoring",
         retained_window_pixels=sum(r["retained_window_pixels"] for r in sources),
         truncated_patches=sum(r["truncated"] for r in patches),
         patch_connectivity=8,
