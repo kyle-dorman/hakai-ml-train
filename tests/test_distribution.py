@@ -90,8 +90,13 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             assert "kelpseg/models.py" in names
             assert "kelpseg/model_bundle.py" in names
             assert "kelpseg/cli/predict.py" in names
-            for module in ("settings", "windows", "predict"):
+            for module in ("settings", "windows", "predict", "chips"):
                 assert f"kelpseg/prediction/{module}.py" in names
+            assert "kelpseg/cli/report.py" in names
+            assert "kelpseg/cli/predict_chips.py" in names
+            assert "kelpseg/validation_report/__init__.py" not in names
+            for module in ("inputs", "report", "metrics", "views", "examples"):
+                assert f"kelpseg/reporting/{module}.py" in names
             assert "kelpseg/training/resume.py" in names
             for module in ("data", "loss", "metrics", "transforms"):
                 assert f"kelpseg/training/{module}.py" in names
@@ -230,6 +235,72 @@ summary = json.loads(Path('predicted/summary.json').read_text())
 assert summary['status'] == 'complete'
 assert summary['predicted_valid_pixels'] == 62
 assert summary['nodata_pixels'] == 1 and summary['uncovered_valid_pixels'] == 0
+
+# Reporting reads saved predictions with the model directory absent.
+shutil.rmtree('copied-model')
+with rasterio.open('label.tif', 'w', driver='GTiff', height=7, width=9,
+                   count=1, dtype='uint8', nodata=3, crs='EPSG:32610',
+                   transform=grid) as destination:
+    destination.write(np.zeros((7, 9), dtype=np.uint8), 1)
+Path('labels.csv').write_text('source_key,label'+chr(10)+'scene,label.tif'+chr(10))
+Path('report.toml').write_text(chr(10).join([
+    'predictions = "predicted"', 'output = "report"', 'labels = "labels.csv"',
+    'label_root = "."', 'external_scope = "installed synthetic validation"',
+    'split = "val"', 'max_examples = 1', '',
+]))
+with patch('kelpseg.model_bundle.load_model_bundle', side_effect=AssertionError('no model during report')):
+    result = CliRunner().invoke(app, ['report', '--recipe', 'report.toml'])
+assert result.exit_code == 0, result.output
+report_summary = json.loads(Path('report/summary.json').read_text())
+assert report_summary['global']['pixels'] == 62
+assert Path('report/report.html').is_file()
+
+
+# The separate chip CLI saves the same probabilities; reporting survives removal
+# of its training/model directory and uses the same installed shared report code.
+chip_root = Path('report-chips').resolve()
+chip_root.mkdir()
+(chip_root / 'recipe.json').write_text(json.dumps(dict(source_band_names=list(BAND_NAMES))))
+chip_label = np.zeros((7, 9), dtype=np.int8)
+chip_label[0, 0] = -100
+payload = chip_root / 'validation.npz'
+np.savez(payload, image=image, label=chip_label)
+chip_row = dict(
+    source_key='crop', source_id='scene', dataset_id='synthetic', release_id='v1',
+    original_tiff='image.tif', region='001', acquisition_date='2021-01-01',
+    row_offset=0, col_offset=0, original_row=0, original_col=0, row=0, col=0,
+    height=7, width=9, crs='EPSG:32610', transform=list(grid),
+    payload=str(payload), split='val', kelp_pixels=0,
+)
+chip_run = Path('chip-run').resolve()
+chip_run.mkdir()
+torch.save(dict(state_dict={'model.'+k: v for k,v in model.state_dict().items()},
+                averaging_state={'n_averaged': 0}, epoch=0, global_step=1), checkpoint)
+export_model_bundle(checkpoint, chip_run / 'model', TrainingSettings(), run_id='installed-chip-smoke')
+checkpoint.unlink()
+(chip_run / 'run.json').write_text(json.dumps(dict(
+    status='complete', run_id='installed-chip-smoke', chips=str(chip_root),
+    assignments='selector-fixture', experiment='baseline', variant='augmented',
+)))
+with patch('kelpseg.model_bundle.build_model', return_value=torch.nn.Conv2d(8,1,1)), patch(
+    'kelpseg.prediction.chips.select_windows', return_value=[chip_row]
+):
+    result = CliRunner().invoke(app, ['predict-chips', '--run', str(chip_run),
+                                    '--output', 'chip-predicted'])
+assert result.exit_code == 0, result.output
+with rasterio.open('chip-predicted/probabilities/source_000001.tif') as probability:
+    np.testing.assert_array_equal(probability.read(1), expected)
+    assert probability.transform == grid
+shutil.rmtree(chip_run)
+Path('chip-report.toml').write_text(chr(10).join([
+    'predictions = "chip-predicted"', 'output = "chip-report"', 'max_examples = 1', '',
+]))
+with patch('kelpseg.model_bundle.load_model_bundle', side_effect=AssertionError('no model during report')):
+    result = CliRunner().invoke(app, ['report', '--recipe', 'chip-report.toml'])
+assert result.exit_code == 0, result.output
+chip_summary = json.loads(Path('chip-report/summary.json').read_text())
+assert chip_summary['global'] == report_summary['global']
+assert Path('chip-report/report.html').is_file()
 """,
             cwd=unrelated,
         )
@@ -359,6 +430,8 @@ runpy.run_module("kelpseg", run_name="__main__")
             ("pixel-stats", "--help"),
             ("train", "--help"),
             ("predict", "--help"),
+            ("predict-chips", "--help"),
+            ("report", "--help"),
         ):
             run(python, "-I", "-c", lazy_probe, *arguments, cwd=unrelated)
 

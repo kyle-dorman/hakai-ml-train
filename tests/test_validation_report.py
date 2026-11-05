@@ -2,15 +2,13 @@
 
 import csv
 import json
-from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from typer.testing import CliRunner
 
 from kelpseg.cli import app
-from kelpseg.validation_report import source_canvas
-from kelpseg.validation_report.metrics import (
+from kelpseg.reporting.metrics import (
     analyze,
     boundary_counts,
     boundary_scores,
@@ -57,42 +55,9 @@ def test_patches_truncation_size_recall_and_probability_counts():
     )
 
 
-def test_adjacent_windows_join_without_splitting_patch(tmp_path):
-    rows = []
-    for index in range(2):
-        label = np.zeros((8, 8), dtype=np.int8)
-        label[3:5, 6:8] = 1 if index == 0 else 0
-        if index == 1:
-            label[3:5, :2] = 1
-        path = tmp_path / f"{index}.npz"
-        np.savez(path, image=np.ones((8, 8, 3), dtype=np.uint16), label=label)
-        rows.append(
-            dict(
-                payload=str(path),
-                original_row=10,
-                original_col=20 + index * 8,
-                height=8,
-                width=8,
-                source_id="source",
-                source_key="source",
-                region="001",
-            )
-        )
-    model = SimpleNamespace(
-        predict_probabilities=lambda image, bands: np.full(image.shape[:2], 0.9)
-    )
-    labels, prob, top, left, _ = source_canvas(
-        rows, model, ["nir", "red", "green"], tmp_path, [], []
-    )
-    patches = analyze(labels, prob)["patches"]
-    assert (top, left) == (10, 20)
-    assert len(patches) == 1 and patches[0]["pixels"] == 8
-    assert not patches[0]["truncated"]
-
-
 @pytest.mark.parametrize("split", ["val", "train"])
 def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch, split):
-    import kelpseg.validation_report as report
+    import kelpseg.prediction.chips as prediction
 
     chips = tmp_path / "chips"
     chips.mkdir()
@@ -116,6 +81,8 @@ def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch, 
             acquisition_date="2021-01-01",
             row=0,
             col=0,
+            row_offset=0,
+            col_offset=0,
             original_row=0,
             original_col=0,
             height=20,
@@ -126,9 +93,9 @@ def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch, 
         )
         for split in ["val", "test"]
     ]
-    monkeypatch.setattr(report, "select_windows", lambda *a, **kw: rows)
+    monkeypatch.setattr(prediction, "select_windows", lambda *a, **kw: rows)
     monkeypatch.setattr(
-        report, "training_sample", lambda *a: [dict(rows[0], split="train")]
+        prediction, "training_sample", lambda *a: [dict(rows[0], split="train")]
     )
     # Tiny actual portable model, offline CPU, no pretrained fetch.
     import torch
@@ -140,10 +107,17 @@ def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch, 
     torch.nn.init.constant_(model.bias, -1)
     portable = PortableModel(
         model.eval(),
-        dict(input_size=512, band_names=["nir", "red", "green"]),
+        dict(
+            input_size=512,
+            band_names=["nir", "red", "green"],
+            threshold=0.5,
+            run_id="test",
+            checkpoint_epoch=4,
+            weight_kind="ema",
+        ),
         torch.device("cpu"),
     )
-    monkeypatch.setattr(report, "load_model_bundle", lambda *a, **kw: portable)
+    monkeypatch.setattr(prediction, "load_model_bundle", lambda *a, **kw: portable)
     run = tmp_path / "run"
     (run / "model").mkdir(parents=True)
     record = dict(
@@ -155,16 +129,14 @@ def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch, 
         variant="augmented",
     )
     (run / "run.json").write_text(json.dumps(record))
-    (run / "model/model.json").write_text(
-        json.dumps(dict(run_id="test", checkpoint_epoch=4, weight_kind="ema"))
-    )
+    (run / "model/model.json").write_text(json.dumps(portable.metadata))
     output = tmp_path / "report"
     args = [
-        "validation-report",
+        "predict-chips",
         "--run",
         str(run),
         "--output",
-        str(output),
+        str(tmp_path / "predictions"),
         "--split",
         split,
     ]
@@ -175,8 +147,20 @@ def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch, 
     (run / "run.json").write_text(json.dumps(record))
     result = CliRunner().invoke(app, args)
     assert result.exit_code == 0, result.output
+    # Report needs saved predictions and payloads, never the training run/model.
+    import shutil
+
+    shutil.rmtree(run)
+    monkeypatch.setattr(
+        prediction,
+        "load_model_bundle",
+        lambda *a, **kw: pytest.fail("report loaded a model"),
+    )
+    recipe = tmp_path / "report.toml"
+    recipe.write_text('predictions = "predictions"\noutput = "report"\n')
+    result = CliRunner().invoke(app, ["report", "--recipe", str(recipe)])
+    assert result.exit_code == 0, result.output
     summary = json.loads((output / "summary.json").read_text())
-    assert f"Report {split} source 1/1" in result.output
     assert summary["split"] == split
     assert summary["global"]["pixels"] == 400
     assert summary["global"]["fn"] == 36
@@ -185,7 +169,7 @@ def test_report_command_completed_run_and_test_isolation(tmp_path, monkeypatch, 
     assert float(source["area_bias_m2"]) == -324
     assert (output / "examples/00.png").exists()
     assert "NIR/red/green" in (output / "report.html").read_text()
-    assert CliRunner().invoke(app, args).exit_code == 1
+    assert CliRunner().invoke(app, ["report", "--recipe", str(recipe)]).exit_code == 1
 
 
 def test_boundary_matching_keeps_observed_references_outside_scoring_margin():
@@ -218,7 +202,7 @@ def test_boundary_partial_matches_use_euclidean_distance():
 
 
 def test_confusion_thresholds_histogram_endpoints_and_undefined_scores():
-    from kelpseg.validation_report.metrics import scores
+    from kelpseg.reporting.metrics import scores
 
     labels = np.array([[1, 1, 0, 0, -100, 1]], dtype=np.int8)
     probability = np.array([[1, 0, 0.5, 0.49, 1, np.nan]])
@@ -242,8 +226,8 @@ def test_confusion_thresholds_histogram_endpoints_and_undefined_scores():
 
 
 def test_pooled_metrics_use_counts_not_mean_source_scores():
-    from kelpseg.validation_report import pooled
-    from kelpseg.validation_report.metrics import COUNT_KEYS, scores
+    from kelpseg.reporting.metrics import COUNT_KEYS, scores
+    from kelpseg.reporting.report import pooled
 
     rows = [
         dict(region="a", tp=1, fp=1, fn=0, tn=8),
@@ -274,8 +258,8 @@ def test_diagonal_patch_connectivity_and_pixel_weighted_size_recall():
 def test_training_sample_is_fixed_label_blind_and_preserves_assignments(
     tmp_path, monkeypatch
 ):
-    import kelpseg.validation_report.selection as selection
-    from kelpseg.validation_report.selection import training_sample
+    import kelpseg.prediction.selection as selection
+    from kelpseg.prediction.selection import training_sample
 
     path = tmp_path / "assignments.csv"
     assignments = [

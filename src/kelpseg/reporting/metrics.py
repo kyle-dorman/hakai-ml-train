@@ -65,6 +65,8 @@ def scores(counts: dict[str, int]) -> dict[str, int | float | None]:
         iou=ratio(tp, tp + fp + fn),
         precision=ratio(tp, tp + fp),
         recall=ratio(tp, tp + fn),
+        f1=ratio(2 * tp, 2 * tp + fp + fn),
+        labeled_prevalence=ratio(tp + fn, tp + fp + fn + tn),
         labeled_kelp_pixels=tp + fn,
         predicted_kelp_pixels=tp + fp,
         area_bias_pixels=fp - fn,
@@ -233,20 +235,24 @@ def patch_summary(rows: list[PatchRow]) -> list[dict[str, str | int | float | No
 
 
 def analyze(
-    label: NDArray[np.signedinteger], probability: NDArray[np.floating]
+    label: NDArray[np.signedinteger],
+    probability: NDArray[np.floating],
+    *,
+    threshold: float = 0.5,
+    include_sweep: bool = True,
 ) -> Analysis:
     """Return diagnostic counts/tables for one reconstructed source canvas.
 
     Inputs are aligned HW arrays: labels are 0/1/-100 and probabilities are
     in [0, 1], with NaN for nodata. Ignore labels and nonfinite probabilities
-    are excluded. Main scores use threshold 0.5; the sweep is diagnostic only.
+    are excluded. Main scores use the saved threshold; optional sweeps are diagnostic only.
     Inputs are not modified and no files are written.
     """
     valid = (label != -100) & np.isfinite(probability)
-    truth, predicted = label == 1, probability >= 0.5
+    truth, predicted = label == 1, probability >= threshold
     sweep = [
         dict(threshold=t, **confusion(truth, probability >= t, valid))
-        for t in THRESHOLDS
+        for t in (THRESHOLDS if include_sweep else ())
     ]
     safe = erode(valid, 4)
     near = distance_to(boundary(truth) & erode(valid, 1)) <= 3

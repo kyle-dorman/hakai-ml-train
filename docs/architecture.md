@@ -17,8 +17,11 @@ TorchMetrics accumulation. Typed loss terms live in `training/loss_settings.py`;
 all terms share ignore masking and float32 reduction. Training uses
 PyTorch Lightning Trainer/LightningModule and native callbacks/loggers.
 Portable bundles support image-array probabilities and the installed `predict`
-command reconstructs georeferenced source rasters without labels; completed-epoch resume
-uses native Trainer checkpoints with explicit random/sampling state.
+command reconstructs georeferenced source rasters without labels. `predict-chips`
+saves selected disjoint chip probabilities on source-coordinate canvases. Both
+feed `report`, which loads saved probabilities and aligned labels and shares
+metrics/figures without model inference. Completed-epoch resume uses native
+Trainer checkpoints with explicit random/sampling state.
 The checkout retains legacy Planet
 `src.*` modules, root `trainer.py`, `scripts/`, relevant configs, and focused tests until their
 replacements land. Unrelated application/model/export families are removed.
@@ -316,11 +319,12 @@ During training, validate ordinary non-overlapping chips and aggregate their
 confusion counts; validation alone selects checkpoints. Test remains held out
 until model selection is complete. This chip scope is reported with its coverage
 and does not claim a stitched full-TIFF score. The installed Lightning training command uses this validation scope.
-Post-training evaluation remains a later task.
+The separate `predict-chips` command saves this disjoint scope for post-training
+reporting; `report` reads the saved predictions without loading weights.
 
 Post-training tiled prediction and source-level scoring use the separate rules
-below. Share one image/window predictor between unlabeled inference and labeled
-evaluation. Labels are optional for scoring and must not be required to infer
+below. The image-only `predict` command provides the same saved probabilities
+for unlabeled mapping and labeled `report` evaluation. Labels are optional for scoring and must not be required to infer
 padding offsets or spatial alignment. Record padding placement explicitly and
 invert it before placing predictions on the source grid.
 
@@ -330,6 +334,17 @@ and dataset metrics. Ignore-index and uncovered pixels do not contribute.
 Preserve georeferencing and report source coverage, including omitted windows
 or nodata exclusions. Labeled and unlabeled paths must predict identically for
 the same image and recipe.
+
+The report reads chip and TIFF inputs through two explicit plain-function paths,
+then shares metrics, aggregation and views. Chip inputs retain disjoint-window
+gaps; TIFF inputs retain image-only tiling coverage. Exact cleaned-label grids
+are required without resampling. Declared overlapping crops of one original
+are combined before scoring once; valid overlapping labels must agree. Keep
+native validity, finite-prediction coverage and valid labels as separate masks.
+Report metadata preserves source identity, original offsets, split, model and
+threshold. Background-chip results remain chip-specific. Reporting requires
+saved predictions and referenced data, not a training run or loaded model.
+
 
 The old chip grid omits some trailing edge strips and has true-size undersized
 chips. Preserve its behavior for the legacy reference. Task 035 mapping

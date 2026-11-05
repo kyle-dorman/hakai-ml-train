@@ -78,8 +78,10 @@ are authorized by Task 024.
 | [033G](033g_tiny_walkthrough_and_handoff.md) | Installed rehearsal/docs | Complete | Eight tiny CPU cases and metadata-only production previews; copied bundle/resume pair; next Task 034 |
 | [034](034_gpu_machine_preparation_and_baseline_launch.md) | Remote-first setup/validation/launch | In progress | RTX 3090 setup, tiny/EMA/resume and sizing pass; deterministic CUDA fix committed; 17 throughput cases measured; 20-epoch pilot and validation/EMA analysis complete; logging diagnostics ready for review; longer-run recipe and Box backup pending |
 | [035](035_image_only_tiled_inference.md) | Local implementation/smoke | Complete | Installed image-only TIFF prediction, coverage/spatial tests and copied-model smoke pass; next 036; remote Task 034 remains separate |
+| [036](036_shared_scoring_and_reports.md) | Local implementation/smoke | Complete | Saved chip/TIFF inference and shared reports; reference parity and installed checks pass; next 036B when selected |
+| [036B](036b_temporal_error_analysis.md) | Local analysis implementation/smoke | Planned | Contract written; temporal summaries and supported common-footprint pairs after 036 |
 
-Tasks 036–039 remain roadmap slots in [docs/todo.md](../docs/todo.md). Task 034
+Tasks 037–039 remain roadmap slots in [docs/todo.md](../docs/todo.md). Task 034
 owns initial GPU setup/launch; the final researcher handoff reuses it.
 
 ## Historical queue: Tasks 000–023

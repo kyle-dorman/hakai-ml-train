@@ -2,40 +2,8 @@
 
 import numpy as np
 
+from kelpseg.prediction.selection import fixed_validation_samples
 from kelpseg.preprocessing import BAND_NAMES, MEAN, STD
-
-
-def fixed_validation_samples(rows):
-    """One positive chip per region where possible, then two background chips."""
-    ordered = sorted(
-        rows,
-        key=lambda row: (
-            row["region"],
-            row["source_id"],
-            int(row["row"]),
-            int(row["col"]),
-        ),
-    )
-    by_region = {}
-    for row in ordered:
-        by_region.setdefault(row["region"], []).append(row)
-    keys = []
-    for candidates in by_region.values():
-        selected = candidates[0]
-        for row in candidates:
-            if int(row["kelp_pixels"]) > 0:
-                selected = row
-                break
-        keys.append(str(selected["payload"]))
-    extra_background = 0
-    for row in ordered:
-        key = str(row["payload"])
-        if int(row["kelp_pixels"]) == 0 and key not in keys:
-            keys.append(key)
-            extra_background += 1
-            if extra_background == 2:
-                break
-    return keys
 
 
 def prediction_image(image, target, prediction, metadata, band_names, phase, epoch):

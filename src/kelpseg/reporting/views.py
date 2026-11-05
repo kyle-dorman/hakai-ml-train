@@ -16,12 +16,13 @@ def example(
     label: NDArray[np.signedinteger],
     probability: NDArray[np.floating],
     caption: str,
+    threshold: float = 0.5,
 ) -> None:
     """Save a five-panel false-color diagnostic PNG at path; return nothing.
 
     image is native HWC imagery with channel names in bands; label (0/1/-100)
     and probability ([0,1] or NaN) are aligned HW arrays. caption identifies
-    the source/window. Show NIR/red/green, labels, threshold-0.5 predictions,
+    the source/window. Show NIR/red/green, labels, saved-threshold predictions,
     probabilities and pixel errors, with excluded pixels gray. Inputs stay intact.
     """
     channels = [bands.index(name) for name in ("nir", "red", "green")]
@@ -31,7 +32,7 @@ def example(
         low, high = np.percentile(color[valid], [2, 98], axis=0)
         color = np.clip((color - low) / np.maximum(high - low, 1), 0, 1)
     color[~valid] = 0.3
-    prediction = probability >= 0.5
+    prediction = probability >= threshold
     error = np.zeros((*label.shape, 3))
     error[(label == 1) & prediction] = [0.2, 0.8, 0.3]
     error[(label == 0) & prediction] = [1, 0.2, 0.2]
@@ -51,7 +52,7 @@ def example(
         [
             "False color: NIR/red/green",
             "Supplied label",
-            "Prediction ≥ 0.5",
+            f"Prediction ≥ {threshold:g}",
             "Kelp probability (0–1)",
             "Green TP · red FP · blue FN",
         ],
@@ -66,7 +67,10 @@ def example(
 
 
 def diagnostic_plot(
-    path: Path, sweep: list[dict[str, Any]], histograms: list[dict[str, Any]]
+    path: Path,
+    sweep: list[dict[str, Any]],
+    histograms: list[dict[str, Any]],
+    threshold: float = 0.5,
 ) -> None:
     """Save threshold curves and class-normalized probability histograms to path.
 
@@ -83,7 +87,7 @@ def diagnostic_plot(
             marker=".",
             label=metric,
         )
-    axes[0].axvline(0.5, color="gray", linestyle="--")
+    axes[0].axvline(threshold, color="gray", linestyle="--")
     axes[0].set(xlabel="Threshold (diagnostic only)", ylabel="Score", ylim=(0, 1))
     for label in ("kelp", "background"):
         rows = [row for row in histograms if row["label"] == label]
@@ -98,7 +102,9 @@ def diagnostic_plot(
         xlabel="Predicted kelp probability", ylabel="Fraction within labeled class"
     )
     for ax in axes:
-        ax.legend()
+        handles, labels = ax.get_legend_handles_labels()
+        if handles:
+            ax.legend()
         ax.grid(alpha=0.2)
     fig.savefig(path, dpi=140)
 
@@ -146,10 +152,18 @@ def write_html(
     provides relative PNG paths and captions. Referenced plots/CSVs must already
     exist in output. Table text is escaped; no server or training hooks are used.
     """
+    threshold = summary["threshold"]
     sections = [
-        ("Global scores at threshold 0.5", [summary["global"]]),
-        ("Region scores at threshold 0.5", regions),
-        ("Background-only chips at threshold 0.5", [summary["background_chips"]]),
+        (
+            "Coverage and excluded pixels (unique within each original source)",
+            [summary["coverage"]],
+        ),
+        (f"Global scores at threshold {threshold:g}", [summary["global"]]),
+        (f"Region scores at threshold {threshold:g}", regions),
+        (
+            "Background-only chips (chip scope only)",
+            [summary["background_chips"]] if summary["background_chips"] else [],
+        ),
         ("Threshold sweep: diagnostic only", sweep),
         ("Boundary agreement: Euclidean pixel tolerance", boundaries),
         ("Errors within 3 pixels of labeled boundaries versus interiors", zones),
@@ -162,13 +176,13 @@ def write_html(
         f'<p>{html.escape(item["caption"])}</p><a href="{item["file"]}"><img src="{item["file"]}"></a>'
         for item in examples
     )
-    text = f"""<!doctype html><html><head><meta charset="utf-8"><title>Validation report</title>
+    text = f"""<!doctype html><html><head><meta charset="utf-8"><title>Labeled evaluation report</title>
 <style>body{{font:16px system-ui;margin:2rem;max-width:1500px}}table{{border-collapse:collapse;font-size:13px}}td,th{{padding:8px;border:1px solid #ddd;text-align:right}}.scroll{{overflow-x:auto}}img{{max-width:100%}}p{{line-height:1.5}}</style></head><body>
-<h1>Post-training {html.escape(summary.get("split", "val"))} report</h1>
+<h1>{html.escape(summary["scope"])} — {html.escape(summary["split"])} report</h1>
 <p>Run: {html.escape(summary["run_id"])}. Selected checkpoint epoch {summary["checkpoint_epoch"]}.
-{summary["sources"]} sources, {summary["chips"]} disjoint {html.escape(summary.get("split", "val"))} chips.
-Float32 inference; no changes to threshold, model or training. Scores describe agreement
-with supplied labels on observed {html.escape(summary.get("split", "val"))} pixels, not full-TIFF or held-out test performance.</p>
+{summary["sources"]} original sources. {summary["chips"]} selected chips (zero for TIFF scope).
+Saved float32 probabilities; no inference or model selection during reporting.
+Scores describe agreement with supplied labels on {html.escape(summary["scope"])} coverage.</p>
 <p>Adjacent windows are joined in source coordinates. Coverage gaps, nodata and ignored pixels
 are excluded. Boundary comparisons exclude a tolerance-plus-one pixel neighborhood of unknown
 areas and image edges for scored pixels. Matches may use contours outside that margin
@@ -177,16 +191,15 @@ exclude a four-pixel neighborhood.
 Patch sizes use 8-connected label components; these are not necessarily biological kelp beds.
 {summary["truncated_patches"]} coverage-truncated components are excluded from size summaries
 but retained in patches.csv. Zero-denominator metrics are shown as —.</p>
-<p>Threshold 0.5 remains the primary result. The sweep does not select a new threshold.
+<p>Threshold {threshold:g} remains the primary result. Sweeps do not select thresholds and are omitted for test scope.
 Probability distributions are in probability_histograms.csv. Source/region areas use each
 source's affine pixel area in square metres; signed bias can cancel errors, so FP/FN counts
 are retained separately. Background-only window results are in background_chips.csv.</p>
 <h2>Threshold and probability diagnostics</h2><img src="diagnostics.png">
 {content}<h2>Fixed false-color examples</h2>
-<p>One positive chip per region when available plus up to two background chips; not a random
-sample. NIR/red/green with a per-chip 2–98% stretch. Gray indicates excluded pixels.
+<p>{html.escape(summary["example_selection"])}; not a random sample. NIR/red/green with a per-example 2–98% stretch. Gray indicates excluded pixels.
 Click a figure for full size. No RGB imagery is used.</p>{figures}
-<p>Tables: <a href="sources.csv">sources</a>, <a href="regions.csv">regions</a>,
+<p>Tables: <a href="input_sources.csv">input source references</a>, <a href="sources.csv">sources</a>, <a href="regions.csv">regions</a>,
 <a href="patches.csv">patches</a>, <a href="thresholds.csv">thresholds</a>,
 <a href="boundaries.csv">boundaries</a>, <a href="zones.csv">error zones</a>,
 <a href="probability_histograms.csv">probability histograms</a>.

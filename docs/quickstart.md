@@ -1542,61 +1542,146 @@ a different policy. See [Lightning early stopping](https://lightning.ai/docs/pyt
 
 ## Post-training validation diagnostics
 
-After training finishes and exports `model/`, run an independent report:
+After training finishes and exports `model/`, save predictions first, then make
+reports from those saved probabilities. The former combined `validation-report`
+command is replaced by `predict-chips` followed by `report`:
 
 ```bash
-uv run --frozen kelpseg validation-report \
+uv run --frozen kelpseg predict-chips \
   --run /home/sky/data/runs/planet8-cabc-70ep-fast-20261104T203544160104Z \
-  --output /home/sky/data/analyses/planet8-cabc-70ep-validation-v1 \
+  --output /home/sky/data/analyses/planet8-validation-predictions-v1 \
   --device cuda
+uv run --frozen kelpseg report --recipe /path/to/chip-report.toml
 ```
 
-Omit `--device cuda` to use CPU. This command refuses incomplete runs and existing
-output directories. It does not modify training, W&B, checkpoints or thresholds.
-Use a fresh output directory after a failure; there is no partial-report resume.
-The run's saved chip/assignment paths must be accessible on this machine.
+Copy [the chip-report recipe](../configs/report/chips.toml) and edit its paths:
 
-For a fixed unaugmented training diagnostic, add `--split train`,
-`--sources-per-region 3` and `--seed 42` and choose a separate fresh output directory.
-This samples original training TIFFs uniformly within each region, without
-looking at labels, then applies the same disjoint-window selection and model
-inference as validation. It includes background-only windows, even though those
-are excluded from optimization. It never changes the saved assignments.
-`selected_windows.csv` records the exact sample and source/window identities.
+```toml
+predictions = "/home/sky/data/analyses/planet8-validation-predictions-v1"
+output = "/home/sky/data/analyses/planet8-validation-report-v1"
+max_examples = 12
+```
+
+Omit `--device cuda` to use CPU inference. Prediction refuses incomplete training
+runs and existing outputs. Reporting reads saved predictions and referenced
+labels/imagery; it does not load weights, run inference or require a GPU. To
+regenerate a report, keep `predictions` unchanged and choose a fresh `output`.
+Both steps stop on failure; there is no partial-output resume. Nothing modifies
+training, W&B, checkpoints or the selected threshold.
+
+The training run's saved chip/assignment paths must be available for prediction.
+The saved prediction directory retains probabilities on source-coordinate
+canvases, selection records and references to chip payloads. Keep those payloads
+available for reporting labels and figures; the training run and model weights
+are no longer needed by reporting. Paths in report recipes resolve relative to
+the recipe file.
+
+For fixed unaugmented training diagnostics, add `--split train`,
+`--sources-per-region 3` and `--seed 42` to `predict-chips`, using a fresh output.
+This samples original training TIFFs uniformly within each region without looking
+at labels, then applies the disjoint evaluation-window selection. It includes
+background-only windows, even though those are excluded from optimization, and
+never changes saved assignments. `windows.csv` records exact selected windows.
 Compare common regions separately: training-only BC regions have no validation
 counterpart. A sampled train–validation gap also reflects source/date/patch-size
 composition, so it is not a pure measurement of overfitting.
 
-Open `report.html` in a browser, keeping its `examples/` directory and
-`diagnostics.png` alongside it. The report includes:
+### Extend the tiny walkthrough through reporting
 
-- Global/source/region confusion counts and signed kelp-area bias in square metres,
-  plus separate false positives/misses and background-only chip results.
-- Diagnostic threshold sweep from 0.1 to 0.9 on the selected report split, and probability histograms
-  split by supplied kelp/background labels. Threshold 0.5 stays the primary result.
-- Boundary precision/recall/F1 at Euclidean tolerances of 1, 2 and 3 pixels.
-- Error rates within 3 pixels of labeled boundaries versus interiors.
+After the [tiny training walkthrough](#tiny-v2-installed-training-walkthrough), use
+its completed run directory with `predict-chips --run <tiny-run> --output
+<fresh-tiny-predictions>` (CPU default). Point the chip report recipe above at
+that output and run `report --recipe <tiny-report.toml>`. Keep the tiny chip
+payloads available; reports no longer need the run or copied model. This checks
+the same saved-prediction workflow as production without new training.
+
+For the tiny TIFF walkthrough below, pair each predicted tiny validation image
+with its same-named file under the tiny release's `labels/` directory. If testing
+a smaller cropped image, create the exactly matching label crop first. Declare
+that validation-only scope in the TIFF report recipe. Do not add held-out inputs
+to a smoke or treat tiny-model results as a quality evaluation.
+
+### Report full-TIFF predictions
+
+Run [image-only TIFF prediction](#predict-cleaned-source-tiffs), then use the same
+`report` command with [the TIFF-report recipe](../configs/report/tiffs.toml).
+Provide a label CSV with `source_key,label` columns matching `sources.csv` in the
+prediction output. Label paths resolve under `label_root`. For example:
+
+```csv
+source_key,label
+example,example_label.tif
+```
+
+```toml
+predictions = "/path/to/tiff-predictions"
+output = "/path/to/fresh-tiff-report"
+labels = "/path/to/labels.csv"
+label_root = "/path/to/cleaned-labels"
+external_scope = "Independent validation collection"
+split = "val"
+max_examples = 12
+```
+
+For existing experiment membership, replace `external_scope` with `assignments`,
+`experiment` and `variant`; keep the explicit `split`. The label CSV can supply
+`source_id` when the declared original prediction identity is not the exact
+assignment source ID. The report checks the identity join rather than guessing
+from filenames. Use test scope only after model settings and thresholds are fixed.
+
+Cleaned labels must match image dimensions, CRS and transform exactly. Reporting
+does not clean, resample or reproject them. The default stored CA/BC label mapping
+is 0→background, 1→kelp, 2→background, 3→ignored, 4→background. Other collections
+can supply an explicit `[label_mapping]` table; values are 0, 1 or -100. See the
+example recipe. Stored background is preserved regardless of label nodata metadata.
+
+### Read the shared report
+
+Open `report.html` alongside its `examples/` directory and `diagnostics.png`.
+Both inference paths share the same metrics, tables and figure implementation:
+
+- Global/source/region confusion counts, IoU, precision, recall and F1, labeled
+  prevalence, scored coverage and signed kelp-area bias. False positives and
+  misses remain separate because signed errors can cancel.
+- Diagnostic threshold sweep from 0.1 to 0.9 for train/validation and probability
+  histograms by supplied kelp/background labels. The saved model threshold stays
+  the primary result; test reports omit exploratory sweeps.
+- Boundary precision/recall/F1 at Euclidean tolerances of 1, 2 and 3 pixels,
+  and error rates near labeled boundaries versus interiors.
 - Pixel recall and fraction of wholly missed label components in size bins
   1–10, 11–100, 101–1000 and >1000 pixels. Connectivity is eight-neighbor;
   these label fragments are not necessarily biological kelp beds.
-- Fixed NIR/red/green false-color views, labels, predictions, probability maps
-  and TP/FP/FN panels. No RGB views. Selection is one positive chip per region
-  when available plus up to two background chips, not a random sample.
+- Bounded, deterministic NIR/red/green false-color examples, labels, predictions,
+  probability maps and TP/FP/FN panels. Examples are diagnostics, not a random
+  or representative score. Chip background-window diagnostics remain specific
+  to the chip workflow.
 
-Adjacent disjoint validation chips are joined in original-source coordinates
-before geometric scoring. Nodata, ignored pixels and coverage gaps stay unknown.
+The report states `chip_disjoint` or `tiff_tiled` scope. Chip inference places
+selected disjoint windows in source coordinates; gaps remain unknown. TIFF
+inference averages overlapping window probabilities before thresholding. Reports
+count each covered, valid labeled original-source pixel once, including declared
+cropped inputs sharing an original grid. Neither scope guarantees complete
+scoreable coverage, and their scores are not directly interchangeable.
+
+Nodata, missing predictions and ignored labels remain explicit exclusions.
 Boundary scores exclude unknown/image edges by tolerance + 1 pixels for scored
-contour pixels. Matching references include all contours with an observed 3×3
-neighborhood; near-boundary error scoring uses a four-pixel exclusion. Patches touching unknown support or
-image edges are flagged in `patches.csv` and excluded from patch-size summaries.
-`summary.json` records scored/retained window coverage and scope; CSVs retain
-source/date/region and original patch coordinates. Undefined ratios are blank
-in CSV, null in JSON and a dash in HTML. Areas require projected metre units.
+contour pixels. Matching references include contours with an observed 3×3
+neighborhood; near-boundary error scoring uses a four-pixel exclusion. Components
+touching unknown support or image edges are flagged and excluded from patch-size
+summaries. Undefined ratios are blank in CSV, null in JSON and a dash in HTML.
+Area reporting requires projected metre units.
 
-This uses the validation-selected exported weights in float32 inference, which
-may differ slightly from bf16 training validation. It scores observed validation
-windows, not a full-TIFF reconstruction or held-out test performance. No test
-payloads are opened. Large reports belong outside Git and should be backed up to Box.
+Saved predictions use float32 inference, which may differ slightly from bf16
+training validation. Reports measure agreement with supplied labels on their
+recorded scope. `input_sources.csv` preserves input paths and identities;
+`source_keys` links merged report rows to their constituent prediction inputs. Large predictions and reports belong outside Git and should be
+backed up to Box. Temporal analysis remains a separate future command.
+
+Reporting holds one original source's imagery, labels, probabilities and diagnostic
+arrays in RAM. Overlapping crop inputs also remain in memory while that original
+is assembled. Boundary/patch operations allocate additional arrays; reports are
+not a streaming solution for mosaics larger than available memory. `max_examples`
+limits figure output, not the scoring footprint or peak raster memory.
 
 ## Copy and use a portable model
 

@@ -9,12 +9,16 @@ import pytest
 
 SCRIPT = Path(__file__).resolve().parents[1] / "run_loss_comparisons.sh"
 STAGES = [
+    "predict:current run",
     "report:current run",
     "train:bce_dice",
+    "predict:bce_dice-test",
     "report:bce_dice-test",
     "train:boundary_bce_dice",
+    "predict:boundary_bce_dice-test",
     "report:boundary_bce_dice-test",
     "train:focal_dice",
+    "predict:focal_dice-test",
     "report:focal_dice-test",
 ]
 
@@ -42,15 +46,21 @@ if args[2] == "python":
     code = sys.stdin.read()
     compile(code, "script-heredoc", "exec")
     if "run_training" not in code:
-        print(json.loads(Path(args[4]).read_text())["status"])
+        sys.argv = ["-", *args[4:]]
+        exec(compile(code, "script-heredoc", "exec"))
         sys.exit(0)
     candidate = Path(args[4]).stem
     stage = "train:" + candidate
     run = Path(os.environ["COMPARISON_TEST_ROOT"]) / (candidate + "-test")
-else:
-    assert args[2:4] == ["kelpseg", "validation-report"]
+elif args[2:4] == ["kelpseg", "predict-chips"]:
     assert args[-2:] == ["--device", "cuda"]
     run = Path(args[args.index("--run") + 1])
+    stage = "predict:" + run.name
+else:
+    import tomllib
+    assert args[2:4] == ["kelpseg", "report"]
+    recipe = tomllib.loads(Path(args[args.index("--recipe") + 1]).read_text())
+    run = Path(Path(recipe["predictions"]).joinpath("run-path.txt").read_text())
     stage = "report:" + run.name
 with Path(os.environ["COMPARISON_TEST_EVENTS"]).open("a") as stream:
     stream.write(json.dumps({"stage": stage, "run": str(run)}) + "\\n")
@@ -61,9 +71,13 @@ if stage.startswith("train:"):
     run.mkdir()
     (run / "run.json").write_text(json.dumps({"status": "complete"}))
     Path(args[5]).write_text(str(run))
-else:
+elif stage.startswith("predict:"):
     assert json.loads((run / "run.json").read_text())["status"] == "complete"
-    Path(args[args.index("--output") + 1]).mkdir()
+    output = Path(args[args.index("--output") + 1])
+    output.mkdir()
+    (output / "run-path.txt").write_text(str(run))
+else:
+    Path(recipe["output"]).mkdir()
 """)
     uv.chmod(0o755)
     sleep = commands / "sleep"

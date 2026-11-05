@@ -1,0 +1,22 @@
+# Saved output from kelpseg predict; no model is loaded by reporting.
+predictions = "/path/to/tiff-predictions"
+output = "/path/to/fresh-tiff-report"
+# CSV columns: source_key,label (optional source_id for assignments joins). Labels must match the cleaned image grid.
+labels = "/path/to/labels.csv"
+label_root = "/path/to/cleaned-labels"
+# For an independent labeled collection, describe its declared evaluation scope.
+external_scope = "Independent validation imagery; no model selection from this report"
+split = "val"
+max_examples = 12
+# For an established split, remove external_scope and supply all three instead:
+# assignments = "/path/to/assignments.csv"
+# experiment = "baseline"
+# variant = "augmented"
+
+# Stored cleaned CA/BC label codes; declare a different mapping for other labels.
+[label_mapping]
+"0" = 0
+"1" = 1
+"2" = 0
+"3" = -100
+"4" = 0

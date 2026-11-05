@@ -69,15 +69,19 @@ ignored pixels stay explicit. Media are diagnostics, not a representative score.
 Regional `val_region_<code>/` metrics pool validation pixels within each region,
 with the same global metric semantics. They do not change checkpoint selection.
 
-The separate `validation-report` command runs only after completion against the
-exported selected model and saved validation membership. Optional `--split train`
-uses a seeded sample of training sources with the same disjoint evaluation grid;
-selection is label-blind and recorded in `selected_windows.csv`. Training-only
-regions and differing source composition must be stated when comparing scores. It reports boundary,
-patch-size, probability/threshold and area diagnostics on observed source pixels,
-with false-color examples. It does not tune thresholds or read test payloads.
+The separate `predict-chips` command runs after completion against the exported
+selected model and saved validation membership. Optional `--split train` uses a
+seeded sample of training sources with the same disjoint evaluation grid;
+selection is label-blind and recorded in `windows.csv`. Training-only regions
+and differing source composition must be stated when comparing scores.
+The `report` command consumes those saved probabilities or image-only TIFF
+predictions from `predict`, plus aligned labels/imagery. It shares confusion,
+area, boundary, patch and probability diagnostics across both scopes without
+loading a model. Report headings and outputs distinguish `chip_disjoint` from
+`tiff_tiled` coverage. The primary threshold comes from saved model metadata;
+train/validation sweeps are descriptive only and test reports omit them.
 See [post-training diagnostics](quickstart.md#post-training-validation-diagnostics)
-for definitions, coverage exclusions and the float32 inference distinction.
+for recipes, definitions, coverage exclusions and the float32 inference distinction.
 
 ## Initialization, fine tuning, and resume
 
@@ -239,7 +243,8 @@ and evaluation coverage matched. Declare the sampling and training budget so
 extra BC data and extra optimization are distinguishable experiment choices;
 those recipe details are selected in the training task.
 
-Tasks 036/037 must add temporal-consistency reporting alongside pooled accuracy:
+Task [036B](../tasks/036b_temporal_error_analysis.md) owns temporal-consistency
+reporting from Task 036 outputs; Task 037 reuses it for comparisons. Include:
 
 - Retain per-source/date confusion counts, scoreable/covered area and labeled
   kelp prevalence; summarize by region, represented year and represented month.

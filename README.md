@@ -25,7 +25,10 @@ The installed `train` command uses Lightning for fitting, validation, checkpoint
 and completed-epoch resume; see [training recipes](docs/quickstart.md#train-and-validate).
 [Portable bundles](docs/quickstart.md#copy-and-use-a-portable-model) predict supplied
 image arrays offline. [Tiled prediction](docs/quickstart.md#predict-cleaned-source-tiffs)
-writes georeferenced probabilities and masks from cleaned imagery without labels. Retained legacy Planet code/tests
+writes georeferenced probabilities and masks from cleaned imagery without labels.
+`predict-chips` saves disjoint evaluation-chip predictions; both paths feed the
+shared [`report` command](docs/quickstart.md#post-training-validation-diagnostics),
+which produces labeled diagnostics without rerunning inference. Retained legacy Planet code/tests
 support the ongoing rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
 starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
 

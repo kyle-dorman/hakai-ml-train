@@ -1,0 +1,5 @@
+# Saved output from kelpseg predict-chips. Edit paths for this machine.
+# Relative paths resolve from this recipe, not the current working directory.
+predictions = "/path/to/chip-predictions"
+output = "/path/to/fresh-chip-report"
+max_examples = 12
