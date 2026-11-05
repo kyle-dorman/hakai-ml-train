@@ -185,12 +185,13 @@ def individual_trials(sample: dict, seed: int = 33):
                         p=1,
                     ),
                     identity=std == 0,
-                    preview_default=std == 0.0008,
+                    preview_default=std == 0.0005,
                 )
                 for std in (
                     0,
                     0.00015,
                     0.0004,
+                    0.0005,
                     0.0008,
                     0.002,
                     0.005,

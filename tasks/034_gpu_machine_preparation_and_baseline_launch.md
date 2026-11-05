@@ -930,3 +930,38 @@ checks pass. Nothing launched, scheduled or committed; active training untouched
 Exact next action: user starts bash run_loss_comparisons.sh in a separate tmux
 session (now to wait, or after completion). Inspect all four reports and back up
 stable external outputs to Box after the sequence. Task 034 remains in progress.
+
+## Noise-strength visual review — 2026-11-05
+
+After the four completed comparisons, user requests weaker noise and viewer
+verification without retraining. Reduce Gaussian std_range from (0,0.002) to
+(0,0.0005) in the shared factory (raw sigma maximum 131.07 to 32.7675).
+Preserve selection frequency and all other augmentation parameters. Update the
+serialized snapshot and isolated viewer trials, retaining the old strength for
+comparison. Generate training-only galleries with fixed display limits and seeds;
+inspect exported previews and run focused parity checks. No commits or fitting.
+
+Noise-review outcome: changed only Gaussian std_range to (0,0.0005), retaining
+per-channel independent noise, SomeOf selection and all other transforms. Updated
+configs/augment/baseline.json, parity assertion and isolated viewer sweep (new
+0.0005 default; former 0.002 retained). Current docs distinguish this future-run
+setting from the four completed runs and their saved augmentation metadata.
+
+Generated /home/sky/data/analyses/task034_noise_review_20261105/isolated/index.html
+and pipeline/index.html using the same four positive training windows plus two
+background controls, seed33 and fixed raw 0–2000 display. Pipeline has 48 draws;
+16 include Gaussian noise with empirical raw sigma 1.26–30.42. Verified identical
+selected-window lists, all referenced viewer assets, and old/new isolated noise
+settings. Visually inspected the exported fixed-scale original/new/old NIR panels
+(noise_comparison.png) and an actual full-pipeline noise draw: reduced noise
+preserves visibly clearer texture/small patches. Browser interaction itself was
+not automated; the existing offline viewer and its assets were generated, and
+requested opening the comparison image and viewer in Codex. No model inference
+or retraining was needed; this does not establish a performance improvement.
+
+Validation: 49 focused augmentation pipeline/preview/training-data tests pass;
+Ruff format/check and diff checks pass. No commits or training launches. Exact
+next action: user reviews Gaussian noise in isolated/index.html at 0.0005 versus
+0.002 and the reduced-strength combined pipeline, then decides whether further
+adjustment is needed. Task 034 follow-up complete; broader run/artifact review
+and Box backup remain outside this visual check.

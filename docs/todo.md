@@ -68,18 +68,16 @@ batch-12/eight-worker recipe, with deterministic execution off; ordinary
 multiworker resume restores training state while worker randomness restarts.
 The user completed the twenty-epoch fast pilot; validation prediction and EMA
 comparisons are recorded in Task 034. Component losses, epoch prediction panels
-and regional metrics are prepared for the next run. Next: review uncommitted
-changes and the prepared seventy-epoch fast recipe (LR 3e-4 to 3e-6), launch
-manually, and back up outputs to Box. Best/last-only retention remains unchanged.
-Reviewed implementation is committed locally; the new recipe/docs are uncommitted.
-The user has launched the seventy-epoch run. A separate post-training validation
-report is ready for use after completion; it does not modify the active training process.
-Configurable standard losses and boundary-weighted BCE use type/name/weight/parameters
-with explicit experimental options. Standalone recipes in `configs/train/losses/`
-prepare later fresh-run comparisons. `run_loss_comparisons.sh` waits for the
-current baseline, reports it, then trains/reports BCE/Dice, boundary BCE/Dice and
-focal/Dice sequentially. Script is prepared only; nothing launched or scheduled.
-The current run retains its original objective.
+and regional metrics are implemented. The 70-epoch baseline and three selected
+loss comparisons (BCE/Dice, boundary BCE/Dice and focal/Dice) completed, with
+post-training validation reports for all four. Best/last-only retention remains
+unchanged; back up stable outputs to Box.
+Configurable losses use type/name/weight/parameters; standalone recipes live in
+`configs/train/losses/`. `run_loss_comparisons.sh` performs the selected sequential
+train/report sequence. The four runs show similar validation IoU with modest
+boundary/patch differences. Gaussian noise strength is now reduced fourfold for
+future runs. Next: visually review the fixed-seed training-only noise galleries;
+no retraining is needed for this check. Noise changes remain uncommitted.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in

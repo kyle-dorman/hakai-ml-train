@@ -111,7 +111,7 @@
             "per_channel": true,
             "std_range": [
               0.0,
-              0.002
+              0.0005
             ]
           },
           {

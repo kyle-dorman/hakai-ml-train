@@ -55,7 +55,7 @@ def test_readable_factory_records_approved_ranges_and_equal_sampling():
     assert pool[1].brightness_limit == (0, 0)
     assert pool[1].contrast_limit == (-0.2, 0.2)
     assert pool[2].sigma_limit == (0.5, 1.5) and pool[2].blur_limit == (0, 0)
-    assert pool[3].std_range == (0, 0.002) and pool[3].per_channel
+    assert pool[3].std_range == (0, 0.0005) and pool[3].per_channel
     assert pool[4].alpha == (0, 1) and pool[4].method == "gaussian"
     assert pool[5].num_holes_range == (1, 4)
     assert pool[5].hole_height_range == pool[5].hole_width_range == (0.05, 0.25)

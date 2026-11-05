@@ -945,7 +945,14 @@ or shear, and the original output size. Imagery is bilinear; labels/validity are
 nearest-neighbor. New borders use zero image fill and ignored mask fill.
 Children are selected uniformly and execute in listed order: brightness, gain,
 blur, noise, Sharpen, coarse dropout, channel shifts, channel dropout. It uses
-the [approved native ranges](../tasks/033_baseline_training_and_portable_models.md#limits-selected-after-isolated-review).
+the [initial native ranges](../tasks/033_baseline_training_and_portable_models.md#limits-selected-after-isolated-review),
+with Gaussian noise subsequently reduced to `std_range=(0, 0.0005)` after the
+four-run loss comparison. This is sigma 0–32.77 raw units (formerly 0–131.07),
+because the library domain is raw / 65535. Selection remains two of eight extras;
+only Gaussian noise strength changed. The isolated viewer retains `0.002` and
+now defaults to `0.0005` so both upper strengths can be compared at fixed display
+limits. New-process augmentation uses this setting; completed models, metrics
+and saved run recipes are unchanged.
 The final [native Albumentations recipe](../configs/augment/baseline.json) is a
 saved snapshot of that factory, verified by a focused parity check. It can be
 loaded directly with `albumentations.from_dict`; there is no custom parser.
@@ -966,6 +973,17 @@ training loader reuses one seeded Albumentations pipeline that includes
 normalization and tensor conversion. Its random state advances across samples;
 explicit per-draw seeds are for replayable previews. This gallery runs no model and opens no held-out payloads.
 Existing outputs are refused; failed generation needs a fresh output.
+
+The GPU-host noise review is at
+`/home/sky/data/analyses/task034_noise_review_20261105/isolated/index.html`
+(select **Gaussian noise**, compare `std_range=0.0005` with `0.002`) and
+`/home/sky/data/analyses/task034_noise_review_20261105/pipeline/index.html`
+for the reduced-strength combined pipeline. Both use the same four positive
+training windows and two background controls, seed 33; the pipeline has eight
+draws per image. Display limits stay fixed at 0–2000, including the NIR view.
+These previews require no model or retraining and are visual checks, not evidence
+of improved validation performance.
+
 
 ## Tiny v2: split, chip and load locally
 
