@@ -89,6 +89,9 @@ def test_wheel_and_sdist_install_outside_checkout(tmp_path: Path) -> None:
             assert "kelpseg/chips.py" in names
             assert "kelpseg/models.py" in names
             assert "kelpseg/model_bundle.py" in names
+            assert "kelpseg/cli/predict.py" in names
+            for module in ("settings", "windows", "predict"):
+                assert f"kelpseg/prediction/{module}.py" in names
             assert "kelpseg/training/resume.py" in names
             for module in ("data", "loss", "metrics", "transforms"):
                 assert f"kelpseg/training/{module}.py" in names
@@ -188,6 +191,45 @@ with patch('kelpseg.model_bundle.build_model', return_value=torch.nn.Conv2d(8,1,
     build.assert_called_once_with(8, encoder_weights=None)
 actual = loaded.predict_probabilities(image, BAND_NAMES)
 np.testing.assert_array_equal(actual, expected)
+
+# Exercise the installed CLI with the same offline copied model and real TIFF I/O.
+import csv
+import json
+import rasterio
+from rasterio.transform import from_origin
+from typer.testing import CliRunner
+from kelpseg.cli import app
+
+grid = from_origin(100, 200, 3, 3)
+with rasterio.open('image.tif', 'w', driver='GTiff', height=7, width=9,
+                   count=8, dtype='uint16', nodata=0, crs='EPSG:32610',
+                   transform=grid) as destination:
+    destination.write(np.moveaxis(image, -1, 0))
+with Path('sources.csv').open('w', newline='') as stream:
+    writer = csv.writer(stream)
+    writer.writerow(['source_key', 'image', 'band_names'])
+    writer.writerow(['scene', 'image.tif', ';'.join(BAND_NAMES)])
+Path('predict.toml').write_text(chr(10).join([
+    'model = "copied-model"', 'manifest = "sources.csv"',
+    'image_root = "."', 'output = "predicted"', '',
+]))
+with patch('kelpseg.model_bundle.build_model', return_value=torch.nn.Conv2d(8,1,1)):
+    result = CliRunner().invoke(app, ['predict', '--recipe', 'predict.toml'])
+assert result.exit_code == 0, result.output
+assert "Source 1/1" in result.output and "valid pixels" in result.output
+with rasterio.open('predicted/probabilities/scene.tif') as probability:
+    np.testing.assert_array_equal(probability.read(1), expected)
+    assert probability.transform == grid and probability.crs.to_epsg() == 32610
+    assert np.isnan(probability.nodata)
+with rasterio.open('predicted/masks/scene.tif') as mask:
+    expected_mask = (expected >= 0.5).astype(np.uint8)
+    expected_mask[0,0] = 255
+    np.testing.assert_array_equal(mask.read(1), expected_mask)
+    assert mask.nodata == 255
+summary = json.loads(Path('predicted/summary.json').read_text())
+assert summary['status'] == 'complete'
+assert summary['predicted_valid_pixels'] == 62
+assert summary['nodata_pixels'] == 1 and summary['uncovered_valid_pixels'] == 0
 """,
             cwd=unrelated,
         )
@@ -316,6 +358,7 @@ runpy.run_module("kelpseg", run_name="__main__")
             ("split", "--help"),
             ("pixel-stats", "--help"),
             ("train", "--help"),
+            ("predict", "--help"),
         ):
             run(python, "-I", "-c", lazy_probe, *arguments, cwd=unrelated)
 

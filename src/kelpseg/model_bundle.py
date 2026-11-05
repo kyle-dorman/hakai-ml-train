@@ -1,11 +1,13 @@
 """Portable selected weights and image-array prediction, without training inputs."""
 
 import json
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 import torch
+from albumentations import Compose
 
 from kelpseg.bands import resolve_band_indices
 from kelpseg.models import build_model
@@ -69,40 +71,76 @@ class PortableModel:
     metadata: dict
     device: torch.device
 
-    def predict_probabilities(self, image, source_band_names):
-        """Predict one native HWC uint16 array no larger than the saved canvas.
+    _transform: Compose = field(init=False, repr=False)
 
-        Pass every native band and its physical name so nodata is determined
-        before selecting model channels. Returns original-size HW float32 with
-        NaN for native nodata. This helper does not tile or read raster files.
+    def __post_init__(self) -> None:
+        """Build the shared deterministic preprocessing once for this model."""
+        self._transform = build_input_transform(self.metadata["band_names"])
+
+    def predict_probabilities(
+        self, image: np.ndarray, source_band_names: Sequence[str]
+    ) -> np.ndarray:
+        """Return original-size probabilities for one native HWC uint16 image.
+
+        Pass every native band and its physical name. Native nodata becomes NaN;
+        artificial bottom/right padding is removed. No raster or label is read.
         """
-        if (
-            not isinstance(image, np.ndarray)
-            or image.ndim != 3
-            or image.dtype != np.uint16
-            or image.shape[-1] != len(source_band_names)
-        ):
-            raise ValueError("Image must be HWC uint16 with named native channels.")
-        size = self.metadata["input_size"]
-        height, width = image.shape[:2]
-        if not (0 < height <= size and 0 < width <= size):
-            raise ValueError(f"Image height and width must be between 1 and {size}.")
+        return self.predict_batch([image], source_band_names)[0]
+
+    def predict_batch(
+        self, images: Sequence[np.ndarray], source_band_names: Sequence[str]
+    ) -> list[np.ndarray]:
+        """Predict a bounded batch of native images sharing one band declaration.
+
+        Each HWC uint16 image must fit the saved canvas; true sizes may differ.
+        Return one original-size float32 probability array per image, preserving
+        input order and NaN at native nodata. The caller controls batch memory.
+        """
+        if len(images) == 0:
+            return []
         indices = resolve_band_indices(source_band_names, self.metadata["band_names"])
-        valid = native_validity(image)
-        padded = np.zeros((size, size, len(indices)), dtype=np.uint16)
-        padded[:height, :width] = image[:, :, indices]
-        padded_valid = np.zeros((size, size), dtype=np.int8)
-        padded_valid[:height, :width] = valid
-        transform = build_input_transform(self.metadata["band_names"])
-        tensor = transform(image=padded, validity=padded_valid)["image"]
+        size = self.metadata["input_size"]
+        tensors = []
+        validity = []
+        for image in images:
+            if (
+                not isinstance(image, np.ndarray)
+                or image.ndim != 3
+                or image.dtype != np.uint16
+                or image.shape[-1] != len(source_band_names)
+            ):
+                raise ValueError("Image must be HWC uint16 with named native channels.")
+            height, width = image.shape[:2]
+            if not (0 < height <= size and 0 < width <= size):
+                raise ValueError(
+                    f"Image height and width must be between 1 and {size}."
+                )
+            valid = native_validity(image)
+            padded = np.zeros((size, size, len(indices)), dtype=np.uint16)
+            padded[:height, :width] = image[:, :, indices]
+            padded_valid = np.zeros((size, size), dtype=np.int8)
+            padded_valid[:height, :width] = valid
+            tensors.append(
+                self._transform(image=padded, validity=padded_valid)["image"]
+            )
+            validity.append(valid)
+
+        self.model.eval()
         with torch.inference_mode():
-            probabilities = self.model(tensor[None].to(self.device)).sigmoid()
-        result = probabilities[0, 0, :height, :width].cpu().numpy().copy()
-        result[~valid] = np.nan
-        return result
+            batch = torch.stack(tensors).to(self.device, dtype=torch.float32)
+            probabilities = self.model(batch).sigmoid().cpu().numpy()
+        results = []
+        for probability, valid in zip(probabilities, validity, strict=True):
+            height, width = valid.shape
+            result = probability[0, :height, :width].copy()
+            result[~valid] = np.nan
+            results.append(result)
+        return results
 
 
-def load_model_bundle(directory, *, device="cpu"):
+def load_model_bundle(
+    directory: str | Path, *, device: str | torch.device = "cpu"
+) -> PortableModel:
     """Construct offline, then load selected weights with no pretrained fetch."""
     directory = Path(directory)
     metadata = json.loads((directory / "model.json").read_text())

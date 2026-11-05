@@ -115,3 +115,34 @@ def test_bundle_rejects_unsupported_normalization_before_constructing_model(
     (tmp_path / "model.json").write_text(json.dumps(metadata))
     with pytest.raises(ValueError, match="normalization"):
         model_bundle.load_model_bundle(tmp_path)
+
+
+def test_batch_matches_single_images_with_mixed_sizes_and_native_nodata():
+    torch.manual_seed(35)
+    names = ("red", "green", "blue")
+    model = model_bundle.PortableModel(
+        torch.nn.Conv2d(3, 1, 1),
+        {"input_size": 512, "band_names": names},
+        torch.device("cpu"),
+    )
+    images = [
+        np.full((17, 23, 8), 1000, dtype=np.uint16),
+        np.full((512, 7, 8), 2000, dtype=np.uint16),
+        np.full((1, 512, 8), 6000, dtype=np.uint16),
+    ]
+    for image in images:
+        image[0, 0] = 0
+        # Selected RGB channels are zero, but a native band makes this valid.
+        image[0, 1] = 0
+        image[0, 1, 0] = 700
+    singles = [model.predict_probabilities(image, BAND_NAMES) for image in images]
+    batched = model.predict_batch(images, BAND_NAMES)
+    assert len(batched) == len(images)
+    for image, single, batch in zip(images, singles, batched, strict=True):
+        assert batch.shape == image.shape[:2]
+        assert batch.dtype == np.float32
+        np.testing.assert_allclose(batch, single, rtol=1e-6, atol=1e-7)
+        assert np.isnan(batch[0, 0])
+        assert np.isfinite(batch[0, 1])
+    assert not model.model.training
+    assert model.predict_batch([], BAND_NAMES) == []

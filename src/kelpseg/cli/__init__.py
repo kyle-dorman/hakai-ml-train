@@ -11,6 +11,7 @@ from kelpseg.cli.clean import clean_command
 from kelpseg.cli.organize import organize_command
 from kelpseg.cli.paths import check_paths_command
 from kelpseg.cli.pixel_stats import pixel_stats_command
+from kelpseg.cli.predict import predict_command
 from kelpseg.cli.split import split_command
 from kelpseg.cli.train import train_command
 from kelpseg.cli.validation_report import validation_report_command
@@ -51,3 +52,5 @@ app.command("pixel-stats")(pixel_stats_command)
 app.command("train")(train_command)
 
 app.command("validation-report")(validation_report_command)
+
+app.command("predict")(predict_command)

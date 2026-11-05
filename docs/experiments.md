@@ -149,8 +149,9 @@ Smooth illumination, haze and misregistration remain excluded.
 Training exports the validation-selected `model/` bundle containing weights,
 architecture settings, band names/order, normalization, and prediction settings
 including threshold. The installed Python loader predicts supplied image arrays
-offline without labels or original recipe paths; tiled/georeferenced prediction
-remains Task 035.
+offline without labels or original recipe paths. The installed `predict` command
+extends it to tiled/georeferenced source rasters with explicit sparse-window
+coverage; see the [prediction recipe](quickstart.md#predict-cleaned-source-tiffs).
 Keep recipe/model identity and averaging semantics explicit. Verify that copying
 the bundle to a fresh directory is enough to predict supplied imagery with the
 installed package, without the old training registry, original config-directory

@@ -4,8 +4,9 @@ The installed `kelpseg` command checks machine paths, organizes raw catalogs,
 checks ordinary image directories, cleans imagery with optional paired labels,
 chips cleaned TIFFs into one native-band collection, assigns source splits,
 computes training-image pixel statistics, and trains/validates recipe-selected
-models with portable bundles and completed-epoch resume. Tiled prediction and
-scientific scoring remain later tasks; see [the roadmap](todo.md). Retained legacy Planet code
+models with portable bundles and completed-epoch resume. Image-only tiled
+prediction writes georeferenced probabilities and masks. Scientific scoring
+remains a later task; see [the roadmap](todo.md). Retained legacy Planet code
 is development/reference material, outside the installed package.
 
 ## Install
@@ -1589,6 +1590,106 @@ export_model_bundle(
 Export refuses an existing destination. Loading a bundle restores model weights
 only; it does not resume training or restore an optimizer.
 
+## Predict cleaned source TIFFs
+
+`predict` maps imagery without reading labels or requiring training chips/splits.
+Run cleanup once and retain its cleaned TIFFs; prediction does not clean again.
+Inputs must be uint16 GeoTIFFs with internal CRS/transform, declared `nodata=0`
+and the cleaned all-native-band-zero convention. Raw 65535-nodata imagery must
+first go through the existing check/clean workflow. Declare every native band
+by physical name, even when the model selects only three or four of them.
+
+Copy [the example recipe](../configs/predict/example.toml) to a local directory.
+Keep all machine-specific paths in this file; relative paths resolve from it:
+
+```toml
+model = "/path/to/copied/model"
+manifest = "sources.csv"
+image_root = "/path/to/cleaned/images"
+output = "/path/to/new/predictions"
+stride = 256
+min_valid_fraction = 0.20
+batch_size = 1
+device = "cpu"
+```
+
+Create `sources.csv` beside the recipe. Image paths resolve from `image_root`:
+
+```csv
+source_key,image,band_names,region_id,acquisition_date
+scene_001,scene_001.tif,coastal_blue;blue;green_i;green;yellow;red;rededge;nir,002,2021-02-28
+```
+
+Only `source_key`, `image` and `band_names` are required. Other supported columns
+are `dataset_id`, `release_id`, `region_id`, `acquisition_date` (YYYY-MM-DD),
+`original_source_id`, `row_offset` and `col_offset` (nonnegative source crop offsets).
+Preserve known identities; omitted metadata stays blank. Keys must start with a
+letter/digit and contain only letters, digits, underscore, dot or hyphen. Keys
+must also be unique ignoring case (for example, `Scene` and `scene` conflict);
+resolved image paths must be unique. Channels are selected by name, not count.
+
+```bash
+uv run kelpseg predict --recipe /path/to/predict.toml
+```
+
+The bundle supplies its weights, 512-pixel canvas, normalization, channel order
+and 0.5 threshold. Inference shifts the last windows inward at the bottom/right;
+only dimensions smaller than 512 need bottom/right padding. Padding is removed
+before source placement. Stride must be 1–512; the default 256 overlaps windows.
+Probabilities are averaged equally at valid source pixels before thresholding
+once (`probability >= 0.5`). There is no test-time augmentation or label input.
+
+Windows below 20% valid imagery are skipped; exactly 20% is retained. This
+fraction excludes artificial padding and is calculated before band selection.
+Entirely nodata windows are always skipped, even with `min_valid_fraction=0`.
+Overlapping retained windows may still predict pixels inside a skipped window.
+
+The output directory contains:
+
+- `probabilities/<source_key>.tif`: float32 probabilities, NaN where not predicted.
+- `masks/<source_key>.tif`: uint8 background 0, kelp 1, no prediction 255.
+- `sources.csv`: identities, paths and unique pixel coverage counts per source.
+- `windows.csv`: actual offsets, sizes, padding, valid fractions and dispositions.
+- `settings.json`: resolved settings and model metadata.
+- `summary.json`: complete status, source/window counts and summed pixel counts.
+
+Both rasters preserve the source CRS, transform and dimensions and use lossless
+compression. Native nodata and uncovered valid pixels share the raster no-prediction
+value; the coverage tables distinguish their counts. To locate those reasons,
+combine output validity with all-native-band-zero validity in the original image.
+An all-skipped source still produces rasters with no predictions and zero coverage.
+These are mapping outputs, not accuracy scores. Task 036 adds labeled scoring.
+
+Use a fresh output directory. Existing outputs are refused; failure stops the
+run and leaves incomplete files for inspection. Choose a new output for another
+attempt. A completed `summary.json` marks completion; there is no resume/reuse.
+Progress logs show sources, retained windows and covered/uncovered valid pixels.
+
+CPU is the default; use `device="cuda"` only on a suitable GPU host. Batch size
+controls tile memory, not whole-source memory. Processing holds one source's
+float32 sum, uint32 count and boolean validity arrays (9 bytes/pixel), plus
+output masks, temporary arrays and model/tile memory. For example, 100 million
+source pixels require at least 0.9 GB just for those accumulators. Reduce batch
+size for model-memory pressure; larger-than-memory source mosaics are outside
+this simple implementation. GPU throughput has not been validated locally.
+
+For notebook use, call `predict(load_settings(recipe))` from
+`kelpseg.prediction.predict` and `kelpseg.prediction.settings`. The same predictor
+will supply Task 036; there is no separate label-aware inference path.
+
+### Extend the tiny walkthrough with prediction
+
+Reuse the copied tiny `model/` above and one **training or validation** TIFF from
+`tiny_ca_bc/v2/images/`. For the published tiny v2 baseline, the validation source
+`002_20210228_182240_2406_tiny.tif` is a 768 × 768 multiwindow example. Use it as
+the CSV image with source key `tiny_val`, native eight-band names, region `002`
+and date `2021-02-28`; set `image_root` to the tiny images directory. Copy the
+model and image into a fresh directory if checking portability. Run the command
+with a new output and inspect its probability/mask TIFFs in a GIS. No labels,
+training registry or online connection are needed. Check `sources.csv` coverage
+before interpreting the maps. A tiny smoke model demonstrates execution and
+spatial correctness, not useful segmentation accuracy.
+
 ## Resume after a completed epoch
 
 For runs started with the completed-epoch support, resume from the last saved
@@ -1785,7 +1886,7 @@ authentication and Box data staging. [Task 034](../tasks/034_gpu_machine_prepara
 is in progress: test and refine installation and the GPU workflow on the remote
 host, then launch one baseline after its checks pass.
 
-Tiled/georeferenced prediction, scoring, LORO model comparisons and adding a
+Scoring, LORO model comparisons and adding a
 region remain later tasks. The reusable walkthrough
 above covers preparation, training/validation, portable image-array probabilities
 and completed-epoch resume. Automated CPU fixtures

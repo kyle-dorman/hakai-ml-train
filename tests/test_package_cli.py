@@ -21,7 +21,7 @@ def test_help_keeps_explicit_subcommand_and_no_future_commands() -> None:
     assert "split" in result.stdout
     assert "pixel-stats" in result.stdout
     assert "preview-augmentations" not in result.stdout
-    assert "train" in {command.name for command in app.registered_commands}
+    assert {"train", "predict"} <= {command.name for command in app.registered_commands}
     # CI may color individual pieces of an option; compare the displayed text.
     assert "--version" in unstyle(result.stdout)
     result = runner.invoke(app, ["check-paths", "--help"])
@@ -39,6 +39,7 @@ def test_version_uses_installed_distribution() -> None:
     ("arguments", "message"),
     [
         (["train"], "Missing option"),
+        (["predict"], "Missing option"),
         (["--unknown"], "No such option"),
         (["check-paths"], "Missing option"),
         (["check-paths", "--unknown"], "No such option"),
@@ -124,7 +125,16 @@ def test_required_paths_never_discovers_a_file(
 
 @pytest.mark.parametrize(
     "argument",
-    ["--help", "--version", "check-paths", "organize", "chip", "split", "train"],
+    [
+        "--help",
+        "--version",
+        "check-paths",
+        "organize",
+        "chip",
+        "split",
+        "train",
+        "predict",
+    ],
 )
 def test_module_entry_is_lightweight_in_real_process(
     tmp_path: Path, argument: str
@@ -150,7 +160,7 @@ runpy.run_module('kelpseg', run_name='__main__')
     environment = dict(os.environ)
     environment.pop("PYTHONPATH", None)
     arguments = [argument]
-    if argument in ("organize", "chip", "split", "train"):
+    if argument in ("organize", "chip", "split", "train", "predict"):
         arguments += ["--help"]
     if argument == "check-paths":
         roots = tmp_path / "roots"
@@ -171,7 +181,19 @@ runpy.run_module('kelpseg', run_name='__main__')
         assert "check-paths" in result.stdout
     elif argument == "--version":
         assert result.stdout.strip() == f"kelpseg {version('kelpseg')}"
-    elif argument in ("organize", "chip", "split", "train"):
+    elif argument in ("organize", "chip", "split", "train", "predict"):
         assert "--recipe" in unstyle(result.stdout)
     else:
         assert "Both roots are existing directories." in result.stdout
+
+
+@pytest.mark.parametrize("contents", [None, "stride = ["])
+def test_prediction_recipe_errors_have_no_traceback(tmp_path: Path, contents) -> None:
+    recipe = tmp_path / "predict.toml"
+    if contents is not None:
+        recipe.write_text(contents)
+    result = runner.invoke(app, ["predict", "--recipe", str(recipe)])
+    assert result.exit_code == 1
+    assert "Error:" in result.stderr
+    assert "Traceback" not in result.output
+    assert result.stdout == ""

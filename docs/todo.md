@@ -107,6 +107,13 @@ about 410 GB of obsolete local data/raw/organized copies were removed. Current
 cleaned/chips/analyses/references stay local; Box was untouched. Task 033 stays
 separate.
 
+## Selected local task
+
+[Task 035](../tasks/035_image_only_tiled_inference.md#outcome--2026-11-04) is complete:
+installed image-only tiled prediction and local spatial/copied-model checks pass.
+Next local action: select and write Task 036 for labeled scoring and qualitative
+figures. Task 034 remote training remains separate.
+
 ## Ordered roadmap
 
 Tasks through 032C are complete. Remaining later rows are ordered scope slots, not permission
@@ -138,7 +145,7 @@ selected; split further if needed.
 | [033F](../tasks/033f_portable_models_and_resume.md) | Portable models and resume — complete | Copied bundle and completed-epoch resume verified independently (zero workers) |
 | [033G](../tasks/033g_tiny_walkthrough_and_handoff.md) | Tiny walkthrough and handoff — complete | Eight tiny CPU cases, installed distributions, copied bundle/resume pair and eight metadata-only previews; next 034 |
 | [034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) | GPU machine preparation and baseline launch — in progress | Local entry checklist/bootstrap; remote-first installation and CUDA/data/resume checks and one healthy baseline launch; local 035 can proceed while training runs |
-| 035 | Image-only tiled inference | Predict from copied model bundle and imagery in a fresh directory; georeferencing, edge coverage, explicit padding, no label dependency |
+| [035](../tasks/035_image_only_tiled_inference.md) | Image-only tiled inference — complete | Copied bundle and cleaned TIFFs; shifted edge windows, explicit sparse-window coverage, georeferenced probabilities/masks; no label dependency |
 | 036 | Labeled scoring and qualitative figures | Unique-pixel overlap metrics; region/date/year/month prevalence and errors; signed area bias and supported matched-footprint change checks; see experiments.md |
 | 037 | LORO runner and matching-TIFF comparisons | Ten 001–010 folds; paired with/without-011/012 CA/Baja results; temporal-consistency and later-date scopes reported separately; tiny suite checks |
 | 038 | New-region experiment recipes | Use prepared regional and combined collection versions; four cases, fixed test scopes, explicit initialization and reset/resume behavior |

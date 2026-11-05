@@ -16,7 +16,8 @@ configured weighted binary objectives (default smoothed BCE/Lovasz) and native
 TorchMetrics accumulation. Typed loss terms live in `training/loss_settings.py`;
 all terms share ignore masking and float32 reduction. Training uses
 PyTorch Lightning Trainer/LightningModule and native callbacks/loggers.
-Portable bundles support image-array probabilities; completed-epoch resume
+Portable bundles support image-array probabilities and the installed `predict`
+command reconstructs georeferenced source rasters without labels; completed-epoch resume
 uses native Trainer checkpoints with explicit random/sampling state.
 The checkout retains legacy Planet
 `src.*` modules, root `trainer.py`, `scripts/`, relevant configs, and focused tests until their
@@ -331,14 +332,18 @@ or nodata exclusions. Labeled and unlabeled paths must predict identically for
 the same image and recipe.
 
 The old chip grid omits some trailing edge strips and has true-size undersized
-chips. Preserve its behavior for the legacy reference. New unlabeled mapping
-should cover the full intended valid source footprint; specify and test edge
-windows in its own task rather than claiming old artifacts cover every pixel.
+chips. Preserve its behavior for the legacy reference. Task 035 mapping
+covers the full source geometrically before filtering windows. It skips windows
+with less than 20% native valid imagery by default (configurable; padding is
+excluded), retaining exactly 20% and always skipping entirely nodata windows.
+Report resulting uncovered valid pixels separately from native nodata; neither
+is background. Overlapping retained windows can recover coverage in skipped
+windows. This policy does not change the existing training chip selection.
 
 Training chips use a fixed regular grid without shifting trailing windows
 inward. Store partial edge chips at their true source size; pad bottom/right
 during loading with image fill 0 and label ignore -100, recording true extents
-and padding offsets. Sliding-window inference may shift its final windows inward
+and padding offsets. Task 035 inference shifts its final bottom/right windows inward
 to cover source edges with full-size inputs where possible. Training and inference grids
 need not match. Record actual inference offsets, avoid duplicate windows, and
 retain explicit padding/inversion for sources smaller than the input window.

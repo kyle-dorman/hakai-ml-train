@@ -1,0 +1,12 @@
+# Copy this file beside your local source CSV and edit these four paths.
+# All paths resolve relative to this recipe. Cleanup is performed separately.
+model = "/path/to/copied/model"
+manifest = "sources.csv"
+image_root = "/path/to/cleaned/images"
+output = "/path/to/fresh/predictions"
+# 256-pixel stride gives 50% overlap with the model's 512-pixel windows.
+stride = 256
+# Skip strictly below 20% valid source pixels; padding is excluded.
+min_valid_fraction = 0.20
+batch_size = 1
+device = "cpu"

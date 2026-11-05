@@ -24,7 +24,8 @@ SegFormer B3, the selected loss and pooled confusion metrics; see
 The installed `train` command uses Lightning for fitting, validation, checkpoints
 and completed-epoch resume; see [training recipes](docs/quickstart.md#train-and-validate).
 [Portable bundles](docs/quickstart.md#copy-and-use-a-portable-model) predict supplied
-image arrays offline. Tiled/georeferenced prediction arrives later. Retained legacy Planet code/tests
+image arrays offline. [Tiled prediction](docs/quickstart.md#predict-cleaned-source-tiffs)
+writes georeferenced probabilities and masks from cleaned imagery without labels. Retained legacy Planet code/tests
 support the ongoing rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
 starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
 
