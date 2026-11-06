@@ -8,6 +8,10 @@ label_root = "/path/to/cleaned-labels"
 external_scope = "Independent validation imagery; no model selection from this report"
 split = "val"
 max_examples = 12
+# Optional prepared source-grid shoreline rasters (no inference or chip rebuild).
+# cluster_inventory = "/path/to/completed-shore-inventory"  # Requires shoreline; reuses full-source IDs/sizes.
+# shoreline = "/path/to/prepared-shoreline"
+# distance_edges = [0, 30, 60, 120, 250, 500]
 # For an established split, remove external_scope and supply all three instead:
 # assignments = "/path/to/assignments.csv"
 # experiment = "baseline"

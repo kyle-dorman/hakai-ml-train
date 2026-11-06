@@ -3,3 +3,7 @@
 predictions = "/path/to/chip-predictions"
 output = "/path/to/fresh-chip-report"
 max_examples = 12
+# Optional prepared source-grid shoreline rasters (no inference or chip rebuild).
+# cluster_inventory = "/path/to/completed-shore-inventory"  # Requires shoreline; reuses full-source IDs/sizes.
+# shoreline = "/path/to/prepared-shoreline"
+# distance_edges = [0, 30, 60, 120, 250, 500]

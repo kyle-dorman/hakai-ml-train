@@ -381,6 +381,36 @@ it does not inherit the organizer/cleaner authentication machinery. Historical
 recorded checksums remain evidence for those older releases. No study upload or
 new authentication catalog is required.
 
+## Shoreline reference and derived analysis
+
+The user-supplied shoreline exports are immutable raw references at
+`kelp-box:kelpseg/data/1_raw/shorelines_v1/`: `mainlands.gpkg`, `big_islands.gpkg`,
+and `small_islands.gpkg`. The local GPU copy is under
+`/home/sky/data/data/1_raw/shorelines_v1/`; all three are EPSG:4326. Preserve the
+supplied exports and their recorded origin rather than silently replacing them
+with a differently versioned shoreline product. Task 040 owns acquisition and
+verification details, including the observed feature counts and mixed geometry.
+
+Prepared land/distance TIFFs and manifests belong in a fresh external analysis
+folder, separate from cleaned imagery and canonical chips. Keep source identity,
+CRS/transform/offsets, raster paths, distance convention/cap, coverage assumption,
+input references and geometry repair counts. Label inventories and augmented
+reports also stay outside Git. Repo recipes describe the generation; no new
+checksums, catalogs or receipts are required. These derived outputs never modify
+source labels, split assignments, or chip payloads.
+
+Label-cluster outputs from `shore-inventory` also stay outside Git: source-grid
+uint32 component-ID TIFFs, a source/raster manifest, component attributes, and
+pixel-distance/size and correlation CSVs. IDs are local to an original source
+and acquisition; they do not track biological beds across dates. Zero is known
+background and uint32 maximum is unavailable/ignored support. Components retain
+full observed sizes before any chip selection, with boundary-fragment flags.
+Joint saved-prediction reports reference these cluster artifacts without
+redefining components. Source/region/distance/size TP/FN tables, acquisition
+support and explicit exclusion accounting stay with each fresh report.
+Training-exposure window/summary CSVs count repeated appearances under uniform
+eligible-window draws; they are separate from unique-pixel inventory counts.
+
 ## Historical experiment artifacts
 
 Tasks 000–023 and starting commit

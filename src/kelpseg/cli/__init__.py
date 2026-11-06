@@ -14,6 +14,8 @@ from kelpseg.cli.pixel_stats import pixel_stats_command
 from kelpseg.cli.predict import predict_command
 from kelpseg.cli.predict_chips import predict_chips_command
 from kelpseg.cli.report import report_command
+from kelpseg.cli.shore_inventory import shore_inventory_command
+from kelpseg.cli.shoreline import prepare_shoreline_command
 from kelpseg.cli.split import split_command
 from kelpseg.cli.temporal_report import temporal_report_command
 from kelpseg.cli.train import train_command
@@ -59,3 +61,6 @@ app.command("report")(report_command)
 app.command("predict")(predict_command)
 
 app.command("temporal-report")(temporal_report_command)
+
+app.command("prepare-shoreline")(prepare_shoreline_command)
+app.command("shore-inventory")(shore_inventory_command)

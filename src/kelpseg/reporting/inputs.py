@@ -14,6 +14,10 @@ from rasterio import Affine
 
 from kelpseg.paths import _resolve_path
 from kelpseg.prepare.chip import map_labels
+from kelpseg.reporting.shore_distance import (
+    DEFAULT_DISTANCE_EDGES,
+    validate_distance_edges,
+)
 
 
 @dataclass(frozen=True)
@@ -30,12 +34,23 @@ class ReportSettings:
     variant: str = ""
     split: str = ""
     max_examples: int = 12
+    shoreline: Path | None = None
+    cluster_inventory: Path | None = None
+    distance_edges: tuple[float, ...] = DEFAULT_DISTANCE_EDGES
     label_mapping: dict[int, int] = field(
         default_factory=lambda: {0: 0, 1: 1, 2: 0, 3: -100, 4: 0}
     )
 
     def __post_init__(self) -> None:
         """Reject ordinary invalid settings for Python and CLI callers."""
+        validate_distance_edges(self.distance_edges)
+        if self.cluster_inventory is not None:
+            if self.shoreline is None:
+                raise ValueError("cluster_inventory requires a shoreline reference.")
+            if tuple(self.distance_edges) != DEFAULT_DISTANCE_EDGES:
+                raise ValueError(
+                    "Joint comparison requires the standard distance bands, including the 120 m edge: [0, 30, 60, 120, 250, 500]."
+                )
         if type(self.max_examples) is not int or self.max_examples < 0:
             raise ValueError("max_examples must be a nonnegative integer.")
         for name in ("external_scope", "experiment", "variant", "split"):
@@ -66,7 +81,15 @@ def load_settings(recipe: str | Path) -> ReportSettings:
     unknown = values.keys() - {f.name for f in fields(ReportSettings)}
     if unknown:
         raise ValueError(f"Unknown report settings: {', '.join(sorted(unknown))}.")
-    for key in ("predictions", "output", "labels", "label_root", "assignments"):
+    for key in (
+        "predictions",
+        "output",
+        "labels",
+        "label_root",
+        "assignments",
+        "shoreline",
+        "cluster_inventory",
+    ):
         value = values.get(key)
         if value is None and key not in ("predictions", "output"):
             continue
@@ -85,6 +108,10 @@ def load_settings(recipe: str | Path) -> ReportSettings:
             raise ValueError(
                 "label_mapping keys must be integer stored categories."
             ) from error
+    if "distance_edges" in values:
+        if not isinstance(values["distance_edges"], list):
+            raise ValueError("distance_edges must be an array of metre boundaries.")
+        values["distance_edges"] = tuple(values["distance_edges"])
     return ReportSettings(**values)
 
 

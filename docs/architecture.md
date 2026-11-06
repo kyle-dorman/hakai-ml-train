@@ -374,6 +374,52 @@ calendar summaries are observation totals, not unique date-area mosaics. See
 [the temporal recipe](quickstart.md#temporal-canopy-change) for interval and
 pair-selection settings.
 
+## Shore-distance diagnostics
+
+`prepare-shoreline` rasterizes the union of three explicit polygon layers on each
+image grid without reading labels. Polygon parts/holes are retained; geometry
+repair and discarded linework are counted. Complete vector coverage is an explicit
+input assumption. Native-grid Euclidean distances use a halo beyond source edges,
+projected metre spacing and a recorded right-censoring cap. They approximate
+land-pixel-center distance, not subpixel or tide-corrected shoreline distance.
+
+`shore-inventory` joins prepared rasters, cleaned labels, chip identities and
+locked assignments. It counts full-source, selected-chip and training-eligible
+pixel unions independently of predictions. Original crop overlaps are deduplicated;
+unknown/land label support and absent split groups remain visible. `report` can
+read the same rasters using canonical keys or the saved chip-window identity
+mapping. Optional distance bands partition the original scored footprint exactly,
+including land and unknown categories; global counts and thresholds do not change.
+Label-only cluster analysis assigns eight-connected IDs on the complete original
+canvas before selecting chip footprints. Each kelp pixel inherits full observed
+component area. Source-local IDs and component tables remain georeferenced;
+components touching unknown labels or canvas edges are flagged as fragments.
+Distance/size distributions and additive Pearson moments pool by region/split;
+correlations use uncapped ocean kelp only, with both pixel and cluster weighting.
+Interior-only results are primary, with all-observed sensitivity tables. Repeated
+pixels and acquisitions are not independent evidence; no significance tests.
+Optional joint validation uses saved original-source cluster-ID rasters and full
+component sizes, aligned to the existing scored canvas without reclustering.
+All observed components partition TP/FN; interior plus truncated counts reconcile
+to that total. Near/offshore comparisons additionally omit mapped land/unknown.
+Region/distance/size summaries pool counts, retain explicit empty groups and
+count unique contributing sources/dates. Matched-acquisition comparisons and
+largest-source/date removal expose support imbalance; no false positive is
+assigned to a true label-cluster size. Precision remains a region/distance metric.
+Training-window exposure is distinct from unique-pixel support: sum label-pixel
+appearances across every eligible training window, preserving overlap and full
+source component sizes. Uniform without-replacement draws yield a sum per full
+epoch and a mean per draw. Region-conditional exposure and global contribution
+have different denominators. Keep all observed fragments, land/unknown support
+and exclusion counts explicit; this describes nominal preaugmentation sampling,
+not augmented loss pixels or gradient weighting.
+Display native imagery using log1p before contrast stretching (the user’s
+preferred imagery display); this is visualization only, never model preprocessing.
+Shoreline panels share a yellow boundary, with a metre colorbar for distance.
+Region/split distributions describe observed labeled support, not unique habitat
+area or optimizer exposure. Commands and interpretation are in
+[the shore-distance recipe](quickstart.md#shore-distance-coverage-and-validation-diagnostics).
+
 ## Local verification
 
 Exercise cleaning, chipping, band selection, splitting, loading, a tiny optimizer

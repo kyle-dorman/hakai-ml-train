@@ -8,6 +8,8 @@ import numpy as np
 from matplotlib.figure import Figure
 from numpy.typing import NDArray
 
+from kelpseg.visualization import log_stretch
+
 
 def example(
     path: Path,
@@ -27,11 +29,7 @@ def example(
     """
     channels = [bands.index(name) for name in ("nir", "red", "green")]
     valid = (label != -100) & np.isfinite(probability)
-    color = image[:, :, channels].astype(np.float32)
-    if valid.any():
-        low, high = np.percentile(color[valid], [2, 98], axis=0)
-        color = np.clip((color - low) / np.maximum(high - low, 1), 0, 1)
-    color[~valid] = 0.3
+    color = log_stretch(image[:, :, channels], valid)
     prediction = probability >= threshold
     error = np.zeros((*label.shape, 3))
     error[(label == 1) & prediction] = [0.2, 0.8, 0.3]
@@ -50,7 +48,7 @@ def example(
     for ax, title in zip(
         axes,
         [
-            "False color: NIR/red/green",
+            "Log false color: NIR/red/green",
             "Supplied label",
             f"Prediction ≥ {threshold:g}",
             "Kelp probability (0–1)",
@@ -135,73 +133,135 @@ def table(rows: list[dict[str, Any]]) -> str:
     return f'<div class="scroll"><table><tr>{header}</tr>{body}</table></div>'
 
 
+def _score_table(rows: list[dict[str, Any]], group: str | None = None) -> str:
+    """Return a compact score table with percentages and labeled-pixel support."""
+    compact = []
+    for row in rows:
+        values = {group.replace("_", " ").title(): row[group]} if group else {}
+        for key in ("recall", "precision", "iou"):
+            value = row.get(key)
+            values[key.title()] = "—" if value is None else f"{value:.1%}"
+        for key, label in (
+            ("labeled_kelp_pixels", "Labeled kelp pixels"),
+            ("tp", "TP"),
+            ("fn", "FN"),
+            ("fp", "FP"),
+        ):
+            values[label] = f"{row[key]:,}"
+        compact.append(values)
+    return table(compact)
+
+
+def _figures(examples: list[dict[str, str]]) -> str:
+    """Return linked figures with source/window captions from saved examples."""
+    return "".join(
+        f'<figure><a href="{html.escape(item["file"])}">'
+        f'<img loading="lazy" src="{html.escape(item["file"])}" '
+        f'alt="{html.escape(item["caption"])}"></a>'
+        f"<figcaption>{html.escape(item['caption'])}</figcaption></figure>"
+        for item in examples
+    )
+
+
 def write_html(
     output: Path,
     summary: dict[str, Any],
     regions: list[dict[str, Any]],
-    sweep: list[dict[str, Any]],
     boundaries: list[dict[str, Any]],
     zones: list[dict[str, Any]],
     sizes: list[dict[str, Any]],
     examples: list[dict[str, str]],
 ) -> None:
-    """Write output/report.html from completed diagnostic tables; return nothing.
+    """Write a concise report from saved scores and figures without changing data.
 
-    summary provides run metadata and global/background scores. Remaining tables
-    hold region, threshold, boundary, error-zone and patch-size results. examples
-    provides relative PNG paths and captions. Referenced plots/CSVs must already
-    exist in output. Table text is escaped; no server or training hooks are used.
+    Display primary global, regional and shore-distance scores. Secondary
+    diagnostics and full-resolution tables remain available behind links or
+    disclosures. Inputs are completed report tables and relative figure paths.
     """
     threshold = summary["threshold"]
-    sections = [
-        (
-            "Coverage and excluded pixels (unique within each original source)",
-            [summary["coverage"]],
-        ),
-        (f"Global scores at threshold {threshold:g}", [summary["global"]]),
-        (f"Region scores at threshold {threshold:g}", regions),
-        (
-            "Background-only chips (chip scope only)",
-            [summary["background_chips"]] if summary["background_chips"] else [],
-        ),
-        ("Threshold sweep: diagnostic only", sweep),
-        ("Boundary agreement: Euclidean pixel tolerance", boundaries),
-        ("Errors within 3 pixels of labeled boundaries versus interiors", zones),
-        ("Label-patch size: complete observed components only", sizes),
+    shore = summary.get("shoreline")
+    parts = [
+        """<!doctype html><html><head><meta charset="utf-8">
+<title>Validation report</title><style>
+body{font:16px system-ui;margin:2rem auto;max-width:1150px;padding:0 1rem;color:#17202b}
+h1{font-size:1.8rem}h2{margin-top:2.5rem;font-size:1.3rem}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:9px 12px;border-bottom:1px solid #ddd;text-align:right}td:first-child,th:first-child{text-align:left}
+.scroll{overflow-x:auto}img{max-width:100%}figure{margin:1.5rem 0}figcaption,.meta{font-size:13px;color:#53606e}details{margin:1.2rem 0}summary{cursor:pointer;padding:.6rem 0}nav{margin:1rem 0}a{color:#175f98}p{line-height:1.5}
+</style></head><body>""",
+        f"<h1>{html.escape(summary['scope'])} · {html.escape(summary['split'])} evaluation</h1>",
+        f'<p class="meta">threshold {threshold:g} · {summary["sources"]} TIFFs · epoch {summary["checkpoint_epoch"]} · — = undefined</p>',
     ]
-    content = "".join(
-        f"<h2>{html.escape(title)}</h2>{table(rows)}" for title, rows in sections
+    if "joint_clusters" in summary:
+        parts.append(
+            '<nav><a href="joint_report.html">Recall by region, distance and cluster size →</a></nav>'
+        )
+    parts.extend(
+        [
+            "<h2>Overall</h2>",
+            _score_table([summary["global"]]),
+            "<h2>By region</h2>",
+            _score_table(regions, "region"),
+        ]
     )
-    figures = "".join(
-        f'<p>{html.escape(item["caption"])}</p><a href="{item["file"]}"><img src="{item["file"]}"></a>'
-        for item in examples
+    if shore:
+        parts.extend(
+            [
+                "<h2>Distance to mapped land</h2>",
+                '<p class="meta">Distance in metres · land and unknown shown separately</p>',
+                '<img src="shoreline.png" alt="Recall, precision and labeled support by distance to mapped land">',
+                "<details><summary>Distance-band counts</summary>",
+                _score_table(shore["global_bands"], "distance_band"),
+                "</details><h2>Shoreline examples</h2>",
+                '<p class="meta">Log NIR/red/green · yellow = mapped shoreline · selected examples</p>',
+                _figures(shore["examples"]),
+            ]
+        )
+    if examples:
+        parts.extend(
+            [
+                "<details><summary>Prediction examples</summary>",
+                '<p class="meta">Log NIR/red/green · gray = excluded · selected examples</p>',
+                _figures(examples),
+                "</details>",
+            ]
+        )
+    parts.extend(
+        [
+            "<details><summary>Additional diagnostics</summary>",
+            '<h2>Threshold and probability</h2><img loading="lazy" src="diagnostics.png" alt="Threshold curves and probability histograms">',
+            "<h2>Boundary agreement</h2>",
+            table(boundaries),
+            "<h2>Boundary and interior errors</h2>",
+            table(zones),
+            "<h2>Observed patch size</h2>",
+            table(sizes),
+            "</details>",
+            "<details><summary>Data and coverage</summary>",
+            f'<p class="meta">{html.escape(summary["run_id"])}</p>',
+            table([summary["coverage"]]),
+        ]
     )
-    text = f"""<!doctype html><html><head><meta charset="utf-8"><title>Labeled evaluation report</title>
-<style>body{{font:16px system-ui;margin:2rem;max-width:1500px}}table{{border-collapse:collapse;font-size:13px}}td,th{{padding:8px;border:1px solid #ddd;text-align:right}}.scroll{{overflow-x:auto}}img{{max-width:100%}}p{{line-height:1.5}}</style></head><body>
-<h1>{html.escape(summary["scope"])} — {html.escape(summary["split"])} report</h1>
-<p>Run: {html.escape(summary["run_id"])}. Selected checkpoint epoch {summary["checkpoint_epoch"]}.
-{summary["sources"]} original sources. {summary["chips"]} selected chips (zero for TIFF scope).
-Saved float32 probabilities; no inference or model selection during reporting.
-Scores describe agreement with supplied labels on {html.escape(summary["scope"])} coverage.</p>
-<p>Adjacent windows are joined in source coordinates. Coverage gaps, nodata and ignored pixels
-are excluded. Boundary comparisons exclude a tolerance-plus-one pixel neighborhood of unknown
-areas and image edges for scored pixels. Matches may use contours outside that margin
-when their immediate 3×3 neighborhood is observed. Near-boundary/interior measurements
-exclude a four-pixel neighborhood.
-Patch sizes use 8-connected label components; these are not necessarily biological kelp beds.
-{summary["truncated_patches"]} coverage-truncated components are excluded from size summaries
-but retained in patches.csv. Zero-denominator metrics are shown as —.</p>
-<p>Threshold {threshold:g} remains the primary result. Sweeps do not select thresholds and are omitted for test scope.
-Probability distributions are in probability_histograms.csv. Source/region areas use each
-source's affine pixel area in square metres; signed bias can cancel errors, so FP/FN counts
-are retained separately. Background-only window results are in background_chips.csv.</p>
-<h2>Threshold and probability diagnostics</h2><img src="diagnostics.png">
-{content}<h2>Fixed false-color examples</h2>
-<p>{html.escape(summary["example_selection"])}; not a random sample. NIR/red/green with a per-example 2–98% stretch. Gray indicates excluded pixels.
-Click a figure for full size. No RGB imagery is used.</p>{figures}
-<p>Tables: <a href="input_sources.csv">input source references</a>, <a href="sources.csv">sources</a>, <a href="regions.csv">regions</a>,
-<a href="patches.csv">patches</a>, <a href="thresholds.csv">thresholds</a>,
-<a href="boundaries.csv">boundaries</a>, <a href="zones.csv">error zones</a>,
-<a href="probability_histograms.csv">probability histograms</a>.
-See summary.json for coverage and full scope metadata.</p></body></html>"""
-    (output / "report.html").write_text(text)
+    links = (
+        ("summary.json", "Metadata"),
+        ("sources.csv", "TIFF scores"),
+        ("regions.csv", "Region scores"),
+        ("thresholds.csv", "Thresholds"),
+        ("patches.csv", "Patches"),
+        ("boundaries.csv", "Boundaries"),
+        ("zones.csv", "Error zones"),
+        ("probability_histograms.csv", "Probabilities"),
+        ("background_chips.csv", "Background chips"),
+        ("shoreline_sources.csv", "TIFF × distance"),
+        ("shoreline_regions.csv", "Region × distance"),
+        ("shoreline_summary.csv", "Distance totals"),
+    )
+    parts.append(
+        "<p>"
+        + " · ".join(
+            f'<a href="{name}">{label}</a>'
+            for name, label in links
+            if (output / name).exists()
+        )
+        + "</p></details></body></html>"
+    )
+    (output / "report.html").write_text("\n".join(parts))

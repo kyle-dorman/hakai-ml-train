@@ -1711,6 +1711,197 @@ is assembled. Boundary/patch operations allocate additional arrays; reports are
 not a streaming solution for mosaics larger than available memory. `max_examples`
 limits figure output, not the scoring footprint or peak raster memory.
 
+## Shore-distance coverage and validation diagnostics
+
+Use `prepare-shoreline` to create land and distance rasters once, then reuse them
+for a label-only split inventory and for saved-prediction reports. Neither
+workflow changes chips, labels, source assignments, model weights or thresholds.
+
+```bash
+uv run --frozen kelpseg prepare-shoreline --recipe /path/to/shoreline.toml
+uv run --frozen kelpseg shore-inventory --recipe /path/to/shore-inventory.toml
+uv run --frozen kelpseg report --recipe /path/to/validation-report.toml
+```
+
+Run these in order, stopping if a command fails. Outputs must be fresh directories;
+there is no preparation resume or partial-output reuse.
+
+### Prepare source-grid land and distance rasters
+
+Copy [the shoreline recipe](../configs/prepare/shoreline.toml). Set the three
+GeoPackage paths, image root, source CSV and output directory. Use the existing
+[prediction source CSV](#predict-cleaned-source-tiffs) format: `source_key,image`,
+with `band_names` for false-color previews and the explicit dataset/release,
+region/date, original-source and crop-offset columns. For the inventory, keys
+must match the canonical chip collection, and `original_source_id` must equal
+its assignment `source_id`. Do not substitute a filename alias for this identity.
+The TIFF labels are not used in this step.
+
+The user-supplied inputs on the GPU host are
+`/home/sky/data/data/1_raw/shorelines_v1/{mainlands,big_islands,small_islands}.gpkg`,
+backed up at `kelp-box:kelpseg/data/1_raw/shorelines_v1/`. All three are EPSG:4326.
+Their GeometryCollections may contain linework: the command keeps polygon parts
+and holes, records discarded non-area parts and any repairs, and unions the land.
+`coverage = "complete"` declares that the supplied polygons cover the requested
+source halos. An incomplete regional export cannot be treated as empty ocean.
+
+Source imagery must use north-up projected metre grids. The command creates
+`land/` (0 ocean, 1 land, 255 unknown), `distance/` (float32 metres, NaN unknown),
+`sources.csv`, settings, summary and bounded imagery/shoreline previews. Geometry
+covers image nodata too; downstream analysis applies native validity separately.
+The shoreline data are an approximate static reference, not a land truth mask.
+
+Distance is from an ocean pixel center to the nearest rasterized land-pixel
+center. It is computed with a halo beyond the TIFF before chip windows are read.
+This is a native-pixel approximation: on a straight shoreline halfway between
+3 m pixel centers, the first ocean distance is 3 m rather than 1.5 m to the vector
+boundary. `max_distance_m = 500` caps distant values; 500 means **at least 500 m**,
+not an exact distance. Source age, tides, omitted rocks and shoreline position
+can matter more than this raster approximation near shore. Inspect `examples/`.
+
+### Compare label support by region and split
+
+Copy [the inventory recipe](../configs/report/shore_inventory.toml). Set
+`shoreline` to the prepared output, `image_root`, `label_root`, canonical
+`chip_root`, locked `assignments`, explicit `experiment`/`variant`, and a fresh
+output. The label CSV needs `source_key,label`, with label paths relative to
+`label_root`, and must match the shoreline source keys exactly. The default
+stored-label mapping is the same as the shared report. No predictions are needed.
+
+`training_positive_only = true` matches the current training policy; change it
+only when describing a run with different eligibility. The inventory reports:
+
+- `full_source`: all valid labeled pixels in the declared cleaned source scope.
+- `selected_chips`: the union of selected windows for each source's split,
+  including the existing disjoint validation/test gaps.
+- `training_eligible`: the union of training windows after the configured
+  background-chip exclusion, shown only for training.
+
+Every original-source pixel contributes once within each scope, including
+intersections between crops or training windows. Padding never contributes.
+These coverage tables measure unique available support. The separate training-
+exposure section below counts repeated window appearances before augmentation.
+Regions 011/012 remain training-only; absent split groups are shown as unavailable.
+Unused source assignments are retained as a separate category.
+
+Open `report.html` for normalized distance distributions and the
+region/split nearshore heatmap. Absolute-area and cumulative-distance figures
+are omitted; their underlying CSV tables remain available. CSVs include source/region/split pixel counts,
+observed hectares, kelp prevalence, the fraction of all kelp in each band, and
+source/date support. Area totals sum observations across acquisitions; they are
+not unique habitat area. Nearshore means ocean distance **below 120 m**;
+land and unknown kelp remain separate and included in the all-kelp denominator.
+
+The inventory also assigns each known kelp pixel to an **eight-connected label
+cluster** on the full original-source canvas. Components are defined before chip
+selection, so window edges do not divide clusters. `cluster_sources.csv` links
+source identities to georeferenced `cluster_ids/` rasters: zero is known background,
+positive IDs identify clusters within that source, and 4294967295 is unavailable
+or ignored label support. Join source ID plus cluster ID to `clusters.csv` for
+pixel count, area, source location and boundary-fragment flag.
+
+`cluster_distance.png` uses marked lines to show which full-cluster sizes labeled
+pixels belong to at each ocean-distance band, separately by split. Size classes
+are 1–10, 11–100, 101–1,000, 1,001–5,000 and >5,000 pixels. Each distance band
+uses its own total kelp pixels as denominator, so the five shares sum to 100%.
+The final 500+ distance is censored, not an exact offshore distance. It excludes components touching
+image edges or unknown labels; CSVs also retain all observed components.
+`cluster_correlations.csv` compares pixel distance with log10 full cluster area
+by source, region/split, split and globally. Pixel-weighted results repeat cluster
+size for every eligible pixel; cluster-weighted results use one observation per
+cluster and the mean of its uncapped ocean-pixel distances. Land, unknown and
+capped distances are excluded from correlations, but remain in distribution
+counts. No p-values assume independent pixels. These observed components are
+not necessarily biological beds, and a linear correlation can miss nonlinear
+relationships. Inspect region/split distributions and both fragment treatments.
+
+The training-exposure section describes the current uniform window sampler:
+shuffle eligible training windows once per full epoch, with no dropped final
+batch. It sums pixel appearances across windows, **including overlap**, unlike
+the unique-pixel coverage tables. `training_positive_only = true` matches the
+current positive-window selector; false describes a hypothetical all-window
+eligibility policy, not the current run. Exposure uses the declared inventory
+source scope, so use the complete training collection to describe the full run.
+
+`exposure_windows.csv` gives per-window label counts by shore zone and full-source
+cluster size. `exposure_summary.csv` and the HTML report give expected pixels per
+draw, full-epoch appearances and the probability a draw contains each category,
+with global and regional breakdowns. Regional means conditional on choosing that
+region are separate from its unconditional contribution to the global sampler.
+Nearshore is ocean <120 m, offshore includes ≥120 m and capped 500+ pixels;
+mapped land/unknown stay separate. The small-cluster summary uses ≤100 pixels
+(900 m² at 3 m resolution), retaining all five cluster-size bins in CSVs.
+
+All observed clusters contribute, including boundary fragments, because their
+pixels are offered to training; the fragment contribution remains explicit.
+Padding, nodata and ignored labels do not contribute. These are nominal counts
+**before augmentation**, not the number of pixels reaching the loss or gradient
+weights: affine transforms and dropout can alter support. No multiplier is chosen
+or applied by this analysis. Epoch totals assume all batches are consumed.
+
+### Add distance bands to a saved-prediction report
+
+Add these top-level settings to an existing chip or TIFF report recipe, before
+any `[label_mapping]` table:
+
+```toml
+shoreline = "/path/to/prepared-shoreline-output"
+distance_edges = [0, 30, 60, 120, 250, 500]
+```
+
+Bins are half-open (for example 30–60 includes 30 but excludes 60), with separate
+land, unknown and final 500+ categories. The last boundary cannot exceed the
+prepared distance cap. Reports without `shoreline` retain their existing behavior.
+Chip reports use recorded `chip_source_key` and `source_id` mappings to read
+matching source raster windows; they do not rebuild or modify the chips.
+
+The report adds source, regional and pooled distance-band CSVs, metric/support
+plots and bounded overlays. Imagery is displayed with log1p followed by a
+per-channel 2–98% contrast stretch to reveal the NIR kelp signal. Yellow mapped
+shorelines appear on imagery, distance, supplied labels and predicted kelp;
+a colorbar gives distance in metres. These display changes never alter model
+inputs, labels or predictions. Confusion counts pool before precision/recall/IoU/F1;
+land and unknown categories reconcile with the unchanged overall score. Coverage,
+ignored labels and missing predictions remain explicit. Keep chip and full-TIFF
+results separate. The saved threshold is fixed, and test performance must remain
+held out until model selection is finished. Use within-region support comparisons
+to interpret a nearshore validation gap; pooled differences alone do not establish
+that training representation caused it.
+
+### Compare recall within region and full-source cluster size
+
+To stratify a saved-prediction report using an already completed shoreline label
+inventory, add this top-level setting alongside `shoreline`:
+
+```toml
+cluster_inventory = "/path/to/completed-shore-inventory"
+```
+
+Use the standard distance edges `[0, 30, 60, 120, 250, 500]`. The inventory must
+contain the five size classes (1–10, 11–100, 101–1,000, 1,001–5,000, >5,000),
+its original-source `cluster_sources.csv` and `clusters.csv`, and aligned saved
+cluster-ID rasters. The report reads these IDs and full-source sizes without
+recomputing clusters from windows or prediction coverage. Missing membership
+for scored labeled kelp fails explicitly. The saved model threshold is unchanged.
+
+Open the linked `joint_report.html` for regional distance/size recall and
+nearshore-versus-offshore comparisons. `joint_sources.csv` and `joint_regions.csv`
+contain TP/FN, labeled pixels/area, recall and acquisition support. Nearshore is
+<120 m; offshore includes ≥120 m and capped 500+ distances. Land and unknown
+remain separate. All-observed, interior-only and truncated-only rows account for
+full-source boundary fragments. `joint_reconciliation.csv` reconciles scored
+TP/FN against the unchanged shoreline counts and reports uncovered labeled kelp.
+False positives and precision stay in `shoreline_regions.csv`; they have no true
+label-cluster size.
+
+Support tables report contributing TIFFs/dates, largest-source/date shares,
+comparisons within the same TIFF/date, and the gap after removing the largest
+contributor. A date may contain several TIFFs. Flags for <100 positive pixels,
+<3 dates or >50% contribution from one source/date are descriptive warnings,
+not significance tests. Comparisons still concern represented labels, with
+residual differences possible within broad size classes; they do not establish
+that distance causes missed kelp. Keep test performance held out during selection.
+
 ## Temporal canopy change
 
 Run `temporal-report` on one completed labeled report; it does not run inference

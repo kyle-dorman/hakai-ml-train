@@ -1,0 +1,11 @@
+# Source CSV uses source_key,image and optional prediction identity/band columns.
+manifest = "/path/to/shoreline-sources.csv"
+image_root = "/path/to/cleaned-release"
+output = "/path/to/fresh-shoreline-output"
+mainlands = "/path/to/shorelines_v1/mainlands.gpkg"
+big_islands = "/path/to/shorelines_v1/big_islands.gpkg"
+small_islands = "/path/to/shorelines_v1/small_islands.gpkg"
+max_distance_m = 500.0
+max_examples = 12
+# Declare supplied global layers (or exported halos) geographically complete.
+coverage = "complete"

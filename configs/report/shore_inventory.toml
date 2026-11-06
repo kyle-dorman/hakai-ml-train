@@ -1,0 +1,21 @@
+# All paths resolve relative to this recipe. Use the same explicit source subset
+# in prepared shoreline sources.csv and the label CSV (source_key,label).
+shoreline = "/path/to/prepared-shoreline"
+image_root = "/path/to/cleaned/images"
+labels = "/path/to/source-labels.csv"
+label_root = "/path/to/cleaned/labels"
+chip_root = "/path/to/chips"
+assignments = "/path/to/splits/assignments.csv"
+output = "/path/to/fresh-shore-inventory"
+experiment = "baseline"
+variant = "augmented"
+distance_edges = [0, 30, 60, 120, 250, 500]
+# Match the actual training recipe; this affects only training_eligible scope.
+training_positive_only = true
+
+[label_mapping]
+0 = 0
+1 = 1
+2 = 0
+3 = -100
+4 = 0

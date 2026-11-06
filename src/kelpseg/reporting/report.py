@@ -21,6 +21,25 @@ from kelpseg.reporting.metrics import (
     patch_summary,
     scores,
 )
+from kelpseg.reporting.shore_distance import (
+    NEARSHORE_CUTOFF_M,
+    load_shore_sources,
+    read_shore_canvas,
+)
+from kelpseg.reporting.shore_joint_counts import joint_source_rows
+from kelpseg.reporting.shore_joint_inputs import (
+    load_cluster_inventory,
+    read_cluster_canvas,
+)
+from kelpseg.reporting.shore_joint_reconcile import reconcile_joint
+from kelpseg.reporting.shore_joint_summary import build_joint_tables
+from kelpseg.reporting.shore_joint_views import write_joint_views
+from kelpseg.reporting.shore_report import (
+    pool_shore_rows,
+    shore_source_rows,
+    shoreline_canvas,
+)
+from kelpseg.reporting.shore_views import shore_example, shore_plot
 from kelpseg.reporting.views import diagnostic_plot, write_html
 
 logger = logging.getLogger(__name__)
@@ -96,7 +115,26 @@ def report(settings: ReportSettings) -> Path:
             f"Report output already exists: {output}. Choose a fresh directory."
         )
     metadata, rows, windows = read_inputs(settings)
+    shore_sources = load_shore_sources(settings.shoreline) if settings.shoreline else {}
+    cluster_inventory = (
+        load_cluster_inventory(settings.cluster_inventory)
+        if settings.cluster_inventory
+        else None
+    )
     scope, split = metadata["scope"], metadata["split"]
+    if settings.shoreline:
+        keys = (
+            {row.get("chip_source_key", "") for row in windows}
+            if scope == "chip_disjoint"
+            else {row["source_key"] for row in rows}
+        )
+        for key in keys:
+            if key not in shore_sources:
+                raise ValueError(f"Missing shoreline source_key: {key}.")
+            if settings.distance_edges[-1] > float(shore_sources[key]["cap_m"]):
+                raise ValueError(
+                    "distance_edges exceed the prepared shoreline cap_m; prepare a larger cap."
+                )
     threshold = metadata["model"]["threshold"]
     groups = source_groups(rows)
     selected = (
@@ -108,6 +146,9 @@ def report(settings: ReportSettings) -> Path:
     (output / "examples").mkdir()
     sources, patches, sweeps, boundaries, zones, histograms = [], [], [], [], [], []
     background, examples = [], []
+    shore_rows, shore_examples = [], []
+    joint_rows: list[dict[str, Any]] = []
+    shore_regions_seen: set[str] = set()
     seen_regions: set[str] = set()
     background_sources: set[str] = set()
     for index, (canvas, selected_windows) in enumerate(
@@ -136,6 +177,57 @@ def report(settings: ReportSettings) -> Path:
             region=source.get("region_id", ""),
             acquisition_date=source.get("acquisition_date", ""),
         )
+        if settings.shoreline:
+            normalized = shoreline_canvas(canvas, selected_windows, scope)
+            land, distance = read_shore_canvas(
+                settings.shoreline,
+                shore_sources,
+                normalized,
+            )
+            shore_rows.extend(
+                shore_source_rows(
+                    canvas,
+                    land,
+                    distance,
+                    threshold,
+                    settings.distance_edges,
+                    identity,
+                    scope,
+                    split,
+                )
+            )
+            if cluster_inventory is not None:
+                ids, components = read_cluster_canvas(
+                    settings.cluster_inventory, cluster_inventory, normalized
+                )
+                joint_rows.extend(
+                    joint_source_rows(
+                        normalized,
+                        ids,
+                        components,
+                        land,
+                        distance,
+                        threshold,
+                        settings.distance_edges,
+                        identity,
+                    )
+                )
+            region_id = identity["region"]
+            if (
+                len(shore_examples) < settings.max_examples
+                and region_id not in shore_regions_seen
+            ):
+                filename = f"examples/shore_{len(shore_examples):02d}.png"
+                caption = shore_example(
+                    output / filename,
+                    canvas,
+                    land,
+                    distance,
+                    threshold,
+                    settings.distance_edges[-1],
+                )
+                shore_examples.append(dict(file=filename, caption=caption))
+                shore_regions_seen.add(region_id)
         pixel_area = abs(canvas["transform"].determinant)
         counts = result["counts"]
         native_valid, footprint = canvas["valid"], canvas["footprint"]
@@ -287,6 +379,53 @@ def report(settings: ReportSettings) -> Path:
         if scope == "chip_disjoint"
         else None
     )
+    if settings.shoreline:
+        shore_regions = pool_shore_rows(shore_rows, by_region=True)
+        shore_global = pool_shore_rows(shore_rows, by_region=False)
+        shore_plot(output / "shoreline.png", shore_global)
+        summary["shoreline"] = dict(
+            root=str(settings.shoreline),
+            distance_edges_m=list(settings.distance_edges),
+            nearshore_cutoff_m=NEARSHORE_CUTOFF_M,
+            global_bands=shore_global,
+            examples=shore_examples,
+        )
+        for name, data in (
+            ("shoreline_sources", shore_rows),
+            ("shoreline_regions", shore_regions),
+            ("shoreline_summary", shore_global),
+            ("shoreline_examples", shore_examples),
+        ):
+            write_csv(output / f"{name}.csv", data)
+    if cluster_inventory is not None:
+        joint_tables = build_joint_tables(joint_rows)
+        reconciliation, accounting = reconcile_joint(
+            joint_rows, shore_rows, summary["global"]
+        )
+        matched_sources = {row["source_id"] for row in joint_rows}
+        full_source_kelp = sum(
+            component.pixels
+            for source_id in matched_sources
+            for component in cluster_inventory.components[source_id].values()
+        )
+        accounting["full_source_labeled_kelp_pixels"] = full_source_kelp
+        accounting["excluded_outside_report_label_footprint"] = (
+            full_source_kelp - accounting["available_labeled_kelp_pixels"]
+        )
+        write_csv(output / "joint_sources.csv", joint_rows)
+        write_csv(output / "joint_reconciliation.csv", reconciliation)
+        for name, data in joint_tables.items():
+            write_csv(output / f"{name}.csv", data)
+        write_joint_views(
+            output, joint_tables, threshold=threshold, accounting=accounting
+        )
+        summary["joint_clusters"] = dict(
+            inventory=str(settings.cluster_inventory),
+            report="joint_report.html",
+            threshold=threshold,
+            reconciliation=accounting,
+            claim="Descriptive within-region/full-source-size recall; saved IDs, no component recomputation.",
+        )
     histogram_results = pooled(histograms, ("label", "lower", "upper"), ("pixels",))
     diagnostic_plot(output / "diagnostics.png", sweep, histogram_results, threshold)
     input_sources = [
@@ -311,7 +450,7 @@ def report(settings: ReportSettings) -> Path:
     ):
         write_csv(output / f"{name}.csv", data)
     write_html(
-        output, summary, regions, sweep, boundary_results, zone_results, sizes, examples
+        output, summary, regions, boundary_results, zone_results, sizes, examples
     )
     resolved = {
         k: str(v) if isinstance(v, Path) else v for k, v in asdict(settings).items()
