@@ -158,21 +158,3 @@ class BinaryObjective(nn.Module):
                 components[term.name] = value
             total = sum(term.weight * components[term.name] for term in self.terms)
         return total, components
-
-
-def segmentation_loss_components(
-    logits: torch.Tensor, targets: torch.Tensor
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Return the historical unweighted BCE/Lovasz pair for B1HW logits and labels.
-
-    This convenience helper retains the baseline API. Configured training uses
-    BinaryObjective directly, with the same ignore and float32 behavior.
-    """
-    _, components = BinaryObjective()(logits, targets)
-    return components["bce"], components["lovasz"]
-
-
-def segmentation_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-    """Return default 0.7 smoothed BCE + 0.3 Lovasz for binary logits and targets."""
-    loss, _ = BinaryObjective()(logits, targets)
-    return loss

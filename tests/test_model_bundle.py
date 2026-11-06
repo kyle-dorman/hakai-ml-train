@@ -24,14 +24,16 @@ from kelpseg.training.transforms import build_input_transform
     ],
 )
 @pytest.mark.parametrize("averaged", [0, 2])
+@pytest.mark.parametrize("encoder_name", ["mit_b0", "mit_b1", "mit_b2", "mit_b3"])
 def test_copied_bundle_matches_selected_validation_probabilities(
-    tmp_path, monkeypatch, names, averaged
+    tmp_path, monkeypatch, names, averaged, encoder_name
 ):
     torch.manual_seed(33)
     selected = torch.nn.Conv2d(len(names), 1, 1).eval()
     indices = [BAND_NAMES.index(name) for name in names]
     settings = replace(
         TrainingSettings(),
+        encoder_name=encoder_name,
         band_names=names,
         mean=tuple(MEAN[index] for index in indices),
         std=tuple(STD[index] for index in indices),
@@ -61,7 +63,8 @@ def test_copied_bundle_matches_selected_validation_probabilities(
     shutil.rmtree(original.parent)
     checkpoint.unlink()
 
-    def offline_model(channels, *, encoder_weights):
+    def offline_model(channels, *, encoder_weights, encoder_name):
+        assert encoder_name == settings.encoder_name
         assert encoder_weights is None
         return torch.nn.Conv2d(channels, 1, 1)
 

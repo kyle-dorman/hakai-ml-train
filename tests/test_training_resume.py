@@ -2,6 +2,7 @@
 
 import random
 from dataclasses import asdict, replace
+from pathlib import Path
 
 import albumentations as A
 import lightning.pytorch as pl
@@ -76,6 +77,7 @@ def fit_run(path, count, stop=False, checkpoint=None, workers=0, observed=None):
                 "num_workers": workers,
                 "epochs": 2,
                 "deterministic": True,
+                "early_stopping_patience": 0,
                 "losses": tuple(asdict(term) for term in DEFAULT_LOSSES),
             }
         },
@@ -271,6 +273,7 @@ def test_resume_rejects_exhausted_budget(tmp_path):
                 "num_workers": workers,
                 "epochs": 2,
                 "deterministic": True,
+                "early_stopping_patience": 0,
                 "losses": tuple(asdict(term) for term in DEFAULT_LOSSES),
             }
         }
@@ -288,28 +291,31 @@ def test_resume_rejects_exhausted_budget(tmp_path):
             load_resume(checkpoint, identity)
 
 
-def test_old_zero_worker_identity_defaults_to_deterministic(tmp_path):
+@pytest.mark.parametrize(
+    "missing",
+    [
+        "deterministic",
+        "losses",
+        "early_stopping_patience",
+        "encoder_name",
+        "checkpoint_epochs",
+    ],
+)
+def test_resume_rejects_missing_recipe_fields(tmp_path: Path, missing: str) -> None:
+    """Reject incomplete saved recipes instead of guessing historical defaults."""
+    identity = {"settings": asdict(TrainingSettings())}
+    saved_settings = dict(identity["settings"])
+    saved_settings.pop(missing)
     checkpoint = tmp_path / "last.ckpt"
-    identity = {
-        "settings": {
-            "num_workers": 0,
-            "epochs": 2,
-            "deterministic": True,
-            "losses": tuple(asdict(term) for term in DEFAULT_LOSSES),
-        }
-    }
     torch.save(
         {
             "epoch": 0,
             "training_resume": {
-                "run_id": "existing",
                 "completed_epoch": True,
-                "identity": {"settings": {"num_workers": 0, "epochs": 2}},
+                "identity": {"settings": saved_settings},
             },
         },
         checkpoint,
     )
-    assert load_resume(checkpoint, identity)["run_id"] == "existing"
-    identity["settings"]["deterministic"] = False
-    with pytest.raises(ValueError, match="recipe or selected memberships"):
+    with pytest.raises(ValueError, match="different schema"):
         load_resume(checkpoint, identity)

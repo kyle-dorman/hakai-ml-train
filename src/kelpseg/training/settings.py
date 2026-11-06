@@ -6,6 +6,7 @@ import tomllib
 from dataclasses import dataclass, fields, replace
 from pathlib import Path
 
+from kelpseg.models import SUPPORTED_ENCODERS
 from kelpseg.preprocessing import BAND_NAMES, CLIP_VALUE, MEAN, STD
 from kelpseg.training.loss_settings import (
     DEFAULT_LOSSES,
@@ -22,6 +23,8 @@ class TrainingSettings:
     early_stopping_patience=0 disables stopping; positive values count validation
     checks without a val/iou gain greater than early_stopping_min_delta. Epochs
     still defines the entire LR schedule even when stopping is enabled.
+    checkpoint_epochs retains sorted one-based completed epochs in addition
+    to best/last; an empty tuple keeps the default best/last-only policy.
     """
 
     name: str = "baseline"
@@ -38,6 +41,7 @@ class TrainingSettings:
     warmup_epochs: int = 5
     early_stopping_patience: int = 0
     early_stopping_min_delta: float = 0.0
+    checkpoint_epochs: tuple[int, ...] = ()
     seed: int = 42
     learning_rate: float = 3e-4
     min_lr: float = 3e-5
@@ -49,6 +53,7 @@ class TrainingSettings:
     accelerator: str = "cuda"
     precision: str = "bf16-mixed"
     deterministic: bool = True
+    encoder_name: str = "mit_b3"
     encoder_weights: str | None = "imagenet"
     num_workers: int = 8
     pin_memory: bool = True
@@ -96,6 +101,17 @@ class TrainingSettings:
             value = getattr(self, name)
             if type(value) is not int or value < 1:
                 raise ValueError(f"{name} must be a positive integer.")
+        if (
+            not isinstance(self.checkpoint_epochs, tuple)
+            or any(
+                type(epoch) is not int or not 1 <= epoch <= self.epochs
+                for epoch in self.checkpoint_epochs
+            )
+            or tuple(sorted(set(self.checkpoint_epochs))) != self.checkpoint_epochs
+        ):
+            raise ValueError(
+                "checkpoint_epochs must be sorted, unique epoch numbers in 1..epochs."
+            )
         for name in ("warmup_epochs", "num_workers", "seed", "early_stopping_patience"):
             value = getattr(self, name)
             if type(value) is not int or value < 0:
@@ -131,6 +147,8 @@ class TrainingSettings:
             raise ValueError("precision must be '32-true' or 'bf16-mixed'.")
         if self.accelerator == "cpu" and self.precision != "32-true":
             raise ValueError("CPU smoke recipes require precision = '32-true'.")
+        if self.encoder_name not in SUPPORTED_ENCODERS:
+            raise ValueError(f"encoder_name must be one of {SUPPORTED_ENCODERS}.")
         if self.encoder_weights not in (None, "imagenet"):
             raise ValueError("encoder_weights must be 'imagenet' or 'none'.")
         for name in ("limit_train_batches", "limit_val_batches"):
@@ -158,7 +176,7 @@ def load_settings(path: str | Path) -> TrainingSettings:
     unknown = document.keys() - {field.name for field in fields(TrainingSettings)}
     if unknown:
         raise ValueError(f"Unknown training settings: {', '.join(sorted(unknown))}.")
-    for name in ("band_names", "mean", "std", "betas"):
+    for name in ("band_names", "mean", "std", "betas", "checkpoint_epochs"):
         if name in document:
             if not isinstance(document[name], list):
                 raise ValueError(f"{name} must be a TOML array.")

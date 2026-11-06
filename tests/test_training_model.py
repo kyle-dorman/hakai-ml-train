@@ -1,6 +1,7 @@
 """Bounded real B3 updates; no pretrained downloads or production training."""
 
 import gc
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -10,7 +11,7 @@ from kelpseg.augmentation_pipeline import build_training_augmentation
 from kelpseg.models import build_model
 from kelpseg.preprocessing import BAND_NAMES
 from kelpseg.training.data import ChipDataset
-from kelpseg.training.loss import segmentation_loss
+from kelpseg.training.loss import BinaryObjective
 
 
 @pytest.mark.parametrize(
@@ -53,7 +54,7 @@ def test_real_b3_cpu_optimizer_update(tmp_path, selection, channels, monkeypatch
         before = model.encoder.patch_embed1.proj.weight.detach().clone()
         logits = model(sample["image"][None])
         assert logits.shape == (1, 1, 64, 64) and logits.dtype == torch.float32
-        loss = segmentation_loss(logits, sample["target"][None])
+        loss = BinaryObjective()(logits, sample["target"][None])[0]
         assert torch.isfinite(loss)
         loss.backward()
         for parameter in model.parameters():
@@ -76,3 +77,48 @@ def test_reject_unsupported_channels(channels):
 def test_reject_unsupported_initialization():
     with pytest.raises(ValueError, match="encoder_weights"):
         build_model(3, encoder_weights="other")
+
+
+@pytest.mark.parametrize("encoder_name", ["mit_b0", "mit_b1", "mit_b2"])
+def test_smaller_encoder_bundle_round_trip(tmp_path: Path, encoder_name: str) -> None:
+    """Export/reload actual eight-band models and preserve inference predictions."""
+    from dataclasses import replace
+
+    from kelpseg.model_bundle import export_model_bundle, load_model_bundle
+    from kelpseg.training.settings import TrainingSettings
+
+    threads = torch.get_num_threads()
+    torch.set_num_threads(1)
+    try:
+        settings = replace(TrainingSettings(), encoder_name=encoder_name)
+        model = build_model(8, encoder_weights=None, encoder_name=encoder_name).eval()
+        x = torch.randn(1, 8, 32, 32)
+        with torch.no_grad():
+            expected = model(x)
+        assert expected.shape == (1, 1, 32, 32)
+        checkpoint = tmp_path / "selected.ckpt"
+        torch.save(
+            {
+                "state_dict": {f"model.{k}": v for k, v in model.state_dict().items()},
+                "epoch": 3,
+                "global_step": 10,
+                "averaging_state": {"n_averaged": 0},
+            },
+            checkpoint,
+        )
+        del model
+        gc.collect()
+        bundle = export_model_bundle(
+            checkpoint, tmp_path / "model", settings, run_id="size-test"
+        )
+        loaded = load_model_bundle(bundle)
+        assert loaded.metadata["encoder"] == encoder_name
+        with torch.no_grad():
+            actual = loaded.model(x)
+        torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+        prediction = loaded.predict_probabilities(
+            np.full((32, 32, 8), 1000, dtype=np.uint16), settings.band_names
+        )
+        assert prediction.shape == (32, 32) and np.isfinite(prediction).all()
+    finally:
+        torch.set_num_threads(threads)

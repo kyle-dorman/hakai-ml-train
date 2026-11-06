@@ -1,14 +1,10 @@
 # Task 034: GPU machine preparation and baseline launch
 
-Status: In progress — 2026-11-03. Linux setup, CUDA/bf16, staged data,
-tiny training, portable loading and deterministic completed-epoch continuation
-pass. The user stopped the ten-epoch pilot and requested throughput tuning.
-Seventeen benchmark cases and ordinary multiworker GPU resume checks pass;
-the user completed the twenty-epoch fast pilot and validation/EMA review.
-Logging diagnostics are ready with changes uncommitted; longer-run recipe
-selection and Box backup remain pending.
-The user selected remote-first implementation: finish the small entry checklist
-locally, then test and iterate on the external machine.
+Status: Complete — 2026-11-06. GPU setup, production training and the requested
+loss/LR/model-size comparisons are complete. B0/B1 are the current baselines;
+B0 with B's settings and EMA is the working model for faster experiments.
+Current checkpoint retention, portable export and resume pass validation.
+Remaining research and artifact-backup follow-ups are recorded in the outcome.
 Depends on: Completed Task 033A–G, published CA/BC chips and tiny v2.
 
 ## Abstract
@@ -1256,3 +1252,167 @@ full-TIFF report on the Mac, then prepare that controlled follow-up.
 Commit validation: 27 training-run tests pass, including increased-patience
 resume and archived prior results. Ruff format/check, all-file pre-commit, and
 Git whitespace checks pass. No production training or inference was launched.
+
+
+## Four-run LR comparison preparation — 2026-11-05
+
+User approved the four recipes from the LR sidecar, epoch 4–12 checkpoints, and
+a sequential training/report launcher. Per-TIFF epoch logging was explicitly
+declined. No new production training was started and no commit/push was made.
+
+`TrainingSettings.checkpoint_epochs` accepts sorted unique one-based epochs;
+empty is the backward-compatible default. `training/checkpoints.py` saves those
+completed epochs through Lightning's native save lifecycle after TrainingResume,
+preserving EMA, current model, optimizer and schedule states. Best/last selection
+is unchanged. Old resume identities default to no extra checkpoints.
+
+`configs/train/lr_comparison/` contains A reference (3e-4/WD0.01), B half LR
+(1.5e-4/WD0.01), C lower LR (1e-4/WD0.01), D half LR/higher decay
+(1.5e-4/WD0.05). Remaining settings match: unsmoothed BCE/Dice 0.7/0.3, reduced
+noise, seed42, W&B, 70 epochs, five warmup epochs, minimum3e-6 and patience20.
+`run_lr_comparisons.sh` trains each fresh run, saves validation-chip predictions,
+then runs the shared report; any failure stops the sequence. It uses
+`<data_root>/lr-comparison-runs/` for all new artifacts, outside the active Box
+uploader's existing runs/analyses roots. The active upload was not changed.
+
+Validation: 76 focused tests passed. A real tiny 13-epoch fit verifies exactly
+nine epoch snapshots, one-based filenames, completed state, EMA/current weight
+separation, export parity, and unchanged best/last files. Launcher command-stub
+tests verify run identity handoff and stopping after training, inference or
+report failure. All four production recipes passed metadata-only previews
+(933 validation chips), without launching training. Ruff format/check,
+all-file pre-commit and Git whitespace checks pass. Existing Lightning worker,
+checkpoint-directory and fork warnings appeared in tiny tests.
+
+Next action: user opens another window in the existing tmux session and runs
+`bash run_lr_comparisons.sh`. Keep the upload in its own window. New runs require
+a separate backup after completion; expected extra snapshot storage is about
+6 GB per run. The follow-up second-seed pair remains unprepared pending results.
+
+
+## Queued B2/B1/B0 comparison after D — 2026-11-05 (Pacific)
+
+User requested three smaller models overnight using C's settings after D.
+Added validated `encoder_name` (mit_b0/mit_b1/mit_b2/mit_b3, default B3) through
+model construction, training settings/module, run metadata, resume identity and
+portable model export/loading. Legacy B3 bundles and old resume identities
+remain supported; changing size requires a fresh run. Existing LR recipes
+retain their B3 meaning. The running C process and LR launcher were not stopped
+or edited. Upcoming D retains B3 and its original settings.
+
+`configs/train/model_size/{b2,b1,b0}.toml` differ from C only in encoder and name.
+`run_model_size_comparisons.sh` runs those in order with W&B, epoch 4–12 plus
+best/last checkpoints, and selected-model validation-chip inference/reporting.
+It stops on any failure. Outputs use `/home/sky/data/model-size-runs/`, outside
+the active backup's runs/analyses trees. Existing runs and uploads are untouched.
+
+A one-off host script at
+`/home/sky/data/queues/model-size-after-d-20261105/wait_then_run.sh` is active in
+`kelp-pilot:model-sizes`. It waits for the current LR launcher PID 830759 to exit,
+then requires D's run.json and validation-report/summary.json to report complete
+before executing the new launcher. Failure leaves the model-size queue stopped;
+the tmux window retains its exit output. No model-size training started during
+setup. Do not separately start the new launcher while this queue is active.
+
+Validation: 127 focused model/bundle/settings/training/launcher tests passed,
+plus installed wheel/sdist and legacy-resume tests (2 checks). Real B2/B1/B0
+CPU forwards and bundle round-trips pass. ImageNet weights were fetched and
+CPU-forward checked in advance: 24,738,049 / 13,693,185 / 3,722,241 parameters.
+All three recipes pass real metadata-only previews (933 validation chips).
+Ruff format/check, all-file pre-commit and Git whitespace checks pass.
+No commit or push. Next: leave the queue running, review selected checkpoints
+and reports after completion, and back up model-size-runs separately.
+
+
+### Model-size queue corrected to B parameters
+
+Before any model-size run started, the user changed the comparison reference
+from C to B. All three size recipes now use peak LR 1.5e-4 and WD0.01, matching
+B in every setting except encoder and run name (`bparams`). Updated the recipe
+parity test and current-facing notes. The queue still waits for D and its report;
+the active D run and uploader were not changed. No commit or push.
+
+### Completed comparisons and pre-commit quality review — 2026-11-06
+
+A–D and B2/B1/B0 completed with saved chip-validation reports. The user selected
+B0 with B's settings as the working baseline for faster experiments. Keep EMA:
+best epoch 16 scores 68.55% IoU with EMA versus 67.64% raw; last epoch 36 scores
+68.29% versus 66.67%. Raw weights have higher precision but lower recall,
+including small patches. These are matched-checkpoint comparisons at threshold
+0.5, not independently selected best raw checkpoints.
+
+External analysis artifacts remain local pending backup:
+
+- `/home/sky/data/analyses/b0-raw-ema-20261106/`: checkpoint-derived model bundles,
+  predictions, reports and comparison JSON; best EMA reuses the original report.
+- `/home/sky/data/analyses/b0-train-gap-20261106/`: fixed unaugmented training
+  sample, three TIFFs per region with seed 42, 36 sources/718 disjoint windows.
+  Best EMA shared-region 001–010 training IoU is 76.38% versus validation 68.55%.
+  Training includes different acquisitions and prevalence; this is a sampled
+  generalization diagnostic, not a matched-scene causal estimate. Small-patch
+  recovery remains weak on both splits.
+- `/home/sky/data/analyses/model-size-visual-review-20261106/`: matched selected
+  windows, confusion maps, and linear/log false-color figures. Examples were
+  chosen for large model differences, not as representative averages.
+
+The quality review covered encoder selection through settings, training,
+resume and portable loading; requested epoch retention and EMA save hooks;
+seven controlled recipes; and sequential train/predict/report launchers.
+Added export parameter/return types and input/output docstrings, clarified
+legacy resume defaults, and added an encoder-change resume rejection case.
+Corrected completed-sweep status in the sidecar, quickstart and remote queue
+summary. Task 040 planning from the other chat was preserved.
+
+Validation: the initial focused suite passed 127 tests; 47 follow-up checks
+passed after the edits, including the new encoder-resume rejection case. The
+installed wheel/sdist test passed (one test covers both formats). All-file
+pre-commit, Ruff format/check, shell syntax, relative documentation file links
+and Git whitespace checks passed. No production training, commit or push was performed.
+Next: user review/commit; back up completed LR/model-size runs and new analyses.
+Small-bed representation work continues separately in Task 040.
+
+### Remove obsolete compatibility paths — 2026-11-06
+
+At the user's request, current B0/B1 checkpoints are the supported baseline;
+old recipe schemas no longer receive migration defaults. Removed inferred
+loss/determinism/stopping/encoder/retention settings and the val_iou → val/iou
+callback migration. Current resume still supports relocation and increased
+patience. Export requires explicit averaging metadata instead of guessing raw
+weights. Removed the old fixed-loss convenience wrappers; tests and researcher
+examples use BinaryObjective directly. B2/B3 remain ordinary explicit encoder
+options, not compatibility branches. Preparation provenance is unchanged.
+
+Validation: 270 focused tests passed, followed by 46 model/bundle checks after
+making EMA metadata mandatory. The installed wheel/sdist test, all-file
+pre-commit, Ruff format/check and Git whitespace checks passed. Both real B0/B1
+last checkpoints have complete current recipe fields and pass resume validation;
+no training was started. Documentation describes the current-only resume policy.
+No commit or push. Next: user review/commit; Task 040 remains separate.
+
+## Outcome — 2026-11-06
+
+Closed at the user's request after production comparisons and quality review.
+The original setup/launch acceptance and subsequent requested experiment work
+are complete. The final changes cover encoder selection, epoch checkpoint
+retention, controlled LR and model-size TOMLs, sequential launchers, removal of
+obsolete checkpoint/loss compatibility paths, focused tests and researcher docs.
+B0/B1 remain the baseline choices; use B0/B parameters with EMA for the next
+controlled experiments. Model size did not resolve small-bed recovery or the
+sampled train/validation gap; those are subsequent research work.
+
+Validation: 270 focused tests, 46 final export/model checks, installed wheel/sdist
+testing, Ruff, pre-commit and whitespace checks passed. Real B0/B1 saved last
+checkpoints pass current-schema resume validation. Earlier sections retain
+historical evidence and decisions that were superseded by later experiments.
+
+Durable external evidence already verified on Box includes
+`kelp-box:kelpseg/analyses/full_tiff_bce_dice_validation_20261105`.
+Completed LR/model-size runs remain under `/home/sky/data/lr-comparison-runs/`
+and `/home/sky/data/model-size-runs/`; the latest EMA, training-gap and visual
+analyses are listed above. Backup of these newer roots is not verified; local
+instance storage remains temporary. This is an explicit operational handoff,
+not a claim that all outputs are durable.
+
+Exact next actions: user pushes the reviewed commit; back up the completed new
+run/analysis roots to Box, then continue small-bed/shore representation work in
+the separate chat. No additional training is scheduled under this closed task.

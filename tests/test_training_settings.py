@@ -133,3 +133,53 @@ def test_recipe_can_disable_deterministic_algorithms(tmp_path):
     recipe = tmp_path / "train.toml"
     recipe.write_text("deterministic = false\n")
     assert not load_settings(recipe).deterministic
+
+
+@pytest.mark.parametrize("epochs", [(0,), (71,), (4, 4), (5, 4), (True,), (4.5,), [4]])
+def test_invalid_checkpoint_epochs(epochs: object) -> None:
+    """Reject ambiguous, unordered, or out-of-budget retention epoch numbers."""
+    with pytest.raises(ValueError, match="checkpoint_epochs"):
+        TrainingSettings(checkpoint_epochs=epochs)
+
+
+def test_lr_comparison_recipes() -> None:
+    """Keep the four sweep recipes controlled except for name, LR and decay."""
+    from dataclasses import asdict
+
+    root = Path("configs/train/lr_comparison")
+    recipes = [load_settings(path) for path in sorted(root.glob("*.toml"))]
+    assert len(recipes) == 4
+    assert [(r.learning_rate, r.weight_decay) for r in recipes] == [
+        (3e-4, 0.01),
+        (1.5e-4, 0.01),
+        (1e-4, 0.01),
+        (1.5e-4, 0.05),
+    ]
+    normalized = []
+    for recipe in recipes:
+        assert recipe.checkpoint_epochs == tuple(range(4, 13))
+        assert (recipe.min_lr, recipe.epochs, recipe.warmup_epochs) == (3e-6, 70, 5)
+        assert recipe.early_stopping_patience == 20 and recipe.wandb
+        values = asdict(recipe)
+        for key in ("name", "learning_rate", "weight_decay"):
+            values.pop(key)
+        normalized.append(values)
+    assert all(value == normalized[0] for value in normalized)
+
+
+def test_model_size_recipes_match_b() -> None:
+    """Change only the model encoder and run name from the B recipe."""
+    from dataclasses import asdict
+
+    reference = asdict(load_settings("configs/train/lr_comparison/b_half_lr.toml"))
+    for size in ("b2", "b1", "b0"):
+        candidate = asdict(load_settings(f"configs/train/model_size/{size}.toml"))
+        assert candidate["encoder_name"] == f"mit_{size}"
+        for key in ("name", "encoder_name"):
+            candidate.pop(key)
+        expected = {
+            k: v for k, v in reference.items() if k not in ("name", "encoder_name")
+        }
+        assert candidate == expected
+    with pytest.raises(ValueError, match="encoder_name"):
+        TrainingSettings(encoder_name="resnet50")

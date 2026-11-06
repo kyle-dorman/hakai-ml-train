@@ -1165,24 +1165,28 @@ original source placement and true extents. D4 can move padding in training;
 use the transformed validity mask there. Validation applies no augmentation and
 keeps bottom/right padding, removable using `true_height`/`true_width`.
 
-The model and objective are ordinary functions:
+Construct the model and configurable objective directly:
 
 ```python
 from kelpseg.models import build_model
-from kelpseg.training.loss import segmentation_loss
+from kelpseg.training.loss import BinaryObjective
 from kelpseg.training.metrics import build_metrics
 
 # Construct one model at a time. None avoids any pretrained-weight download.
-model = build_model(len(inputs["train"].band_names), encoder_weights=None)
+model = build_model(
+    len(inputs["train"].band_names), encoder_weights=None, encoder_name="mit_b0"
+)
+objective = BinaryObjective(settings.losses)
 metrics = build_metrics()  # Native TorchMetrics MetricCollection.
 # Given B1HW logits and BHW targets from later validation batches:
-# loss = segmentation_loss(logits, targets)
+# loss, components = objective(logits, targets)
 # metrics.update((logits[:, 0] >= 0).long(), targets)  # Each batch.
 # report = metrics.compute()  # Once after the entire validation scope.
 # metrics.reset()  # Before the next scope.
 ```
 
-`build_model` always uses SegFormer B3 / `mit_b3` and one full-resolution logit.
+`build_model` supports SegFormer B0–B3 and returns one full-resolution logit.
+Current baseline recipes explicitly select B0 or B1; the generic default is B3.
 Its default `encoder_weights="imagenet"` is the initialization for new baselines
 and may download weights on first use. SMP retains RGB weights for three inputs;
 for four/eight it repeats the RGB input kernels cyclically and multiplies by
@@ -1293,8 +1297,8 @@ focal or Lovasz to penalize false positives on such groups. Per-image averaging
 includes these valid zero-valued background images.
 
 Run/settings JSON, W&B config and resume identity store resolved types, names,
-weights and parameters. Changing any loss settings requires a fresh run. Older
-checkpoints with no loss settings retain the historical default on resume.
+weights and parameters. Changing any loss settings requires a fresh run. Resume
+requires the complete current settings schema; missing historical fields are not inferred.
 Epoch logs remain valid-pixel-weighted means of scalar microbatch losses, including
 when a term uses per-image pooling or sum reduction. Compare experiments using
 unchanged validation IoU/precision/recall and post-training diagnostics, rather
@@ -1496,7 +1500,55 @@ uv run --frozen kelpseg train --recipe configs/train/regularization/bce_dice_wd0
 Use `predict-chips` followed by `report` for post-training diagnostics, as
 [documented below](#post-training-validation-diagnostics). The next controlled
 LR comparison is recorded in the [Task 034 sidecar](../tasks/034_lr_followup_notes.md);
-it is a plan, not a prepared training recipe.
+the four recipes and launcher are now prepared.
+
+## Controlled learning-rate comparison
+
+Run `bash run_lr_comparisons.sh` from the checkout in tmux. The four recipes in
+`configs/train/lr_comparison/` vary peak LR/weight decay only (apart from names):
+`3e-4/0.01`, `1.5e-4/0.01`, `1e-4/0.01`, and `1.5e-4/0.05`. All use the same
+reduced-noise pipeline, seed 42, unsmoothed BCE/Dice, W&B, 70-epoch schedule,
+five-epoch warmup, minimum LR `3e-6`, and patience 20. Each run is followed by
+CUDA `predict-chips` and a shared `report` of its selected model. The sequence
+stops on failure; rerunning the launcher starts new experiments from the first
+recipe rather than resuming a partially completed sweep.
+
+The launcher overrides runs_root to `<data_root>/lr-comparison-runs/`, creating
+it if needed. On this GPU host that is `/home/sky/data/lr-comparison-runs/`.
+Reports and saved validation predictions live inside each run. This location is
+outside the current Box uploader's `runs/` and `analyses/` trees, so it does not
+copy checkpoints being written. Back up the new root after the sweep completes.
+Running `kelpseg train` directly with these TOMLs uses the ordinary paths file;
+use the launcher for this isolated output location.
+
+`checkpoint_epochs = [4, 5, 6, 7, 8, 9, 10, 11, 12]` saves full checkpoints
+`checkpoints/epoch-04.ckpt` through `epoch-12.ckpt`, only when those epochs finish.
+Numbers are one-based; the internal checkpoint epoch remains zero-based.
+The default empty list retains existing best/last-only behavior. Extra snapshots
+preserve validation-selected EMA weights and current training/optimizer state,
+using the same native save hooks as best/last; model-bundle export can read them.
+The supported training-resume entry remains `last.ckpt`. Expect roughly 6 GB
+of extra snapshots per run. No per-TIFF epoch metrics are added.
+
+## Smaller SegFormer comparison
+
+`encoder_name` selects `mit_b0`, `mit_b1`, `mit_b2`, or `mit_b3` (the default).
+The selected encoder is recorded in settings, checkpoints and portable models;
+loading a bundle reconstructs its recorded size offline. Resume requires matching
+current settings. Changing size requires a fresh training run.
+
+`bash run_model_size_comparisons.sh` runs B2, B1, then B0 with the B recipe's
+settings: peak LR `1.5e-4`, WD `0.01`, minimum LR `3e-6`, five warmup epochs,
+70-epoch schedule, patience 20, unsmoothed BCE/Dice, reduced noise and seed 42.
+It retains epoch 4–12 snapshots, best/last, W&B, and selected-model chip validation
+predictions/reports after each run. Recipes live in `configs/train/model_size/`.
+Any failure stops the sequence. The launcher uses `<data_root>/model-size-runs/`,
+outside the current Box backup roots; back it up separately after completion.
+
+Do not run this launcher concurrently with another training job. The original
+one-off host queue and both sweeps have completed; see Task 034 for their
+historical setup. The launcher starts immediately and does not wait for other
+GPU jobs. Rerunning it starts three fresh experiments.
 
 ## Early stopping
 

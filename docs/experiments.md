@@ -193,11 +193,9 @@ Both modes support completed-epoch continuation. With loader workers, worker
 augmentation streams restart and sample order may differ after continuation;
 the model, optimizer, scheduler, EMA and completed-epoch progress are restored.
 Exact replay requires zero workers and deterministic execution from the start;
-cross-device/software bitwise equivalence is not promised. A missing setting in zero-worker checkpoints is interpreted as `true`, matching
-the immediately preceding deterministic runner. Earlier nondeterministic GPU
-smoke artifacts have no exact-replay guarantee.
-Older Task 033E checkpoints and multiworker checkpoints written before this
-support lack the required resume metadata; partial-epoch recovery is unsupported.
+cross-device/software bitwise equivalence is not promised. Resume requires the
+complete current settings and callback state; historical missing fields and
+metric names are not migrated. Partial-epoch recovery is unsupported.
 Bundle loading is model-only initialization and restores none of that training state.
 
 ## Legacy gut check
@@ -311,3 +309,16 @@ proceed locally while the baseline uses its fixed committed checkout, environmen
 and recipe remotely; integrate setup fixes through separate commits rather than
 changing a running job. Task 039 reuses the setup procedure for the final
 researcher walkthrough and does not repeat the initial relocation/launch gate.
+
+
+Optional `checkpoint_epochs` retains specified one-based completed epochs in
+addition to best/last, without changing checkpoint selection or validation
+metrics. These native full checkpoints use the existing EMA save hooks and
+can be exported for later inference. See the [LR comparison recipe](quickstart.md#controlled-learning-rate-comparison)
+for the four-run launcher and its separate output root during Box uploads.
+
+
+Model-size recipes select `encoder_name` from `mit_b0`, `mit_b1`, `mit_b2`,
+or `mit_b3`. B3 remains the generic constructor default; current B0/B1 baseline
+recipes select their encoder explicitly. Portable exports record the encoder and reconstruct it
+when loaded; encoder changes are fresh experiments, not compatible resumes.

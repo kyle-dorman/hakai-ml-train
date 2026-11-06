@@ -202,7 +202,7 @@ with torch.inference_mode():
 expected[0,0] = np.nan
 with patch('kelpseg.model_bundle.build_model', return_value=torch.nn.Conv2d(8,1,1)) as build:
     loaded = load_model_bundle('copied-model')
-    build.assert_called_once_with(8, encoder_weights=None)
+    build.assert_called_once_with(8, encoder_weights=None, encoder_name="mit_b3")
 actual = loaded.predict_probabilities(image, BAND_NAMES)
 np.testing.assert_array_equal(actual, expected)
 
@@ -405,7 +405,7 @@ assert Path('temporal-report/report.html').is_file()
             "from kelpseg.model_bundle import load_model_bundle, export_model_bundle; "
             "assert callable(load_model_bundle) and callable(export_model_bundle); "
             "from kelpseg.training.data import build_training_inputs; "
-            "from kelpseg.training.loss import segmentation_loss; "
+            "from kelpseg.training.loss import BinaryObjective; "
             "from kelpseg.training.metrics import build_metrics; "
             "from kelpseg.training.transforms import build_input_transform; "
             "raw=np.full((4,4,3),1000,dtype=np.uint16); "
@@ -419,7 +419,7 @@ assert Path('temporal-report/report.html').is_file()
             "assert callable(build_model) and callable(build_training_inputs); "
             "x=torch.tensor([[[[1.,-1.]]]],requires_grad=True); "
             "y=torch.tensor([[[1,0]]]); "
-            "loss=segmentation_loss(x,y); loss.backward(); "
+            "loss,_=BinaryObjective()(x,y); loss.backward(); "
             "assert torch.isfinite(loss) and torch.isfinite(x.grad).all(); "
             "metrics=build_metrics(); metrics.update((x[:,0]>=0).long(),y); assert metrics.compute()['iou'].item()==1.; "
             "assert not any(n in sys.modules for n in ('src','scripts','lightning','wandb')); "

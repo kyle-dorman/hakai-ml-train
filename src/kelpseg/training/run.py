@@ -24,6 +24,7 @@ from torch.utils.data import DataLoader, default_collate
 from kelpseg.augmentation_pipeline import build_training_augmentation
 from kelpseg.model_bundle import export_model_bundle
 from kelpseg.paths import PathSettings
+from kelpseg.training.checkpoints import EpochCheckpoints
 from kelpseg.training.data import build_training_inputs
 from kelpseg.training.ema import DelayedEMA
 from kelpseg.training.module import TrainingModule
@@ -113,12 +114,10 @@ def run_training(
     previous_result = None
     if resume is not None and (output / "model").exists():
         previous = json.loads((output / "run.json").read_text())
-        previous_patience = saved["identity"]["settings"].get(
-            "early_stopping_patience", 0
-        )
+        previous_patience = saved["identity"]["settings"]["early_stopping_patience"]
         if not (
             previous["status"] == "complete"
-            and previous.get("stopped_early", False)
+            and previous["stopped_early"]
             and 0 < previous_patience < settings.early_stopping_patience
         ):
             raise ValueError(
@@ -175,7 +174,7 @@ def run_training(
         "adaptation_case": None,
         "augmentation": build_training_augmentation(settings.seed).to_dict(),
         "normalization_scope": "kelp-positive with-BC training, capped at 5000",
-        "model": "SegFormer B3 / mit_b3",
+        "model": f"SegFormer / {settings.encoder_name}",
         "selection": "maximum pooled validation foreground IoU, earliest ties, threshold 0.5",
         "validation_weights": "current before optimizer update 101; EMA thereafter",
         "ema": {"decay": 0.999, "first_optimizer_update": 101},
@@ -285,6 +284,7 @@ def run_training(
         callbacks = [
             DelayedEMA(),
             TrainingResume(run_id, identity, train_loader, val_loader),
+            EpochCheckpoints(output / "checkpoints", settings.checkpoint_epochs),
             LearningRateMonitor(logging_interval="step"),
             checkpoint,
             last_checkpoint,

@@ -22,8 +22,8 @@ bundle loading predicts supplied image arrays; the
 covers all four spectral recipes and both variants. The separate
 [validation report](quickstart.md#post-training-validation-diagnostics) adds
 post-training boundary/patch/probability diagnostics and false-color examples.
-[Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) is in progress
-for remote-first GPU setup and baseline launch; tiled/georeferenced
+[Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) is complete:
+GPU setup, baseline comparisons and B0/B1 handoff are recorded; tiled/georeferenced
 prediction is implemented by `predict` in [Task 035](../tasks/035_image_only_tiled_inference.md).
 [Task 036](../tasks/036_shared_scoring_and_reports.md) implements `predict-chips`
 and one shared `report` command for saved chip/TIFF predictions;

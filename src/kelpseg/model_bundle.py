@@ -1,25 +1,40 @@
 """Portable selected weights and image-array prediction, without training inputs."""
 
+from __future__ import annotations
+
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 from albumentations import Compose
 
 from kelpseg.bands import resolve_band_indices
-from kelpseg.models import build_model
+from kelpseg.models import SUPPORTED_ENCODERS, build_model
 from kelpseg.preprocessing import BAND_NAMES, CLIP_VALUE, MEAN, STD, native_validity
 from kelpseg.training.transforms import build_input_transform
 
+if TYPE_CHECKING:
+    from kelpseg.training.settings import TrainingSettings
 
-def export_model_bundle(checkpoint_path, output_directory, settings, *, run_id):
+
+def export_model_bundle(
+    checkpoint_path: str | Path,
+    output_directory: str | Path,
+    settings: TrainingSettings,
+    *,
+    run_id: str,
+) -> Path:
     """Export validation-selected weights, never ordinary recovery weights.
 
     Read only trusted local Lightning checkpoints. The exported weights file
     contains tensors alone and loads with PyTorch's restricted weights loader.
+    Settings supply the encoder and preprocessing metadata; run_id identifies
+    the originating run. Create and return a fresh bundle directory containing
+    weights.pt and model.json, refusing an existing output directory.
     """
     output = Path(output_directory)
     if output.exists():
@@ -32,11 +47,11 @@ def export_model_bundle(checkpoint_path, output_directory, settings, *, run_id):
     }
     if not weights:
         raise ValueError("Checkpoint has no model weights to export.")
-    averaged = int(checkpoint.get("averaging_state", {}).get("n_averaged", 0))
+    averaged = int(checkpoint["averaging_state"]["n_averaged"])
     metadata = {
         "format_version": 1,
         "architecture": "segformer",
-        "encoder": "mit_b3",
+        "encoder": settings.encoder_name,
         "classes": 1,
         "band_names": list(settings.band_names),
         "clip_value": settings.clip_value,
@@ -147,7 +162,7 @@ def load_model_bundle(
     if (
         metadata.get("format_version") != 1
         or metadata.get("architecture") != "segformer"
-        or metadata.get("encoder") != "mit_b3"
+        or metadata.get("encoder") not in SUPPORTED_ENCODERS
         or metadata.get("classes") != 1
         or metadata.get("input_size") != 512
         or metadata.get("threshold") != 0.5
@@ -161,7 +176,9 @@ def load_model_bundle(
         or metadata["std"] != [STD[index] for index in indices]
     ):
         raise ValueError("Bundle normalization differs from the supported baseline.")
-    model = build_model(len(names), encoder_weights=None)
+    model = build_model(
+        len(names), encoder_weights=None, encoder_name=metadata["encoder"]
+    )
     model.load_state_dict(
         torch.load(directory / "weights.pt", map_location="cpu", weights_only=True)
     )

@@ -1,7 +1,9 @@
 # Task 034 sidecar: next learning-rate experiment
 
-Saved 2026-11-05. Plan only: these runs, intermediate-checkpoint retention and
-per-TIFF epoch logging are not yet configured or implemented.
+Saved 2026-11-05; updated 2026-11-06 after completion of A–D and B2/B1/B0.
+The recipes and launchers retain epochs 4–12. B0 with B's parameters and EMA
+is now the working baseline. Per-TIFF epoch logging was explicitly declined;
+existing global and regional metrics remain unchanged. The original plan follows.
 
 1. **Test half the peak LR: `3e-4 → 1.5e-4`.** Keep the minimum at `3e-6`,
    warmup at 5 epochs, schedule length at 70 epochs, and stopping patience at 20.
@@ -15,9 +17,9 @@ per-TIFF epoch logging are not yet configured or implemented.
    changing LR is not perfectly independent of regularization. See the
    [PyTorch AdamW documentation](https://docs.pytorch.org/docs/stable/generated/torch.optim.AdamW.html).
 3. **Save evidence around the early transition.** Retain checkpoints around
-   epochs 4–12 (counting from 1) and record per-TIFF validation confusion counts
-   each epoch. This will locate acquisition-specific spikes and allow direct
-   inspection. Best/last checkpoints alone cannot reconstruct the transition.
+   epochs 4–12 (counting from 1), plus best and last. Inspect acquisitions later
+   through checkpoint inference; do not add per-TIFF epoch logging. Best/last
+   checkpoints alone cannot reconstruct the transition.
 4. **Investigate training representation before adding regularization.** Compare
    region 004's training acquisitions, kelp coverage and imagery conditions with
    its validation scenes. Establish any underrepresented condition before
@@ -31,6 +33,32 @@ isolated weight-decay test. Keep that original model as the working baseline.
 The early region 004 collapse was mainly a precision drop; later deterioration
 was mainly declining recall. Diagnose those separately.
 
-Next action: inspect the completed full-TIFF baseline report, then prepare the
-controlled pair and the additional checkpoint/metric recording before launch.
+Prepared recipes in `configs/train/lr_comparison/`:
+
+| Recipe | Peak LR | Weight decay |
+| --- | --- | --- |
+| `a_reference.toml` | `3e-4` | `0.01` |
+| `b_half_lr.toml` | `1.5e-4` | `0.01` |
+| `c_lower_lr.toml` | `1e-4` | `0.01` |
+| `d_half_lr_wd005.toml` | `1.5e-4` | `0.05` |
+
+To repeat the comparison, run `bash run_lr_comparisons.sh` in tmux. Each fresh training run
+is followed by validation `predict-chips` and `report`, stopping on any failure.
+The launcher puts all outputs under `<data_root>/lr-comparison-runs/`, outside
+the active backup's `runs/` and `analyses/` roots. Back these up after completion.
+A second-seed reference/winner pair remains a later decision, not part of this
+launcher.
 See [Task 034](034_gpu_machine_preparation_and_baseline_launch.md) for run evidence.
+
+
+## Approved overnight size comparison
+
+The completed sequence ran B2 → B1 → B0 after D, using B's parameters unchanged
+except encoder size and run name. `configs/train/model_size/` and
+`run_model_size_comparisons.sh` implement this sequence, including epoch 4–12
+snapshots and post-training validation-chip reports. Outputs go to
+`/home/sky/data/model-size-runs/`, outside the active backup. This comparison
+precedes any decision about extra seeds. No per-TIFF epoch logging is added.
+
+Next action: review the current changes and back up the completed output roots.
+Investigate small-bed representation separately before selecting another run.

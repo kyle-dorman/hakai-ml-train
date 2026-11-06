@@ -230,7 +230,7 @@ def test_partial_accumulation_keeps_native_fixed_divisor(tmp_path):
 
 
 def test_validation_loss_weights_batch_objective_by_valid_pixels():
-    from kelpseg.training.loss import segmentation_loss
+    from kelpseg.training.loss import BinaryObjective
 
     module = TrainingModule(settings(), nn.Identity())
     recorded = {}
@@ -253,22 +253,19 @@ def test_validation_loss_weights_batch_objective_by_valid_pixels():
         module.validation_step(batch, index)
     module.on_validation_epoch_end()
     expected = (
-        segmentation_loss(batches[0]["image"], batches[0]["target"])
-        + 2 * segmentation_loss(batches[1]["image"], batches[1]["target"])
+        BinaryObjective()(batches[0]["image"], batches[0]["target"])[0]
+        + 2 * BinaryObjective()(batches[1]["image"], batches[1]["target"])[0]
     ) / 3
     torch.testing.assert_close(recorded["val/loss"].compute(), expected.double())
-    from kelpseg.training.loss import segmentation_loss_components
-
     components = [
-        segmentation_loss_components(batch["image"], batch["target"])
-        for batch in batches
+        BinaryObjective()(batch["image"], batch["target"])[1] for batch in batches
     ]
-    for index, name in enumerate(("bce", "lovasz")):
-        expected_component = (components[0][index] + 2 * components[1][index]) / 3
+    for name in ("bce", "lovasz"):
+        expected_component = (components[0][name] + 2 * components[1][name]) / 3
         torch.testing.assert_close(
             recorded[f"val/{name}"].compute(), expected_component.double()
         )
-        assert components[2][index] == 0
+        assert components[2][name] == 0
     assert recorded["val/pixels"].compute() == 3
     assert recorded["val/iou"].compute().item() == pytest.approx(1 / 3)
 

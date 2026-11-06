@@ -71,7 +71,9 @@ class TrainingModule(pl.LightningModule):
             model
             if model is not None
             else build_model(
-                len(settings.band_names), encoder_weights=settings.encoder_weights
+                len(settings.band_names),
+                encoder_weights=settings.encoder_weights,
+                encoder_name=settings.encoder_name,
             )
         )
         metrics = build_metrics(include_confusion=False)

@@ -5,7 +5,7 @@ import torch
 from segmentation_models_pytorch.losses import LovaszLoss
 from torch.nn import functional as F
 
-from kelpseg.training.loss import segmentation_loss
+from kelpseg.training.loss import BinaryObjective
 from kelpseg.training.metrics import build_metrics
 
 
@@ -16,18 +16,18 @@ def test_objective_matches_approved_terms_and_ignores_gradients():
     expected = 0.7 * F.binary_cross_entropy_with_logits(
         logits[:, 0][valid], target[valid].float() * 0.9 + 0.05
     ) + 0.3 * LovaszLoss(mode="binary", ignore_index=-100)(logits, target)
-    actual = segmentation_loss(logits, target)
+    actual = BinaryObjective()(logits, target)[0]
     torch.testing.assert_close(actual, expected)
     actual.backward()
     assert (logits.grad[:, 0][~valid] == 0).all()
     assert torch.isfinite(logits.grad).all()
-    torch.testing.assert_close(actual, segmentation_loss(logits, target[:, None]))
+    torch.testing.assert_close(actual, BinaryObjective()(logits, target[:, None])[0])
 
 
 @pytest.mark.parametrize("label", [0, 1, -100])
 def test_uniform_targets_have_finite_loss_and_gradients(label):
     logits = torch.zeros((2, 1, 4, 4), requires_grad=True)
-    loss = segmentation_loss(logits, torch.full((2, 4, 4), label))
+    loss = BinaryObjective()(logits, torch.full((2, 4, 4), label))[0]
     loss.backward()
     assert torch.isfinite(loss) and torch.isfinite(logits.grad).all()
     if label == -100:
@@ -83,11 +83,11 @@ def test_metrics_all_ignored_have_zero_support_and_library_zero_ratios():
 @pytest.mark.parametrize("shape", [(1, 2, 4, 4), (1, 4, 4)])
 def test_reject_nonbinary_logits(shape):
     with pytest.raises(ValueError, match="Logits"):
-        segmentation_loss(torch.zeros(shape), torch.zeros((1, 4, 4)))
+        BinaryObjective()(torch.zeros(shape), torch.zeros((1, 4, 4)))[0]
 
 
 def test_reject_wrong_target_shape_or_categories():
     with pytest.raises(ValueError, match="match logits"):
-        segmentation_loss(torch.zeros((1, 1, 4, 4)), torch.zeros((1, 3, 4)))
+        BinaryObjective()(torch.zeros((1, 1, 4, 4)), torch.zeros((1, 3, 4)))[0]
     with pytest.raises(ValueError, match="only background"):
-        segmentation_loss(torch.zeros((1, 1, 4, 4)), torch.full((1, 4, 4), 2))
+        BinaryObjective()(torch.zeros((1, 1, 4, 4)), torch.full((1, 4, 4), 2))[0]

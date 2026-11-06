@@ -9,8 +9,6 @@ import numpy as np
 import torch
 from lightning.pytorch.callbacks import Callback, EarlyStopping, ModelCheckpoint
 
-from kelpseg.training.loss_settings import DEFAULT_LOSSES
-
 
 def build_resume_identity(settings, inputs):
     """Compare ordinary settings and selected metadata, allowing root relocation."""
@@ -40,7 +38,7 @@ def load_resume(path: str | Path, identity: dict) -> dict:
     """Read a completed-epoch checkpoint and return its saved resume metadata.
 
     path identifies last.ckpt; identity contains current settings/memberships.
-    Earlier missing loss settings mean the historical BCE/Lovasz default.
+    Saved settings must use the current complete recipe schema.
     A positive early-stopping patience may increase; all other settings must match.
     Changed recipes or exhausted epoch budgets raise ValueError; files are not
     modified and restoring model/optimizer state remains Lightning's job.
@@ -49,24 +47,11 @@ def load_resume(path: str | Path, identity: dict) -> dict:
     saved = checkpoint.get("training_resume")
     if saved is None or not saved["completed_epoch"]:
         raise ValueError("Resume requires a last checkpoint from a completed epoch.")
-    # The immediately preceding runner hardcoded deterministic=True. Interpret
-    # its missing field that way; earlier GPU smokes have no replay guarantee.
     saved_identity = copy.deepcopy(saved["identity"])
-    saved_identity["settings"].setdefault("deterministic", True)
-    # Earlier runs used exactly this hardcoded objective. Preserve their resume
-    # meaning; a changed configured loss still requires a fresh run.
-    saved_identity["settings"].setdefault(
-        "losses", tuple(asdict(term) for term in DEFAULT_LOSSES)
-    )
-    # Old runs did not have early stopping; these defaults preserve that policy.
-    for name, default in (
-        ("early_stopping_patience", 0),
-        ("early_stopping_min_delta", 0.0),
-    ):
-        if name in identity["settings"]:
-            saved_identity["settings"].setdefault(name, default)
-    previous_patience = saved_identity["settings"].get("early_stopping_patience", 0)
-    patience = identity["settings"].get("early_stopping_patience", 0)
+    if saved_identity["settings"].keys() != identity["settings"].keys():
+        raise ValueError("Resume settings use a different schema; start a fresh run.")
+    previous_patience = saved_identity["settings"]["early_stopping_patience"]
+    patience = identity["settings"]["early_stopping_patience"]
     if 0 < previous_patience < patience:
         saved_identity["settings"]["early_stopping_patience"] = patience
     if saved_identity != identity:
@@ -144,10 +129,10 @@ class TrainingResume(Callback):
         # Lightning restores patience from its saved callback state, overriding
         # the constructor. Apply the permitted increase to the in-memory state;
         # retain best_score and wait_count so patience still counts since best.
-        previous_patience = checkpoint["training_resume"]["identity"]["settings"].get(
-            "early_stopping_patience", 0
-        )
-        patience = self.identity["settings"].get("early_stopping_patience", 0)
+        previous_patience = checkpoint["training_resume"]["identity"]["settings"][
+            "early_stopping_patience"
+        ]
+        patience = self.identity["settings"]["early_stopping_patience"]
         if 0 < previous_patience < patience:
             for callback in trainer.callbacks:
                 if isinstance(callback, EarlyStopping):
@@ -161,19 +146,8 @@ class TrainingResume(Callback):
         for callback in trainer.callbacks:
             if not isinstance(callback, ModelCheckpoint):
                 continue
-            states = checkpoint.get("callbacks", {})
-            # The display-name change must not reset the best validation score.
-            if callback.monitor == "val/iou" and callback.state_key not in states:
-                for key, saved_state in list(states.items()):
-                    if (
-                        isinstance(saved_state, dict)
-                        and saved_state.get("monitor") == "val_iou"
-                    ):
-                        saved_state["monitor"] = "val/iou"
-                        states[callback.state_key] = states.pop(key)
-                        break
-            state = states.get(callback.state_key)
-            if state is None or state["dirpath"] == callback.dirpath:
+            state = checkpoint["callbacks"][callback.state_key]
+            if state["dirpath"] == callback.dirpath:
                 continue
             old_directory = Path(state["dirpath"])
             new_directory = Path(callback.dirpath)

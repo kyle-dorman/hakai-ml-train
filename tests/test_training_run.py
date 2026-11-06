@@ -352,13 +352,11 @@ def test_completed_epoch_runner_resume_and_recipe_cli_preview(
         best_key = next(
             key for key, value in callbacks.items() if value.get("monitor") == "val/iou"
         )
-        prior_best = callbacks.pop(best_key)
-        prior_best["monitor"] = "val_iou"
+        prior_best = callbacks[best_key]
         # A score of 1 cannot be beaten; failure to restore would select epoch 1.
         prior_best["best_model_score"] = torch.tensor(1.0)
         prior_best["best_k_models"] = {prior_best["best_model_path"]: torch.tensor(1.0)}
         prior_best["kth_value"] = torch.tensor(1.0)
-        callbacks[best_key.replace("val/iou", "val_iou")] = prior_best
         torch.save(saved_checkpoint, checkpoint)
         with pytest.raises(ValueError, match="recipe or selected memberships"):
             run.run_training(replace(settings, epochs=3), paths, resume=checkpoint)
@@ -532,31 +530,6 @@ def test_early_stopping_preserves_schedule_and_saves_best(
     ]
 
 
-def test_legacy_resume_defaults_to_disabled_early_stopping(tmp_path: Path) -> None:
-    """Load a pre-stopping checkpoint only under the unchanged disabled policy."""
-    settings = load_settings("configs/train/tiny_cpu.toml")
-    current = {"settings": asdict(settings)}
-    historical = {"settings": asdict(settings)}
-    historical["settings"].pop("early_stopping_patience")
-    historical["settings"].pop("early_stopping_min_delta")
-    checkpoint = tmp_path / "last.ckpt"
-    torch.save(
-        {
-            "epoch": 0,
-            "training_resume": {
-                "run_id": "legacy",
-                "completed_epoch": True,
-                "identity": historical,
-            },
-        },
-        checkpoint,
-    )
-    assert run.load_resume(checkpoint, current)["run_id"] == "legacy"
-    current["settings"]["early_stopping_patience"] = 10
-    with pytest.raises(ValueError, match="recipe or selected memberships"):
-        run.load_resume(checkpoint, current)
-
-
 @pytest.mark.parametrize(
     "change",
     [
@@ -564,6 +537,7 @@ def test_legacy_resume_defaults_to_disabled_early_stopping(tmp_path: Path) -> No
         {"early_stopping_patience": 0},
         {"early_stopping_patience": 4, "early_stopping_min_delta": 0.01},
         {"early_stopping_patience": 4, "learning_rate": 0.01},
+        {"early_stopping_patience": 4, "encoder_name": "mit_b0"},
     ],
 )
 def test_resume_patience_exception_does_not_allow_other_recipe_changes(
@@ -587,3 +561,50 @@ def test_resume_patience_exception_does_not_allow_other_recipe_changes(
     )
     with pytest.raises(ValueError, match="recipe"):
         run.load_resume(checkpoint, {"settings": asdict(replace(settings, **change))})
+
+
+def test_retained_epochs_preserve_ema_and_best_last(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Save exactly completed epochs 4–12 with exportable EMA and full train state."""
+    from kelpseg.model_bundle import export_model_bundle
+    from kelpseg.training.ema import DelayedEMA
+
+    settings, paths = _inputs(tmp_path)
+    settings = replace(settings, epochs=13, checkpoint_epochs=tuple(range(4, 13)))
+    monkeypatch.setattr(
+        run,
+        "TrainingModule",
+        lambda settings: TrainingModule(settings, torch.nn.Conv2d(3, 1, 1)),
+    )
+    # Exercise the real averaging/save lifecycle without 101 warmup updates.
+    monkeypatch.setattr(DelayedEMA, "should_update", lambda self, **kwargs: True)
+    threads = torch.get_num_threads()
+    torch.set_num_threads(1)
+    try:
+        result = run.run_training(settings, paths, run_id="retained")
+    finally:
+        torch.set_num_threads(threads)
+    directory = Path(result["output"]) / "checkpoints"
+    assert {p.name for p in directory.iterdir()} == {
+        "best.ckpt",
+        "last.ckpt",
+        *(f"epoch-{epoch:02d}.ckpt" for epoch in range(4, 13)),
+    }
+    for epoch in range(4, 13):
+        state = torch.load(directory / f"epoch-{epoch:02d}.ckpt", weights_only=False)
+        assert state["epoch"] == epoch - 1
+        assert state["training_resume"]["completed_epoch"]
+        assert state["optimizer_states"] and state["lr_schedulers"]
+        assert state["averaging_state"]["n_averaged"] > 0
+        assert not torch.equal(
+            state["state_dict"]["model.weight"],
+            state["current_model_state"]["model.weight"],
+        )
+    bundle = export_model_bundle(
+        directory / "epoch-12.ckpt", tmp_path / "export", settings, run_id="retained"
+    )
+    weights = torch.load(bundle / "weights.pt", weights_only=True)
+    assert torch.equal(weights["weight"], state["state_dict"]["model.weight"])
+    assert json.loads((bundle / "model.json").read_text())["checkpoint_epoch"] == 11
+    assert torch.load(directory / "last.ckpt", weights_only=False)["epoch"] == 12

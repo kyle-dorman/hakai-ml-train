@@ -59,41 +59,16 @@ copied bundles and zero-worker completed-epoch resume pass offline CPU checks.
 installed tiny CPU checks cover all eight recipe/variant cases, copied models and
 completed-epoch resume; eight production metadata previews pass.
 **[Task 034: GPU machine preparation and baseline launch](../tasks/034_gpu_machine_preparation_and_baseline_launch.md)
-is in progress.** The [entry checklist](gpu_setup.md) has been followed on the RTX 3090 host.
-Frozen installation, CUDA/bf16, staged-data inventory, tiny training, copied
-bundle prediction, eight metadata previews and deterministic GPU EMA/resume
-checks pass. The user started then stopped the ten-epoch eight-band with-BC
-pilot and requested throughput benchmarks. Seventeen cases identified a faster
-batch-12/eight-worker recipe, with deterministic execution off; ordinary
-multiworker resume restores training state while worker randomness restarts.
-The user completed the twenty-epoch fast pilot; validation prediction and EMA
-comparisons are recorded in Task 034. Component losses, epoch prediction panels
-and regional metrics are implemented. The 70-epoch baseline and three selected
-loss comparisons (BCE/Dice, boundary BCE/Dice and focal/Dice) completed, with
-post-training validation reports for all four. Best/last-only retention remains
-unchanged; back up stable outputs to Box.
-Configurable losses use type/name/weight/parameters; standalone recipes live in
-`configs/train/losses/`. The completed loss-comparison launcher is retired;
-the completed weight-decay launcher is also retired. The four runs show similar validation IoU with modest
-boundary/patch differences. Gaussian noise strength is now reduced fourfold for
-future runs (committed as `d301909`). The probability-metrics follow-up adds
-pooled train/validation/regional AUROC and calibration error and removes accuracy;
-these changes remain uncommitted. A fixed unaugmented training report and targeted
-validation gallery confirm a generalization gap plus small-component difficulty
-on both splits. BCE/Dice now enables patience-10 early stopping with its original
-LR schedule. The code-quality pass verified metric parity and GPU update costs,
-reused source identity helpers, and fixed report progress logging. Correction: the completed BCE/Dice run used smoothing=0, not smoothed
-BCE. Next: inspect priority region 001/004/006/008 examples and confirm smoothing
-before a future experiment. The requested wd=0.05 BCE/Dice recipe is prepared
-with patience 10. Its run/report completed: stopped at epoch 15, selected epoch 5,
-validation IoU 66.98% versus prior 68.98%, with more false positives. It stopped
-while recovering; reduced noise also confounds attribution to weight decay.
-The patience-20 continuation completed at epoch 39, selecting epoch 19; report
-IoU was 68.64% versus 68.98% for the original BCE/Dice baseline. Retain the original
-model. Full-TIFF validation prediction/reporting completed for all 53 sources and
-was verified on Box. Next: inspect that report, then follow the
-[controlled LR experiment sidecar](../tasks/034_lr_followup_notes.md).
-Review artifacts and backup paths are recorded in Task 034.
+is complete — 2026-11-06.** RTX 3090 setup, throughput tuning, production
+baselines, loss/LR/model-size comparisons and post-training diagnostics are
+complete. B0/B1 are the current baseline models; B0 with B's parameters and EMA
+is the working choice for faster experiments. Epoch 4–12 retention and current
+checkpoint loading/resume are validated. Small-bed recovery and the sampled
+train/validation gap remain research questions, not setup blockers.
+See Task 034 for results, validation and artifact locations. Operational handoff:
+back up the separate LR/model-size runs and recent analyses to Box; backup of
+these new roots is not yet verified. Continue representation diagnostics in the
+separate chat; no further experiment is scheduled under Task 034.
 Task 027 verified the Box backup; see its
 [outcome](../tasks/027_verify_box_and_back_up_raw_reference_audit.md#outcome-2026-10-27).
 Task 026's artifacts, validation, and unresolved evidence limits are recorded in
@@ -135,7 +110,7 @@ on common valid footprints. Installed checks and bounded report smokes pass.
 Next: select and write Task 037 for LORO and matching-TIFF comparisons.
 The completed full 53-TIFF validation predictions have now been analyzed with
 Task 036B: 62 spatially supported pairs, 61 with defined percentage errors.
-See its task record for results and coverage limits. Task 034 remote work stays separate.
+See its task record for results and coverage limits. Task 034 remote setup and experiment handoff is complete.
 
 ## Ordered roadmap
 
@@ -167,7 +142,7 @@ selected; split further if needed.
 | [033E](../tasks/033e_training_validation_and_ema.md) | Training, validation and EMA — complete | Flat recipes, equal epochs, validation-only selection, local records and saved states |
 | [033F](../tasks/033f_portable_models_and_resume.md) | Portable models and resume — complete | Copied bundle and completed-epoch resume verified independently (zero workers) |
 | [033G](../tasks/033g_tiny_walkthrough_and_handoff.md) | Tiny walkthrough and handoff — complete | Eight tiny CPU cases, installed distributions, copied bundle/resume pair and eight metadata-only previews; next 034 |
-| [034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) | GPU machine preparation and baseline launch — in progress | Local entry checklist/bootstrap; remote-first installation and CUDA/data/resume checks and one healthy baseline launch; local 035 can proceed while training runs |
+| [034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) | GPU machine preparation and baseline launch — complete | RTX 3090 validation, throughput tuning, completed comparisons, B0/B1 handoff and current checkpoint checks; artifact backup follow-up recorded |
 | [035](../tasks/035_image_only_tiled_inference.md) | Image-only tiled inference — complete | Copied bundle and cleaned TIFFs; shifted edge windows, explicit sparse-window coverage, georeferenced probabilities/masks; no label dependency |
 | [036](../tasks/036_shared_scoring_and_reports.md) | Separate inference and shared labeled reports — complete | Saved chip/TIFF predictions; one report command; existing diagnostic parity, unique-pixel scoring and explicit coverage |
 | [036B](../tasks/036b_temporal_error_analysis.md) | Temporal error and change analysis — complete | Region/date/year/month support, signed bias and explicit supported common-footprint pairs; reuse 036 outputs |
