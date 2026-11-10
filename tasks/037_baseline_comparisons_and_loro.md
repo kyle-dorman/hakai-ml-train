@@ -1,6 +1,6 @@
 # Task 037: Baseline comparisons and leave-one-region-out evaluation
 
-Status: Planning draft. Implementation and production runs are pending.
+Status: 037A complete. The user selected the with-BC epoch-16 EMA baseline. Later tasks remain planning drafts.
 
 ## Abstract
 
@@ -18,7 +18,7 @@ Follow with a separate legacy cleanup subtask.
   and the existing source-level assignments. In those assignments, `augmented`
   includes both BC regions (011/012) for training and `base` excludes them.
 - Match evaluation sources, labels, and scoreable pixels. Keep CA regions and
-  Baja (009/010) visible separately. Use source and region confusion counts,
+  Baja (001/002) visible separately. Use source and region confusion counts,
   foreground IoU, precision and recall with label support and coverage.
 - Produce a temporal report for the current baseline and every new model,
   including optional runs and each LORO fold. Discuss temporal results alongside
@@ -34,9 +34,10 @@ Follow with a separate legacy cleanup subtask.
 
 ## 037A — Train without BC (slide step 2)
 
-Use the existing with-BC B0 bundle as the reference. Prepare a planned
-`configs/train/baseline_comparisons/b0_without_bc.toml` based on the same B0
-recipe with `variant = "base"` and a fresh name. Keep the non-BC source
+The [037A launch contract](037a_without_bc_launch.md) owns the verified
+[no-BC recipe](../configs/train/baseline_comparisons/b0_without_bc.toml),
+launcher, and validation handoff. It uses the existing with-BC B0 bundle
+and a fresh B0 run with `variant = "base"`. Keep the non-BC source
 assignments, 8-band inputs, loss, initialization, batch settings, EMA,
 threshold and validation checkpoint rule. Reuse the fixed preprocessing for
 the controlled comparison and disclose that its statistics were estimated
@@ -57,9 +58,8 @@ stop at a different point under the same rule.
 Compare on the same validation imagery and evaluation grid. Reuse the saved
 with-BC predictions where their scope and coverage match. Present paired
 source, regional and temporal results and the effect on the target regions.
-The user then selects the with-BC or without-BC run as the reference for 037B and 037C.
-Record the exact run, bundle and variant. Keep the current baseline until
-that decision is made.
+The user selected the [with-BC epoch-16 EMA bundle](037a_without_bc_launch.md#baseline-decision)
+as the reference for 037B and 037C.
 
 ## 037B — Compare 4-band and 3-band inputs (slide step 3)
 
@@ -139,7 +139,6 @@ for the baseline-versus-LORO temporal comparison.
 
 ## User decisions required
 
-- Review 037A validation results and select the reference before 037B.
 - After 037B, decide whether to run false-color DINOv3 and freeze the recipe
   for LORO.
 - Before LORO production, decide whether to run only the selected BC variant
@@ -156,4 +155,4 @@ Keep the legacy workflow through 037C. Complete the cleanup separately in 037D.
 Outcome to record for each child: changed files, durable run/report paths,
 checks, decision, remaining limits and exact next action.
 
-Next action: write the 037A launch contract and dry-run the no-BC recipe.
+Next action when selected: write the 037B contract using the [selected 8-band reference](037a_without_bc_launch.md#baseline-decision).

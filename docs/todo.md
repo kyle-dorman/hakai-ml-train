@@ -128,10 +128,9 @@ The [plain BCE plus Dice B0 model-size run](experiments.md#current-planet-8-band
 is the current Planet 8-band baseline for California and British Columbia.
 Review researcher feedback on suspected nearshore label omissions before
 revisiting weighting.
-[Task 037](../tasks/037_baseline_comparisons_and_loro.md) is drafted. Start with
-the equal-compute no-BC comparison and baseline decision, then compare 4-band
-and 3-band inputs, then run LORO. Include temporal reports for each model.
-037D handles legacy cleanup after LORO.
+[Task 037A production comparison](../tasks/037a_without_bc_launch.md#production-comparison)
+is complete. The user selected the with-BC B0 epoch-16 EMA reference. When
+selected, write the Task 037B contract for matched spectral comparisons.
 The completed full 53-TIFF validation predictions have now been analyzed with
 Task 036B: 62 spatially supported pairs, 61 with defined percentage errors.
 See its task record for results and coverage limits. Task 034 remote setup and experiment handoff is complete.
@@ -172,6 +171,7 @@ selected; split further if needed.
 | [036B](../tasks/036b_temporal_error_analysis.md) | Temporal error and change analysis — complete | Region/date/year/month support, signed bias and explicit supported common-footprint pairs; reuse 036 outputs |
 | [040](../tasks/040_shore_distance_diagnostics.md) | Shore-distance coverage and pixel-level evaluation — complete | Aligned land/distance rasters; region/split label support; distance-binned validation metrics with unique-pixel and coverage reconciliation |
 | [041](../tasks/041_distance_weighted_bce_experiment.md) | Distance-weighted BCE recall experiment — complete | Alpha 0 retained as the experiment control; plain BCE plus Dice B0 adopted as baseline |
+| [037A](../tasks/037a_without_bc_launch.md) | Equal-budget no-BC comparison — complete | With-BC B0 epoch-16 EMA selected on paired validation |
 | [037](../tasks/037_baseline_comparisons_and_loro.md) | Baseline comparisons, LORO and legacy cleanup — planning draft | 037A no-BC baseline choice, 037B matched spectral comparisons, 037C held-out-region comparisons, 037D legacy cleanup |
 | 038 | New-region experiment recipes | Use prepared regional and combined collection versions; four cases, fixed test scopes, explicit initialization and reset/resume behavior |
 | 039 | Final researcher handoff and complete-workflow rehearsal | Rehearse the finished preparation/train/predict/score/transfer recipes after LORO and legacy cleanup. Reuse Task 034 setup. |

@@ -25,6 +25,8 @@ class TrainingSettings:
     still defines the entire LR schedule even when stopping is enabled.
     checkpoint_epochs retains sorted one-based completed epochs in addition
     to best/last; an empty tuple keeps the default best/last-only policy.
+    train_draws_per_epoch defaults to one shuffled pass. Set a larger draw
+    count to fill the epoch with extra draws from one shuffled repeat.
     """
 
     name: str = "baseline"
@@ -47,6 +49,7 @@ class TrainingSettings:
     min_lr: float = 3e-5
     betas: tuple[float, float] = (0.9, 0.95)
     weight_decay: float = 0.01
+    train_draws_per_epoch: int | None = None
     batch_size: int = 3
     accumulate_grad_batches: int = 8
     gradient_clip_val: float = 0.8
@@ -101,6 +104,11 @@ class TrainingSettings:
             value = getattr(self, name)
             if type(value) is not int or value < 1:
                 raise ValueError(f"{name} must be a positive integer.")
+        if self.train_draws_per_epoch is not None and (
+            type(self.train_draws_per_epoch) is not int
+            or self.train_draws_per_epoch < 1
+        ):
+            raise ValueError("train_draws_per_epoch must be a positive integer.")
         if (
             not isinstance(self.checkpoint_epochs, tuple)
             or any(

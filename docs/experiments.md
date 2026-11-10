@@ -295,9 +295,11 @@ other regions' later imagery in training and must be described accordingly.
 ## Current Planet 8-band B0 baseline
 
 Use the B0 model-size run `planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z`
-as the reference for California and British Columbia comparisons. It uses the
+as the selected 8-band reference after the [Task 037A validation decision](../tasks/037a_without_bc_launch.md#baseline-decision).
+It uses the
 [B0 recipe](../configs/train/model_size/b0.toml), with ordinary BCE plus Dice
-on the canonical chips. Use its portable EMA bundle from completed epoch 16
+on the canonical chips with `variant = "augmented"` (with BC). Use its
+portable EMA bundle from completed epoch 16
 (`checkpoint_epoch = 15`) at probability threshold 0.5.
 
 - Local bundle: `/home/sky/data/model-size-runs/planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z/model`
