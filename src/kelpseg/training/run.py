@@ -29,7 +29,6 @@ from kelpseg.training.data import build_training_inputs
 from kelpseg.training.ema import DelayedEMA
 from kelpseg.training.module import TrainingModule
 from kelpseg.training.resume import TrainingResume, build_resume_identity, load_resume
-from kelpseg.training.sampling import RepeatEpochSampler
 from kelpseg.training.settings import TrainingSettings
 
 
@@ -140,14 +139,7 @@ def run_training(
         raise ValueError("No validation windows; check the collection and assignments.")
     if inputs["train"].chip_size != 512:
         raise ValueError("Training recipes require a 512-pixel chip canvas.")
-    sampler = None
-    train_draws = len(inputs["train"])
-    if settings.train_draws_per_epoch is not None:
-        sampler = RepeatEpochSampler(
-            train_draws, settings.train_draws_per_epoch, settings.seed
-        )
-        train_draws = len(sampler)
-    train_batches = math.ceil(train_draws / settings.batch_size)
+    train_batches = math.ceil(len(inputs["train"]) / settings.batch_size)
     val_batches = math.ceil(len(inputs["val"]) / settings.batch_size)
     train_batches = _limited_batches(train_batches, settings.limit_train_batches)
     val_batches = _limited_batches(val_batches, settings.limit_val_batches)
@@ -198,9 +190,6 @@ def run_training(
         },
         "budget": {
             "epochs": settings.epochs,
-            "training_draws_per_epoch": min(
-                train_draws, train_batches * settings.batch_size
-            ),
             "training_batches_per_epoch": train_batches,
             "validation_batches_per_epoch": val_batches,
             "optimizer_updates_per_epoch": updates,
@@ -221,10 +210,6 @@ def run_training(
             else "main-process and augmentation random states restored"
         ),
     }
-    if sampler is not None and settings.num_workers:
-        report["resume_randomness"] = (
-            "epoch-seeded sample order restored; worker augmentation streams restart"
-        )
     if previous_result is not None:
         report["previous_result"] = str(previous_result)
     if dry_run:
@@ -252,8 +237,7 @@ def run_training(
     )
     train_loader = DataLoader(
         inputs["train"],
-        shuffle=sampler is None,
-        sampler=sampler,
+        shuffle=True,
         generator=torch.Generator().manual_seed(settings.seed),
         **loader_options,
     )

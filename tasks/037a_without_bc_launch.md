@@ -45,15 +45,12 @@ formatting and lint. Save the launch command, external output locations and
 evidence here. The user launches production and chooses the baseline after
 reviewing validation. Test scoring and Task 037B are outside this contract.
 
-## Launch
+## Historical launch
 
-From a tmux shell on the staged GPU host:
+The completed experiment ran with the launcher and exact recipe preserved in
+commit `4ac0a31`. See [Code retirement](#code-retirement) for recovery commands.
 
-```bash
-bash examples/run_task037a.sh /home/sky/data/analyses/task037a-without-bc-01
-```
-
-The Bash launcher uses a fresh comparison folder and a UTC-stamped training
+The Bash launcher used a fresh comparison folder and a UTC-stamped training
 directory under `/home/sky/data/runs/planet8-ca-baja-b0-without-bc-70ep-*`.
 The comparison's `no-bc-dry-run.json` contains its exact path. Training writes
 `run.json`, `checkpoints/`, `model/` and `metrics/` there. The comparison
@@ -64,20 +61,17 @@ and temporal CSVs. `training-comparison.csv` records the actual optimizer counts
 and selected checkpoint for each arm. The with-BC reference stopped at 12,780
 updates and selected the EMA checkpoint at epoch 16 (5,680 updates).
 
-An optional second launcher argument can supply completed saved full-TIFF
-reference predictions. The local predictions from the exact reference bundle
-use disjoint chip windows. The earlier full-TIFF B3 predictions use different
-weights. The default launch therefore generates fresh tiled predictions from
-the selected B0 EMA bundle. If the two finite masks differ, the launcher stops
-before scoring so the result cannot compare mismatched pixels.
+The launcher supported reuse of completed full-TIFF reference predictions.
+At launch, the saved predictions for the selected B0 EMA bundle were on a
+disjoint chip grid, and the earlier full-TIFF predictions used B3 weights.
+The comparison generated tiled predictions for both B0 bundles and verified
+exact finite-mask equality before scoring.
 
 ## Outcome
 
-- Added the [no-BC recipe](../configs/train/baseline_comparisons/b0_without_bc.toml),
-  [Bash launcher](../examples/run_task037a.sh), and two small workflow entry
-  points for preparing the locked scope and combining reports. Training's
-  existing sampler remains the default. The repeat budget is opt-in and the
-  existing checkpoint format remains valid for ordinary sampling.
+- Added an equal-budget recipe, a Bash launcher and two workflow entry points
+  for preparing the locked scope and combining reports. The repeat budget was
+  opt-in, and ordinary sampling used the existing checkpoint format.
 - Production dry run matched the saved reference settings and schedule.
   All non-BC assignments agreed, with 933 identical validation chip windows
   and 53 cleaned TIFFs on exact image/label grids. The full TIFF list also
@@ -200,6 +194,28 @@ paired CSVs byte for byte. A tiny launcher replay exercised saved-reference
 reuse, training and reporting. Injected stage failures stopped the launcher.
 The focused suite passed 248 tests. Ruff format/check, pre-commit and
 `git diff --check` passed.
+
+## Code retirement
+
+The repeat sampler was built for this one comparison. Matching draws per
+epoch matched both the optimizer schedule and the number of updates between
+validation checks. The experiment is complete, so the repeat sampler, its
+resume integration and the one-off launcher and reporting helpers were
+removed from the maintained code. The exact implementation and recipe remain
+in commit `4ac0a316cd19fce11877d5075d9bb06e59ebcabf`.
+
+```bash
+git show 4ac0a31:configs/train/baseline_comparisons/b0_without_bc.toml
+git show 4ac0a31:examples/run_task037a.sh
+git show 4ac0a31:src/kelpseg/training/sampling.py
+```
+
+The [retained no-BC recipe](../configs/train/baseline_comparisons/b0_without_bc.toml)
+uses ordinary sampling and a distinct run name. Its 7,280 eligible windows
+produce 607 microbatches and 304 updates per epoch, with a 21,280-update
+cap over 70 epochs. Use the commit above for the historical equal-budget recipe.
+The retained recipe passed a production metadata dry run. The focused suite
+passed 242 tests, along with Ruff, pre-commit and `git diff --check`.
 
 Next action when selected: write the 037B contract for matched 4-band and
 3-band comparisons using this reference.

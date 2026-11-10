@@ -2412,30 +2412,3 @@ It runs alpha 4 then 8, with validation and fixed training-sample predictions
 and shoreline/cluster reports after each arm. These stronger settings have
 maximum positive weights of 5 and 9. At the fixed 500 m cap their positive
 weights remain about 1.223 and 1.445.
-
-## Compare 8-band B0 with and without BC
-
-On the staged GPU host, run the
-[Task 037A launcher](../examples/run_task037a.sh) from a tmux shell:
-
-```bash
-bash examples/run_task037a.sh /home/sky/data/analyses/task037a-without-bc-01
-```
-
-Choose a fresh comparison directory for a new launch. Machine roots come from
-`paths.local.toml` via the [no-BC recipe](../configs/train/baseline_comparisons/b0_without_bc.toml).
-The launcher checks the shared 53-TIFF validation scope and training budget,
-fits the no-BC model, runs both sets of tiled predictions, verifies matching
-coverage, and writes segmentation and temporal reports. An optional second
-argument points to existing full-TIFF predictions for the selected reference
-bundle on the same scope and tiling policy. The known saved B0 chip predictions
-have a disjoint grid, so the command above generates the full-TIFF reference.
-
-Under the comparison directory, open each arm's `*-segmentation/report.html`
-and `*-temporal/report.html`. Use `paired-sources.csv`, `paired-region.csv`,
-and `paired-geography.csv` for the matched confusion counts and scores.
-Use `paired-temporal-*.csv` for pair support and signed and absolute change
-errors on pairs with percentages defined in both arms. `training-comparison.csv`
-links each selected bundle and reports planned and completed updates separately.
-The exact training directory is in `no-bc-dry-run.json`. Shared normalization
-was estimated from with-BC training imagery.

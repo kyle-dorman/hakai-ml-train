@@ -18,7 +18,6 @@ from kelpseg.training.loss_settings import DEFAULT_LOSSES, LossTerm
 from kelpseg.training.module import TrainingModule
 from kelpseg.training.resume import TrainingResume, build_resume_identity, load_resume
 from kelpseg.training.run import seed_worker
-from kelpseg.training.sampling import RepeatEpochSampler
 from kelpseg.training.settings import TrainingSettings
 
 
@@ -36,11 +35,7 @@ class RandomImages(Dataset):
         image = self.transform(image=image)["image"]
         image = torch.from_numpy(image.transpose(2, 0, 1).copy())
         image = image + random.random() / 10 + np.random.rand() / 10
-        sample = {
-            "image": image,
-            "target": torch.ones(2, 2, dtype=torch.long),
-            "index": index,
-        }
+        sample = {"image": image, "target": torch.ones(2, 2, dtype=torch.long)}
         if self.include_distance:
             sample["effective_distance_m"] = torch.tensor(
                 [[0.0, 120.0], [-100.0, 500.0]]
@@ -61,14 +56,11 @@ def fit_run(
     workers=0,
     observed=None,
     losses=DEFAULT_LOSSES,
-    draws=None,
-    indices=None,
 ):
     pl.seed_everything(42)
     settings = TrainingSettings(
         epochs=2,
         losses=losses,
-        train_draws_per_epoch=draws,
         warmup_epochs=1,
         num_workers=workers,
         persistent_workers=bool(workers),
@@ -81,11 +73,9 @@ def fit_run(
         persistent_workers=bool(workers),
         worker_init_fn=seed_worker,
     )
-    sampler = RepeatEpochSampler(count, draws, settings.seed) if draws else None
     train = DataLoader(
         RandomImages(count, any(term.type == "distance_bce" for term in losses)),
-        shuffle=sampler is None,
-        sampler=sampler,
+        shuffle=True,
         generator=torch.Generator().manual_seed(42),
         **options,
     )
@@ -118,15 +108,6 @@ def fit_run(
         enable_version_counter=False,
     )
     callbacks = [DelayedEMA(), resume, last]
-    if indices is not None:
-
-        class RecordDraws(Callback):
-            def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
-                indices.setdefault(trainer.current_epoch, []).extend(
-                    batch["index"].tolist()
-                )
-
-        callbacks.append(RecordDraws())
     if stop:
         callbacks.append(StopAfterEpoch())
     if observed is not None:
@@ -221,31 +202,6 @@ def test_completed_epoch_resume_matches_uninterrupted(tmp_path, count):
     )
     assert resumed["global_step"] == count * 2
     assert int(resumed["averaging_state"]["n_averaged"]) == max(0, count * 2 - 100)
-
-
-@pytest.mark.parametrize("workers", [0, 2])
-def test_repeat_sampler_resumes_at_next_epoch(tmp_path, workers):
-    """Preserve epoch draw order independently of worker augmentation streams."""
-    full_draws, split_draws = {}, {}
-    full = fit_run(tmp_path / "full", 5, draws=7, workers=workers, indices=full_draws)
-    split = tmp_path / "split"
-    partial = fit_run(
-        split, 5, stop=True, draws=7, workers=workers, indices=split_draws
-    )
-    resumed = fit_run(
-        split,
-        5,
-        checkpoint=split / "last.ckpt",
-        draws=7,
-        workers=workers,
-        indices=split_draws,
-    )
-    assert partial["epoch"] == 0 and partial["global_step"] == 7
-    assert resumed["epoch"] == 1 and resumed["global_step"] == 14
-    assert split_draws == full_draws and full_draws[0] != full_draws[1]
-    if workers == 0:
-        assert_equal(full["state_dict"], resumed["state_dict"])
-        assert_equal(full["optimizer_states"], resumed["optimizer_states"])
 
 
 def test_weighted_resume_restores_and_checks_alpha(tmp_path: Path) -> None:

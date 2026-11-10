@@ -1,9 +1,9 @@
-# Task 037A: match the with-BC B0 schedule using only non-BC training imagery.
-name = "planet8-ca-baja-b0-without-bc-70ep"
+# No-BC B0 with one shuffled pass per epoch. The equal-budget 037A recipe
+# and its repeat sampler are preserved in commit 4ac0a31.
+name = "planet8-ca-baja-b0-without-bc-70ep-standard"
 experiment = "baseline"
 paths_file = "../../../paths.local.toml"
 variant = "base"
-train_draws_per_epoch = 8518
 
 # Machine paths are relative to this recipe; chips/assignments use data_root.
 # Fixed with-BC normalization reference; preserve band order.

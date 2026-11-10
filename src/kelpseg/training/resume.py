@@ -9,17 +9,12 @@ import numpy as np
 import torch
 from lightning.pytorch.callbacks import Callback, EarlyStopping, ModelCheckpoint
 
-from kelpseg.training.sampling import RepeatEpochSampler
-
 
 def build_resume_identity(settings, inputs):
     """Compare ordinary settings and selected metadata, allowing root relocation."""
     recipe = asdict(settings)
     for name in ("paths_file", "chips", "assignments"):
         recipe.pop(name)
-    # Preserve the checkpoint identity of recipes using ordinary sampling.
-    if recipe["train_draws_per_epoch"] is None:
-        recipe.pop("train_draws_per_epoch")
     memberships = {}
     for split, rows in (
         ("train", inputs["train"].rows),
@@ -131,11 +126,6 @@ class TrainingResume(Callback):
         }
 
     def on_load_checkpoint(self, trainer, pl_module, checkpoint):
-        # Lightning can prefetch with persistent workers while sizing the loader,
-        # before its normal per-epoch sampler hook. Seed that first iterator too.
-        sampler = self.train_loader.sampler
-        if isinstance(sampler, RepeatEpochSampler):
-            sampler.set_epoch(checkpoint["epoch"] + 1)
         # Lightning restores patience from its saved callback state, overriding
         # the constructor. Apply the permitted increase to the in-memory state;
         # retain best_score and wait_count so patience still counts since best.

@@ -34,10 +34,9 @@ Follow with a separate legacy cleanup subtask.
 
 ## 037A — Train without BC (slide step 2)
 
-The [037A launch contract](037a_without_bc_launch.md) owns the verified
-[no-BC recipe](../configs/train/baseline_comparisons/b0_without_bc.toml),
-launcher, and validation handoff. It uses the existing with-BC B0 bundle
-and a fresh B0 run with `variant = "base"`. Keep the non-BC source
+The [037A task record](037a_without_bc_launch.md) documents the historical
+equal-budget recipe, launch and validation. The comparison used the existing
+with-BC B0 bundle and a fresh B0 run with `variant = "base"`. Keep the non-BC source
 assignments, 8-band inputs, loss, initialization, batch settings, EMA,
 threshold and validation checkpoint rule. Reuse the fixed preprocessing for
 the controlled comparison and disclose that its statistics were estimated
