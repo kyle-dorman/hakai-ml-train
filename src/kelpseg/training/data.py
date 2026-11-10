@@ -32,6 +32,7 @@ class ChipDataset(Dataset):
         selection="all",
         chip_size: int = 512,
         augmentation=None,
+        include_distance: bool = False,
     ):
         if any(row["split"] not in ("train", "val") for row in rows):
             raise ValueError(
@@ -46,6 +47,7 @@ class ChipDataset(Dataset):
         self.rows = rows
         self.source_band_names = tuple(source_band_names)
         self.chip_size = chip_size
+        self.include_distance = include_distance
         self.transform = build_input_transform(self.band_names, augmentation)
 
     def __len__(self):
@@ -58,16 +60,21 @@ class ChipDataset(Dataset):
         # ChannelDropout uniformly choose an actual model input, never a hidden
         # native band. band_names retains each selected channel's physical identity.
         chip = load_chip(
-            row["payload"], self.source_band_names, self.band_names, self.chip_size
+            row["payload"],
+            self.source_band_names,
+            self.band_names,
+            self.chip_size,
+            include_distance=self.include_distance,
         )
         image, target, valid = chip["image"], chip["label"], chip["valid_mask"]
         if target is None:
             raise ValueError(
                 f"{row['payload']}: training/validation requires mapped labels."
             )
-        tensors = self.transform(
-            image=image, mask=target, validity=valid.astype("int8")
-        )
+        inputs = {"image": image, "mask": target, "validity": valid.astype("int8")}
+        if self.include_distance:
+            inputs["effective_distance_m"] = chip["effective_distance_m"]
+        tensors = self.transform(**inputs)
         metadata = dict(row)
         metadata.update(
             band_names=self.band_names,
@@ -75,12 +82,15 @@ class ChipDataset(Dataset):
             true_width=chip["true_width"],
             padding=chip["padding"],
         )
-        return {
+        sample = {
             "image": tensors["image"],
             "target": tensors["mask"],
             "valid_mask": tensors["validity"] == 1,
             "metadata": metadata,
         }
+        if self.include_distance:
+            sample["effective_distance_m"] = tensors["effective_distance_m"]
+        return sample
 
 
 def build_training_inputs(
@@ -91,12 +101,13 @@ def build_training_inputs(
     experiment: str = "baseline",
     variant: str = "augmented",
     seed: int = 33,
+    include_distance: bool = False,
 ) -> dict:
     """Select positive training chips and representative disjoint validation.
 
-    Only metadata is read here. Test identities are returned as rows, never a
-    dataset. Training keeps canonical overlap and filters only kelp_pixels > 0;
-    validation and test membership remain the selector's declared scope.
+    Read metadata only and request distance arrays for training only. Return test
+    identities as rows. Training keeps canonical overlap and filters only
+    kelp_pixels > 0. Validation and test retain the selector's declared scope.
     """
     chips = Path(chips).expanduser().resolve()
     recipe = json.loads((chips / "recipe.json").read_text(encoding="utf-8"))
@@ -130,6 +141,7 @@ def build_training_inputs(
         selection,
         recipe["chip_size"],
         build_training_augmentation(seed),
+        include_distance=include_distance,
     )
     val = ChipDataset(
         validation, recipe["source_band_names"], selection, recipe["chip_size"]

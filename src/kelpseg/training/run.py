@@ -32,14 +32,19 @@ from kelpseg.training.resume import TrainingResume, build_resume_identity, load_
 from kelpseg.training.settings import TrainingSettings
 
 
-def collate_chips(samples):
+def collate_chips(samples: list[dict]) -> dict:
     """Stack tensors and keep original source/window metadata as ordinary rows."""
-    return {
+    batch = {
         "image": default_collate([sample["image"] for sample in samples]),
         "target": default_collate([sample["target"] for sample in samples]),
         "valid_mask": default_collate([sample["valid_mask"] for sample in samples]),
         "metadata": [sample["metadata"] for sample in samples],
     }
+    if "effective_distance_m" in samples[0]:
+        batch["effective_distance_m"] = default_collate(
+            [sample["effective_distance_m"] for sample in samples]
+        )
+    return batch
 
 
 def seed_worker(worker_id):
@@ -86,6 +91,7 @@ def run_training(
         experiment=settings.experiment,
         variant=settings.variant,
         seed=settings.seed,
+        include_distance=any(term.type == "distance_bce" for term in settings.losses),
     )
     identity = build_resume_identity(settings, inputs)
     if resume is not None:

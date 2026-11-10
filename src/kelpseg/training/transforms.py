@@ -27,8 +27,14 @@ class _RestoreInvalid(A.DualTransform):
         image[~valid] = 0
         return image
 
-    def apply_to_mask(self, mask, valid, **params):
-        mask = mask.astype(np.int64)
+    def apply_to_mask(
+        self, mask: np.ndarray, valid: np.ndarray, **params
+    ) -> np.ndarray:
+        """Ignore invalid pixels, preserving floating-point distance masks."""
+        if np.issubdtype(mask.dtype, np.floating):
+            mask = mask.copy()
+        else:
+            mask = mask.astype(np.int64)
         mask[~valid] = -100
         return mask
 
@@ -62,6 +68,6 @@ def build_input_transform(band_names, augmentation=None) -> A.Compose:
     )
     return A.Compose(
         transforms,
-        additional_targets={"validity": "mask"},
+        additional_targets={"validity": "mask", "effective_distance_m": "mask"},
         seed=augmentation.seed if augmentation is not None else None,
     )

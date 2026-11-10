@@ -1498,28 +1498,15 @@ uv run --frozen kelpseg train --recipe configs/train/regularization/bce_dice_wd0
 ```
 
 Use `predict-chips` followed by `report` for post-training diagnostics, as
-[documented below](#post-training-validation-diagnostics). The next controlled
-LR comparison is recorded in the [Task 034 sidecar](../tasks/034_lr_followup_notes.md);
-the four recipes and launcher are now prepared.
+[documented below](#post-training-validation-diagnostics).
 
 ## Controlled learning-rate comparison
 
-Run `bash run_lr_comparisons.sh` from the checkout in tmux. The four recipes in
-`configs/train/lr_comparison/` vary peak LR/weight decay only (apart from names):
-`3e-4/0.01`, `1.5e-4/0.01`, `1e-4/0.01`, and `1.5e-4/0.05`. All use the same
-reduced-noise pipeline, seed 42, unsmoothed BCE/Dice, W&B, 70-epoch schedule,
-five-epoch warmup, minimum LR `3e-6`, and patience 20. Each run is followed by
-CUDA `predict-chips` and a shared `report` of its selected model. The sequence
-stops on failure; rerunning the launcher starts new experiments from the first
-recipe rather than resuming a partially completed sweep.
-
-The launcher overrides runs_root to `<data_root>/lr-comparison-runs/`, creating
-it if needed. On this GPU host that is `/home/sky/data/lr-comparison-runs/`.
-Reports and saved validation predictions live inside each run. This location is
-outside the current Box uploader's `runs/` and `analyses/` trees, so it does not
-copy checkpoints being written. Back up the new root after the sweep completes.
-Running `kelpseg train` directly with these TOMLs uses the ordinary paths file;
-use the launcher for this isolated output location.
+The completed comparison and its recipes are recorded in the
+[Task 034 sidecar](../tasks/034_lr_followup_notes.md). To repeat an arm, train
+with a recipe from `configs/train/lr_comparison/`, then run the post-training
+validation commands. The historical runs are under
+`/home/sky/data/lr-comparison-runs/` on the GPU host.
 
 `checkpoint_epochs = [4, 5, 6, 7, 8, 9, 10, 11, 12]` saves full checkpoints
 `checkpoints/epoch-04.ckpt` through `epoch-12.ckpt`, only when those epochs finish.
@@ -1537,18 +1524,10 @@ The selected encoder is recorded in settings, checkpoints and portable models;
 loading a bundle reconstructs its recorded size offline. Resume requires matching
 current settings. Changing size requires a fresh training run.
 
-`bash run_model_size_comparisons.sh` runs B2, B1, then B0 with the B recipe's
-settings: peak LR `1.5e-4`, WD `0.01`, minimum LR `3e-6`, five warmup epochs,
-70-epoch schedule, patience 20, unsmoothed BCE/Dice, reduced noise and seed 42.
-It retains epoch 4–12 snapshots, best/last, W&B, and selected-model chip validation
-predictions/reports after each run. Recipes live in `configs/train/model_size/`.
-Any failure stops the sequence. The launcher uses `<data_root>/model-size-runs/`,
-outside the current Box backup roots; back it up separately after completion.
-
-Do not run this launcher concurrently with another training job. The original
-one-off host queue and both sweeps have completed; see Task 034 for their
-historical setup. The launcher starts immediately and does not wait for other
-GPU jobs. Rerunning it starts three fresh experiments.
+The completed comparison used the B settings for B2, B1, and B0. To repeat an
+arm, train with its recipe in `configs/train/model_size/` and run the
+post-training validation commands. The historical runs are under
+`/home/sky/data/model-size-runs/` on the GPU host.
 
 ## Early stopping
 
@@ -2316,3 +2295,120 @@ need no Box/W&B login, GPU or model-weight download.
 
 See [data and artifacts](data_artifacts.md) for storage/backup rules and
 [experiments](experiments.md) for model, checkpoint, and run identity rules.
+
+## Run the B0 distance-weighted BCE screen
+
+[Task 041](../tasks/041_distance_weighted_bce_experiment.md) compares a fresh
+alpha-zero control and alpha 1 and 2 treatments on the same derived chips and
+existing assignments. At training time, the positive-pixel multiplier halves
+its boost every 120 m. Mapped land receives the full boost. Unknown distance
+and background have weight 1. Capped positives use 500 m, so alpha 2 still
+gives them a weight of about 1.111. BCE divides by the sum of valid-pixel
+weights in each microbatch. Dice, optimizer accumulation and checkpoint selection
+use the B0 settings.
+
+The following commands use the existing local CA/BC release and Task 040
+rasters. Run them from the repository root in Bash when ready to launch the
+screen. Change the roots for your machine. Use a fresh work directory outside
+any active upload. The derived release duplicates about 66 GB of canonical
+payloads and adds up to about 35 GB of uncompressed distance/land data before
+NPZ compression. Allow about 101 GB for preparation plus space for the runs,
+predictions and reports. Check the reported byte count after preparation.
+Eight source workers suit the current GPU host. Omit `--workers` to use
+one process, or lower it on a smaller machine.
+
+```bash
+uv run --frozen kelpseg prepare-chip-distances \
+  --chips /home/sky/data/data/chips/ca_bc/v1 \
+  --shoreline /home/sky/data/analyses/task040_shoreline_v1 \
+  --output /home/sky/data/data/chips/ca_bc/v1-distance500 --workers 8
+```
+
+Once the derived dataset is published, set up the run folder and preview the
+three recipes.
+
+```bash
+set -euo pipefail
+data=/home/sky/data
+work="$data/task041-distance-bce-v1"
+shore="$data/analyses/task040_shoreline_v1"
+inventory="$data/analyses/task040_shore_inventory_size5000_v5"
+
+df -h "$data"
+mkdir "$work"
+mkdir "$work/runs"
+cat > "$work/paths.toml" <<EOF
+[paths]
+data_root = "$data"
+runs_root = "$work/runs"
+EOF
+
+for alpha in 0 1 2; do
+  recipe="$work/alpha$alpha.toml"
+  sed "s|^paths_file = .*|paths_file = \"$work/paths.toml\"|" \
+    "configs/train/distance_weighting/alpha$alpha.toml" > "$recipe"
+  uv run --frozen kelpseg train --recipe "$recipe" --dry-run
+done
+```
+
+Each preview should show 53 validation sources and 933 validation windows, with
+identical counts and update budgets across arms. The preparation output includes
+the original chip recipe, source and window manifests and a new summary with
+payload bytes and unknown-distance positive window pixels. Those counts include
+overlapping appearances across the whole release. If preparation fails, inspect
+the error and choose a fresh output before starting again. Keep each recipe's
+`chips` setting in sync with the chosen derived path.
+
+Run the following block in the same shell after reviewing the previews. Each
+alpha finishes training, prediction and reporting before the next starts.
+The exported best bundle drives float32 chip predictions at threshold 0.5.
+The reports use disjoint validation windows and the same fixed unaugmented
+training sample for each arm.
+
+```bash
+for alpha in 0 1 2; do
+  uv run --frozen kelpseg train --recipe "$work/alpha$alpha.toml"
+  runs=( "$work/runs/planet8-cabc-b0-distance-alpha${alpha}-70ep-"* )
+  test "${#runs[@]}" -eq 1 && test -d "${runs[0]}" || exit 1
+  for split in val train; do
+    predictions="$work/alpha$alpha-$split-predictions"
+    uv run --frozen kelpseg predict-chips --run "${runs[0]}" --device cuda \
+      --split "$split" --seed 42 --sources-per-region 3 --output "$predictions"
+    report_recipe="$work/alpha$alpha-$split-report.toml"
+    cat > "$report_recipe" <<EOF
+predictions = "$predictions"
+output = "$work/alpha$alpha-$split-report"
+shoreline = "$shore"
+cluster_inventory = "$inventory"
+max_examples = 12
+EOF
+    uv run --frozen kelpseg report --recipe "$report_recipe"
+  done
+done
+```
+
+In CSV and W&B, `train/distance_bce` is the optimized BCE component and
+`train/distance_bce_unweighted` is ordinary BCE on the same augmented training
+pixels. `train/unknown_distance_positive_pixels` counts surviving positive
+appearances with unknown distance after augmentation. Validation logs
+`val/distance_bce_unweighted` and ordinary BCE/Dice loss. Scoring uses ordinary
+pixel counts. Compare nearshore recall and precision alongside mapped-land,
+offshore and overall results. The joint report adds full-source cluster size
+and source/date support. Compare support and coverage across arms before
+interpreting any score changes.
+
+### Additional distance-weighting arms
+
+The user-requested alpha 4 and 8 recipes are in
+`configs/train/distance_weighting/`. On the current GPU host, the prepared
+launcher uses the local recipe copies and the same derived chips and source
+assignments as alpha 0/1/2. Run it in tmux after the initial screen finishes.
+
+```bash
+bash /home/sky/data/task041-distance-bce-v1/run-alpha4-alpha8.sh
+```
+
+It runs alpha 4 then 8, with validation and fixed training-sample predictions
+and shoreline/cluster reports after each arm. These stronger settings have
+maximum positive weights of 5 and 9. At the fixed 500 m cap their positive
+weights remain about 1.223 and 1.445.

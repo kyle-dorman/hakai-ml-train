@@ -37,6 +37,10 @@ and log-scaled shoreline examples. All 369 sources and saved chip/TIFF validatio
 see the [shore-distance recipe](quickstart.md#shore-distance-coverage-and-validation-diagnostics). Tasks 000–023 describe the
 preceding completed PS8B study.
 
+[Task 041](../tasks/041_distance_weighted_bce_experiment.md) implements a controlled
+B0 distance-weighted BCE recall screen. See the
+[preparation and launch recipe](quickstart.md#run-the-b0-distance-weighted-bce-screen).
+
 ## Read by task
 
 - [quickstart.md](quickstart.md): researcher setup, available commands, paths,

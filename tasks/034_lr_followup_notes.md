@@ -42,23 +42,21 @@ Prepared recipes in `configs/train/lr_comparison/`:
 | `c_lower_lr.toml` | `1e-4` | `0.01` |
 | `d_half_lr_wd005.toml` | `1.5e-4` | `0.05` |
 
-To repeat the comparison, run `bash run_lr_comparisons.sh` in tmux. Each fresh training run
-is followed by validation `predict-chips` and `report`, stopping on any failure.
-The launcher puts all outputs under `<data_root>/lr-comparison-runs/`, outside
-the active backup's `runs/` and `analyses/` roots. Back these up after completion.
-A second-seed reference/winner pair remains a later decision, not part of this
-launcher.
+The retired `run_lr_comparisons.sh` launcher saved its outputs under
+`<data_root>/lr-comparison-runs/` and followed each training run with validation
+`predict-chips` and `report`. See the [current recipe](../docs/quickstart.md#controlled-learning-rate-comparison)
+for repeating an arm. A second-seed reference/winner pair remains a later
+decision.
 See [Task 034](034_gpu_machine_preparation_and_baseline_launch.md) for run evidence.
 
 
 ## Approved overnight size comparison
 
 The completed sequence ran B2 → B1 → B0 after D, using B's parameters unchanged
-except encoder size and run name. `configs/train/model_size/` and
-`run_model_size_comparisons.sh` implement this sequence, including epoch 4–12
-snapshots and post-training validation-chip reports. Outputs go to
-`/home/sky/data/model-size-runs/`, outside the active backup. This comparison
-precedes any decision about extra seeds. No per-TIFF epoch logging is added.
+except encoder size and run name. The retired `run_model_size_comparisons.sh`
+launcher retained epoch 4–12 snapshots and ran post-training validation-chip
+reports. Outputs are under `/home/sky/data/model-size-runs/`. The saved recipes
+are in `configs/train/model_size/`.
 
-Next action: review the current changes and back up the completed output roots.
-Investigate small-bed representation separately before selecting another run.
+The completed LR and model-size output roots were verified against Box on
+2026-11-10.

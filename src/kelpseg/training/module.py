@@ -11,6 +11,7 @@ from torchmetrics.functional.classification import binary_jaccard_index
 
 from kelpseg.models import build_model
 from kelpseg.training.loss import BinaryObjective
+from kelpseg.training.loss_settings import LossTerm
 from kelpseg.training.metrics import build_metrics
 from kelpseg.training.probability_metrics import build_probability_metrics
 from kelpseg.training.scheduler import LinearWarmupCosineDecayLR
@@ -87,13 +88,29 @@ class TrainingModule(pl.LightningModule):
         self.train_loss = MeanMetric().set_dtype(torch.float64)
         self.val_loss = MeanMetric().set_dtype(torch.float64)
         self.objective = BinaryObjective(settings.losses)
-        self.component_metrics = nn.ModuleDict(
-            {
-                f"{phase}_{term.name}": MeanMetric().set_dtype(torch.float64)
-                for phase in ("train", "val")
-                for term in settings.losses
-            }
+        validation_terms = tuple(
+            LossTerm("bce", f"{term.name}_unweighted", term.weight)
+            if term.type == "distance_bce"
+            else term
+            for term in settings.losses
         )
+        self.validation_objective = (
+            BinaryObjective(validation_terms)
+            if validation_terms != settings.losses
+            else None
+        )
+        names = [f"train_{term.name}" for term in settings.losses]
+        names.extend(f"val_{term.name}" for term in validation_terms)
+        names.extend(
+            f"train_{term.name}_unweighted"
+            for term in settings.losses
+            if term.type == "distance_bce"
+        )
+        self.component_metrics = nn.ModuleDict(
+            {name: MeanMetric().set_dtype(torch.float64) for name in names}
+        )
+        if self.validation_objective is not None:
+            self.train_unknown_positive = SumMetric().set_dtype(torch.float64)
         self.val_pixels = SumMetric().set_dtype(torch.float64)
         self.region_metrics = nn.ModuleDict()
         self.region_pixels = nn.ModuleDict()
@@ -154,7 +171,22 @@ class TrainingModule(pl.LightningModule):
         """
         logits = self(batch["image"])
         targets = batch["target"]
-        loss, components = self.objective(logits, targets)
+        objective = self.objective
+        distance = None
+        if self.validation_objective is not None and phase == "val":
+            objective = self.validation_objective
+        if self.validation_objective is not None and phase == "train":
+            distance = batch["effective_distance_m"]
+        loss, components = objective(logits, targets, distance)
+        if distance is not None:
+            unknown_positive = (targets == 1) & (distance < 0)
+            self.train_unknown_positive.update(unknown_positive.sum().double())
+            self.log(
+                "train/unknown_distance_positive_pixels",
+                self.train_unknown_positive,
+                on_step=False,
+                on_epoch=True,
+            )
         support = (targets != -100).sum()
         for name, value in {"loss": loss, **components}.items():
             metric = (

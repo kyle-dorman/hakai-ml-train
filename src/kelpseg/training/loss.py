@@ -11,7 +11,14 @@ from segmentation_models_pytorch.losses import (
 )
 from torch import nn
 
-from kelpseg.training.loss_settings import DEFAULT_LOSSES, LossTerm, validate_losses
+from kelpseg.training.loss_settings import (
+    DEFAULT_LOSSES,
+    DISTANCE_CAP_M,
+    LossTerm,
+    validate_losses,
+)
+
+BCE_TYPES = ("bce", "boundary_bce", "distance_bce")
 
 
 def binary_targets(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
@@ -46,6 +53,24 @@ def boundary_weights(targets: torch.Tensor, radius: int, factor: float) -> torch
     return 1 + (factor - 1) * edge.float()
 
 
+def distance_weights(
+    targets: torch.Tensor,
+    distance_m: torch.Tensor,
+    alpha: float,
+    half_distance_m: float,
+) -> torch.Tensor:
+    """Return float32 BCE weights for hard positives with known effective distance.
+
+    Land is already represented by zero; negative and nonfinite distances are
+    unknown. Ignore pixels get zero. No input is modified.
+    """
+    distance = distance_m.float()
+    known_positive = (targets == 1) & torch.isfinite(distance) & (distance >= 0)
+    safe = torch.where(known_positive, distance.clamp(max=DISTANCE_CAP_M), 0)
+    boost = alpha * torch.exp2(-safe / half_distance_m)
+    return torch.where(targets == -100, 0, 1 + torch.where(known_positive, boost, 0))
+
+
 def build_loss(term: LossTerm) -> nn.Module:
     """Construct one PyTorch/SMP loss from its type and library-specific options.
 
@@ -54,7 +79,7 @@ def build_loss(term: LossTerm) -> nn.Module:
     """
     parameters = dict(term.parameters)
     parameters.pop("per_image")
-    if term.type in ("bce", "boundary_bce"):
+    if term.type in BCE_TYPES:
         return nn.BCEWithLogitsLoss(
             reduction="none",
             pos_weight=None
@@ -89,8 +114,9 @@ class BinaryObjective(nn.Module):
         module: nn.Module,
         logits: torch.Tensor,
         targets: torch.Tensor,
-    ) -> torch.Tensor:
-        """Return one scalar for a nonempty BHW group using term's reduction.
+        distance_m: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
+        """Return the reduced term and, for distance BCE, ordinary BCE for logging.
 
         Inputs retain image geometry until boundary weights are computed. Only
         valid pixels then enter SMP/PyTorch. Caller chooses a whole microbatch
@@ -101,60 +127,102 @@ class BinaryObjective(nn.Module):
         truth = targets[valid].float().reshape_as(prediction)
         parameters = term.parameters
         target = truth
-        if term.type in ("bce", "boundary_bce"):
+        if term.type in BCE_TYPES:
             smoothing = parameters["smoothing"]
             target = truth * (1 - smoothing) + smoothing / 2
         value = module(prediction, target)
-        if term.type in ("bce", "boundary_bce"):
-            weights = torch.ones_like(value)
-            if term.type == "boundary_bce":
-                weights = boundary_weights(
-                    targets, parameters["radius"], parameters["factor"]
-                )[valid].reshape_as(value)
-            value = (value * weights).sum()
-            if parameters["reduction"] == "mean":
-                denominator = (
-                    weights.sum()
-                    if parameters.get("normalization", "weights") == "weights"
-                    else weights.numel()
-                )
-                value = value / denominator
-        elif term.type in ("tversky", "focal_tversky"):
+
+        if term.type == "distance_bce":
+            if distance_m is None:
+                raise ValueError("distance_bce requires aligned effective distances.")
+            ordinary = value.mean()
+            alpha = parameters["alpha"]
+            if alpha == 0:
+                return ordinary, ordinary.detach()
+
+            weights = distance_weights(
+                truth,
+                distance_m[valid].reshape_as(value),
+                alpha,
+                parameters["half_distance_m"],
+            )
+            return (value * weights).sum() / weights.sum(), ordinary.detach()
+
+        if term.type == "bce":
+            return (
+                value.mean() if parameters["reduction"] == "mean" else value.sum()
+            ), None
+
+        if term.type == "boundary_bce":
+            weights = boundary_weights(
+                targets, parameters["radius"], parameters["factor"]
+            )[valid].reshape_as(value)
+            weighted = (value * weights).sum()
+            if parameters["reduction"] == "sum":
+                return weighted, None
+            denominator = (
+                weights.sum()
+                if parameters["normalization"] == "weights"
+                else weights.numel()
+            )
+            return weighted / denominator, None
+
+        if term.type in ("tversky", "focal_tversky"):
             # SMP uses gamma itself, not 1/gamma. Define zero-loss gradients
             # as zero, including fractional exponents with a singular derivative.
             positive = value > 0
             base = torch.where(positive, value, torch.ones_like(value))
             value = torch.where(positive, base ** parameters["gamma"], value)
-        return value
+
+        return value, None
 
     def forward(
-        self, logits: torch.Tensor, targets: torch.Tensor
+        self,
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+        distance_m: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        """Return weighted total and named unweighted components from binary tensors.
+        """Return the combined objective and components before term multipliers.
 
         logits is B1HW; targets is BHW/B1HW with 0/1/-100. Each term either pools
         the whole microbatch or averages separately reduced image losses, excluding
         all-ignored images. Preserve image identity before masking. All arithmetic
         is float32; an entirely ignored batch returns differentiable zero. Loss
-        weights are literal multipliers. Neither input is modified.
+        weights are literal multipliers. Distance BCE requires effective distances
+        shaped BHW and includes an ordinary BCE component for logging only.
+        Inputs are left intact.
         """
         targets = binary_targets(logits, targets)
+        if distance_m is not None and distance_m.shape != targets.shape:
+            raise ValueError("Effective distances must match BHW targets.")
         with torch.autocast(device_type=logits.device.type, enabled=False):
             values = logits[:, 0].float()
             if not (targets != -100).any():
                 zero = values.sum() * 0
-                return zero, {term.name: zero for term in self.terms}
+                components = {term.name: zero for term in self.terms}
+                components.update(
+                    {
+                        f"{term.name}_unweighted": zero
+                        for term in self.terms
+                        if term.type == "distance_bce"
+                    }
+                )
+                return zero, components
             components = {}
             for term, module in zip(self.terms, self.components, strict=True):
                 if term.parameters["per_image"]:
                     image_losses = [
-                        self._component(term, module, image[None], target[None])
+                        self._component(term, module, image[None], target[None])[0]
                         for image, target in zip(values, targets, strict=True)
                         if (target != -100).any()
                     ]
                     value = torch.stack(image_losses).mean()
                 else:
-                    value = self._component(term, module, values, targets)
+                    value, ordinary = self._component(
+                        term, module, values, targets, distance_m
+                    )
+                    if ordinary is not None:
+                        components[f"{term.name}_unweighted"] = ordinary
                 components[term.name] = value
             total = sum(term.weight * components[term.name] for term in self.terms)
         return total, components

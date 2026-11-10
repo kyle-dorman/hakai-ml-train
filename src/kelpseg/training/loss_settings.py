@@ -7,6 +7,20 @@ from typing import Any
 
 type LossParameter = int | float | bool | str | None
 
+DISTANCE_CAP_M = 500.0
+BCE_PARAMETERS: dict[str, LossParameter] = {
+    "smoothing": 0.0,
+    "pos_weight": 1.0,
+    "reduction": "mean",
+    "per_image": False,
+}
+FIXED_DISTANCE_BCE_PARAMETERS = {
+    **BCE_PARAMETERS,
+    "cap_m": DISTANCE_CAP_M,
+    "land_distance_m": 0.0,
+    "unknown_weight": 1.0,
+}
+
 OVERLAP_PARAMETERS: dict[str, LossParameter] = {
     "smooth": 0.0,
     "eps": 1e-7,
@@ -14,11 +28,11 @@ OVERLAP_PARAMETERS: dict[str, LossParameter] = {
     "per_image": False,
 }
 DEFAULT_PARAMETERS: dict[str, dict[str, LossParameter]] = {
-    "bce": {
-        "smoothing": 0.0,
-        "pos_weight": 1.0,
-        "reduction": "mean",
-        "per_image": False,
+    "bce": dict(BCE_PARAMETERS),
+    "distance_bce": {
+        **FIXED_DISTANCE_BCE_PARAMETERS,
+        "alpha": 0.0,
+        "half_distance_m": 120.0,
     },
     "boundary_bce": {
         "smoothing": 0.0,
@@ -54,6 +68,7 @@ RESERVED_NAMES = {
     "pixels",
     "auroc",
     "calibration_error",
+    "unknown_distance_positive_pixels",
 }
 
 
@@ -125,9 +140,12 @@ def validate_parameters(loss_type: str, parameters: dict[str, LossParameter]) ->
             raise ValueError(f"{loss_type}.{name} must be a finite nonnegative number.")
         if name == "smoothing" and value >= 1:
             raise ValueError("BCE smoothing must be in [0, 1).")
-        if name in ("alpha", "beta") and value > 1:
+        if loss_type != "distance_bce" and name in ("alpha", "beta") and value > 1:
             raise ValueError(f"{loss_type}.{name} must be in [0, 1].")
-        if name in ("eps", "pos_weight", "reduced_threshold") and value <= 0:
+        if (
+            name in ("eps", "pos_weight", "reduced_threshold", "half_distance_m")
+            and value <= 0
+        ):
             raise ValueError(f"{loss_type}.{name} must be positive.")
         if name == "reduced_threshold" and value >= 1:
             raise ValueError("focal.reduced_threshold must be in (0, 1).")
@@ -139,6 +157,10 @@ def validate_parameters(loss_type: str, parameters: dict[str, LossParameter]) ->
             )
         if name == "factor" and value < 1:
             raise ValueError("boundary_bce.factor must be >= 1.")
+    if loss_type == "distance_bce":
+        for name, value in FIXED_DISTANCE_BCE_PARAMETERS.items():
+            if parameters[name] != value:
+                raise ValueError(f"distance_bce.{name} must be {value!r}.")
     if (
         loss_type in ("tversky", "focal_tversky")
         and parameters["alpha"] + parameters["beta"] == 0
@@ -168,7 +190,11 @@ def validate_losses(terms: tuple[LossTerm, ...]) -> None:
         or any(not isinstance(term, LossTerm) for term in terms)
     ):
         raise ValueError("losses must contain at least one LossTerm.")
-    if len({term.name for term in terms}) != len(terms):
+    names = [term.name for term in terms]
+    names.extend(
+        f"{term.name}_unweighted" for term in terms if term.type == "distance_bce"
+    )
+    if len(set(names)) != len(names):
         raise ValueError(
             "Loss names must be unique within a recipe; repeated types need distinct names."
         )

@@ -22,8 +22,9 @@ from kelpseg.training.settings import TrainingSettings
 
 
 class RandomImages(Dataset):
-    def __init__(self, count):
+    def __init__(self, count, include_distance=False):
         self.count = count
+        self.include_distance = include_distance
         self.transform = A.Compose([A.RandomBrightnessContrast(p=1)], seed=71)
 
     def __len__(self):
@@ -34,7 +35,12 @@ class RandomImages(Dataset):
         image = self.transform(image=image)["image"]
         image = torch.from_numpy(image.transpose(2, 0, 1).copy())
         image = image + random.random() / 10 + np.random.rand() / 10
-        return {"image": image, "target": torch.ones(2, 2, dtype=torch.long)}
+        sample = {"image": image, "target": torch.ones(2, 2, dtype=torch.long)}
+        if self.include_distance:
+            sample["effective_distance_m"] = torch.tensor(
+                [[0.0, 120.0], [-100.0, 500.0]]
+            )
+        return sample
 
 
 class StopAfterEpoch(Callback):
@@ -42,10 +48,19 @@ class StopAfterEpoch(Callback):
         trainer.should_stop = True
 
 
-def fit_run(path, count, stop=False, checkpoint=None, workers=0, observed=None):
+def fit_run(
+    path,
+    count,
+    stop=False,
+    checkpoint=None,
+    workers=0,
+    observed=None,
+    losses=DEFAULT_LOSSES,
+):
     pl.seed_everything(42)
     settings = TrainingSettings(
         epochs=2,
+        losses=losses,
         warmup_epochs=1,
         num_workers=workers,
         persistent_workers=bool(workers),
@@ -59,7 +74,7 @@ def fit_run(path, count, stop=False, checkpoint=None, workers=0, observed=None):
         worker_init_fn=seed_worker,
     )
     train = DataLoader(
-        RandomImages(count),
+        RandomImages(count, any(term.type == "distance_bce" for term in losses)),
         shuffle=True,
         generator=torch.Generator().manual_seed(42),
         **options,
@@ -78,7 +93,7 @@ def fit_run(path, count, stop=False, checkpoint=None, workers=0, observed=None):
                 "epochs": 2,
                 "deterministic": True,
                 "early_stopping_patience": 0,
-                "losses": tuple(asdict(term) for term in DEFAULT_LOSSES),
+                "losses": tuple(asdict(term) for term in losses),
             }
         },
         train,
@@ -187,6 +202,39 @@ def test_completed_epoch_resume_matches_uninterrupted(tmp_path, count):
     )
     assert resumed["global_step"] == count * 2
     assert int(resumed["averaging_state"]["n_averaged"]) == max(0, count * 2 - 100)
+
+
+def test_weighted_resume_restores_and_checks_alpha(tmp_path: Path) -> None:
+    """Resume a weighted run after EMA starts and reject a changed alpha."""
+    losses = (
+        LossTerm("distance_bce", weight=0.7, parameters={"alpha": 2}),
+        LossTerm("dice", weight=0.3),
+    )
+    count = 102
+    reference = fit_run(tmp_path / "full-weighted", count, losses=losses)
+    split = tmp_path / "split-weighted"
+    partial = fit_run(split, count, stop=True, losses=losses)
+    assert int(partial["averaging_state"]["n_averaged"]) == 2
+    checkpoint = split / "last.ckpt"
+    identity = partial["training_resume"]["identity"]
+    load_resume(checkpoint, identity)
+    changed = dict(
+        identity["settings"],
+        losses=(asdict(LossTerm("distance_bce", weight=0.7)), asdict(losses[1])),
+    )
+    with pytest.raises(ValueError, match="recipe or selected memberships"):
+        load_resume(checkpoint, dict(identity, settings=changed))
+    resumed = fit_run(split, count, checkpoint=checkpoint, losses=losses)
+    assert int(resumed["averaging_state"]["n_averaged"]) == 104
+    for name in (
+        "state_dict",
+        "current_model_state",
+        "averaging_state",
+        "optimizer_states",
+        "lr_schedulers",
+        "global_step",
+    ):
+        assert_equal(reference[name], resumed[name])
 
 
 def test_persistent_worker_resume_restores_training_state_and_advances(tmp_path):

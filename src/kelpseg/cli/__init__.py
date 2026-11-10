@@ -7,6 +7,7 @@ import typer
 
 from kelpseg.cli.check import check_command
 from kelpseg.cli.chip import chip_command
+from kelpseg.cli.chip_distances import prepare_chip_distances_command
 from kelpseg.cli.clean import clean_command
 from kelpseg.cli.organize import organize_command
 from kelpseg.cli.paths import check_paths_command
@@ -64,3 +65,4 @@ app.command("temporal-report")(temporal_report_command)
 
 app.command("prepare-shoreline")(prepare_shoreline_command)
 app.command("shore-inventory")(shore_inventory_command)
+app.command("prepare-chip-distances")(prepare_chip_distances_command)

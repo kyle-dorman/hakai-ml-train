@@ -11,7 +11,8 @@ from kelpseg.training.loss import BinaryObjective, boundary_weights
 from kelpseg.training.loss_settings import DEFAULT_PARAMETERS, LossTerm
 from kelpseg.training.settings import load_settings
 
-NAMES = tuple(DEFAULT_PARAMETERS)
+# Distance BCE has its own tests because it requires a spatial input.
+NAMES = tuple(name for name in DEFAULT_PARAMETERS if name != "distance_bce")
 OVERLAP = {"dice", "jaccard", "tversky", "focal_tversky"}
 
 

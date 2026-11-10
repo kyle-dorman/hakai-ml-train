@@ -14,6 +14,8 @@ def load_chip(
     source_band_names: Sequence[str],
     selection: str | Sequence[str] | Sequence[int] = "all",
     chip_size: int = 512,
+    *,
+    include_distance: bool = False,
 ) -> dict:
     """Load raw HWC uint16 imagery and optional mapped HW int8 targets.
 
@@ -23,6 +25,8 @@ def load_chip(
     so source nodata and artificial padding remain distinct. No normalization,
     resizing, target remapping, or augmentation occurs here. Targets are already
     mapped by the chipper; loading does not audit their category values again.
+    When requested, effective_distance_m uses zero on land and -100 for unknown
+    distance or padding. Ordinary loaders need only the image and label arrays.
     """
     if type(chip_size) is not int or chip_size < 1:
         raise ValueError("chip_size must be a positive integer.")
@@ -30,6 +34,12 @@ def load_chip(
     with np.load(path, allow_pickle=False) as arrays:
         image = arrays["image"]
         label = arrays.get("label")
+        if include_distance:
+            if "distance_m" not in arrays or "land" not in arrays:
+                raise ValueError(
+                    f"{path}: distance_bce requires chips from prepare-chip-distances."
+                )
+            distance, land = arrays["distance_m"], arrays["land"]
 
     if image.dtype != np.uint16 or image.ndim != 3:
         raise ValueError(f"{path}: image must be HWC uint16.")
@@ -51,7 +61,7 @@ def load_chip(
             label = np.pad(label, ((0, bottom), (0, right)), constant_values=-100)
         invalid = np.pad(invalid, ((0, bottom), (0, right)), constant_values=False)
         valid = np.pad(valid, ((0, bottom), (0, right)), constant_values=False)
-    return {
+    chip = {
         "image": image,
         "label": label,
         "true_height": height,
@@ -61,3 +71,12 @@ def load_chip(
         "valid_mask": valid,
         "band_names": tuple(source_band_names[index] for index in indices),
     }
+    if include_distance:
+        if distance.shape != (height, width) or land.shape != distance.shape:
+            raise ValueError(f"{path}: distance and land must match the chip window.")
+        distance[~np.isfinite(distance)] = -100
+        distance[land == 1] = 0
+        if bottom or right:
+            distance = np.pad(distance, ((0, bottom), (0, right)), constant_values=-100)
+        chip["effective_distance_m"] = distance
+    return chip

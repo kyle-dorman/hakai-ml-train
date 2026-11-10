@@ -274,7 +274,11 @@ def test_validation_loss_weights_batch_objective_by_valid_pixels():
     "terms",
     [
         DEFAULT_LOSSES,
-        tuple(LossTerm(name, weight=0.2) for name in DEFAULT_PARAMETERS),
+        tuple(
+            LossTerm(name, weight=0.2)
+            for name in DEFAULT_PARAMETERS
+            if name != "distance_bce"
+        ),
         (
             LossTerm("bce", name="metrics", weight=0.5),
             LossTerm(

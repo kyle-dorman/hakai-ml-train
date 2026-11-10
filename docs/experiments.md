@@ -292,6 +292,14 @@ If claiming no training data from a future year, enforce that cutoff for all
 training regions, including 011/012. Region-specific later-date tests may have
 other regions' later imagery in training and must be described accordingly.
 
+## Current Planet 8-band B0 baseline
+
+Use the selected portable model from the [Task 041 alpha 0 run](../tasks/041_distance_weighted_bce_experiment.md#baseline-decision)
+as the reference for California and British Columbia comparisons. This B0 run
+uses ordinary BCE plus Dice. Its selected EMA model is from completed epoch 29
+and uses a 0.5 probability threshold. Keep alpha at 0 pending feedback on the
+suspected nearshore label omissions.
+
 ## Local-to-GPU progression
 
 Use CPU float32 inference and tiny training/validation/checkpoint checks on the
@@ -315,7 +323,7 @@ Optional `checkpoint_epochs` retains specified one-based completed epochs in
 addition to best/last, without changing checkpoint selection or validation
 metrics. These native full checkpoints use the existing EMA save hooks and
 can be exported for later inference. See the [LR comparison recipe](quickstart.md#controlled-learning-rate-comparison)
-for the four-run launcher and its separate output root during Box uploads.
+for the saved recipes and historical output root.
 
 
 Model-size recipes select `encoder_name` from `mit_b0`, `mit_b1`, `mit_b2`,
