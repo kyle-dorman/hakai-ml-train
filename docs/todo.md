@@ -124,9 +124,10 @@ and the user has authorized its commit.
 All Task 040 report pages now use concise plots/tables without written analysis;
 detailed diagnostics remain collapsed or downloadable.
 [Task 041](../tasks/041_distance_weighted_bce_experiment.md) is complete.
-The [alpha 0 run](experiments.md#current-planet-8-band-b0-baseline) is the current
-Planet 8-band B0 baseline for California and British Columbia. Review researcher
-feedback on suspected nearshore label omissions before revisiting weighting.
+The [plain BCE plus Dice B0 model-size run](experiments.md#current-planet-8-band-b0-baseline)
+is the current Planet 8-band baseline for California and British Columbia.
+Review researcher feedback on suspected nearshore label omissions before
+revisiting weighting.
 Task 037 remains the next general roadmap contract.
 The completed full 53-TIFF validation predictions have now been analyzed with
 Task 036B: 62 spatially supported pairs, 61 with defined percentage errors.
@@ -167,7 +168,7 @@ selected; split further if needed.
 | [036](../tasks/036_shared_scoring_and_reports.md) | Separate inference and shared labeled reports — complete | Saved chip/TIFF predictions; one report command; existing diagnostic parity, unique-pixel scoring and explicit coverage |
 | [036B](../tasks/036b_temporal_error_analysis.md) | Temporal error and change analysis — complete | Region/date/year/month support, signed bias and explicit supported common-footprint pairs; reuse 036 outputs |
 | [040](../tasks/040_shore_distance_diagnostics.md) | Shore-distance coverage and pixel-level evaluation — complete | Aligned land/distance rasters; region/split label support; distance-binned validation metrics with unique-pixel and coverage reconciliation |
-| [041](../tasks/041_distance_weighted_bce_experiment.md) | Distance-weighted BCE recall experiment — complete | Alpha 0 selected as baseline pending nearshore label feedback |
+| [041](../tasks/041_distance_weighted_bce_experiment.md) | Distance-weighted BCE recall experiment — complete | Alpha 0 retained as the experiment control; plain BCE plus Dice B0 adopted as baseline |
 | 037 | LORO runner and matching-TIFF comparisons | Ten 001–010 folds; paired with/without-011/012 CA/Baja results; temporal-consistency and later-date scopes reported separately; tiny suite checks |
 | 038 | New-region experiment recipes | Use prepared regional and combined collection versions; four cases, fixed test scopes, explicit initialization and reset/resume behavior |
 | 039 | Final researcher handoff and complete-workflow rehearsal | Another researcher follows the finished preparation/train/predict/score/transfer recipes; reuse 034 setup; finish no-scripts cleanup; no repeated GPU bootstrap or first-launch gate |

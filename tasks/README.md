@@ -81,7 +81,7 @@ are authorized by Task 024.
 | [036](036_shared_scoring_and_reports.md) | Local implementation/smoke | Complete | Saved chip/TIFF inference and shared reports; reference parity and installed checks pass; next 036B when selected |
 | [036B](036b_temporal_error_analysis.md) | Local analysis implementation/smoke | Complete | Proportional canopy change relative to labels; 1–13 and 29–47 days; reuse saved 036 reports |
 | [040](040_shore_distance_diagnostics.md) | Preparation/reporting | Complete | 369 land/distance and cluster-ID grids; region/split cluster, label and sampler-exposure inventory; concise log-imagery and joint region/distance/size reports; code quality pass and 53-TIFF parity verified; closed |
-| [041](041_distance_weighted_bce_experiment.md) | Training experiment | Complete | Alpha 0 selected as the Planet 8-band B0 baseline pending nearshore label feedback |
+| [041](041_distance_weighted_bce_experiment.md) | Training experiment | Complete | Alpha 0 retained as the experiment control; plain BCE plus Dice B0 adopted as baseline |
 
 Tasks 037–039 remain roadmap slots in [docs/todo.md](../docs/todo.md). Task 034
 owns initial GPU setup/launch; the final researcher handoff reuses it.

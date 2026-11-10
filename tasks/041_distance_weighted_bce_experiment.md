@@ -1,6 +1,6 @@
 # Task 041: Distance-weighted BCE for nearshore kelp recall
 
-Status: Complete. Alpha 0 selected as the baseline and final code review passed on 2026-11-10.
+Status: Complete. Alpha 0 is the experiment control. The earlier plain BCE plus Dice B0 run is the project baseline.
 Starting revision: `9f742637cecaabd7f8a0a90eff0517f977f05b9b`.
 Depends on Task 034 B0/B1 baselines and Task 040 aligned shoreline artifacts.
 
@@ -391,10 +391,17 @@ selected nearshore chips, not the population distribution.
 
 ## Baseline decision
 
-The user selected the completed alpha 0 control as the current Planet 8-band
-B0 baseline for California and British Columbia. It uses ordinary BCE plus Dice.
-Use the portable EMA bundle from completed epoch 29 (`checkpoint_epoch = 28`
-in the bundle metadata) with probability threshold 0.5.
+The user initially selected the completed alpha 0 control, then adopted the
+[earlier plain BCE plus Dice B0 run](../docs/experiments.md#current-planet-8-band-b0-baseline)
+as the project baseline. That run uses the canonical chips without distance
+arrays. The two runs use the same training settings apart from the BCE type,
+chip root and run bookkeeping. Their chip recipe, source and window manifests
+match byte for byte. The alpha-zero objective and its gradients match plain BCE
+plus Dice in the parity test. The saved runs selected different epochs, with
+validation IoU of 68.56% for plain BCE and 68.91% for the alpha-zero control.
+
+For comparisons within Task 041, use the alpha 0 portable EMA bundle from
+completed epoch 29 (`checkpoint_epoch = 28`) at probability threshold 0.5.
 
 - Run ID: `planet8-cabc-b0-distance-alpha0-70ep-20261106T213240953792Z`
 - Local bundle: `/home/sky/data/task041-distance-bce-v1/runs/planet8-cabc-b0-distance-alpha0-70ep-20261106T213240953792Z/model`

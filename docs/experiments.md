@@ -294,11 +294,19 @@ other regions' later imagery in training and must be described accordingly.
 
 ## Current Planet 8-band B0 baseline
 
-Use the selected portable model from the [Task 041 alpha 0 run](../tasks/041_distance_weighted_bce_experiment.md#baseline-decision)
-as the reference for California and British Columbia comparisons. This B0 run
-uses ordinary BCE plus Dice. Its selected EMA model is from completed epoch 29
-and uses a 0.5 probability threshold. Keep alpha at 0 pending feedback on the
-suspected nearshore label omissions.
+Use the B0 model-size run `planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z`
+as the reference for California and British Columbia comparisons. It uses the
+[B0 recipe](../configs/train/model_size/b0.toml), with ordinary BCE plus Dice
+on the canonical chips. Use its portable EMA bundle from completed epoch 16
+(`checkpoint_epoch = 15`) at probability threshold 0.5.
+
+- Local bundle: `/home/sky/data/model-size-runs/planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z/model`
+- Box bundle: `kelp-box:kelpseg/runs/model-size-runs/planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z/model`
+- Validation report: `/home/sky/data/model-size-runs/planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z/validation-report/report.html`
+
+Both bundle files matched Box on 2026-11-10. The
+[Task 041 alpha 0 run](../tasks/041_distance_weighted_bce_experiment.md#baseline-decision)
+remains the control for the five-arm distance experiment.
 
 ## Local-to-GPU progression
 
