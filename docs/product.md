@@ -42,7 +42,7 @@ training/validation/test assignments fixed. Neither training-only region creates
 a LORO test fold or contributes to validation/checkpoint selection. The run
 including both BC regions is the primary baseline; without both is the comparison.
 The manifest names remain `augmented` and `base`, respectively. Report
-California and Baja results explicitly so geographic scope remains clear.
+pooled validation results and retain source and region identities.
 
 Within each experiment/fold, group by physical spacecraft ID plus UTC acquisition
 date across regions and crops. Each group can contribute to only one of train,

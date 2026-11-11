@@ -1,6 +1,7 @@
 # Task 037: Baseline comparisons and leave-one-region-out evaluation
 
-Status: 037A complete. The user selected the with-BC epoch-16 EMA baseline. Later tasks remain planning drafts.
+Status: 037A and 037B complete. The with-BC epoch-16
+EMA is the selected 8-band baseline. 037C and 037D remain planning drafts.
 
 ## Abstract
 
@@ -17,8 +18,8 @@ Follow with a separate legacy cleanup subtask.
   the [B0 recipe](../configs/train/model_size/b0.toml), canonical CA/BC v1 chips,
   and the existing source-level assignments. In those assignments, `augmented`
   includes both BC regions (011/012) for training and `base` excludes them.
-- Match evaluation sources, labels, and scoreable pixels. Keep CA regions and
-  Baja (001/002) visible separately. Use source and region confusion counts,
+- Match evaluation sources, labels, and scoreable pixels. Pool the declared
+  scope for headline results. Retain source and region confusion counts,
   foreground IoU, precision and recall with label support and coverage.
 - Produce a temporal report for the current baseline and every new model,
   including optional runs and each LORO fold. Discuss temporal results alongside
@@ -62,34 +63,14 @@ as the reference for 037B and 037C.
 
 ## 037B — Compare 4-band and 3-band inputs (slide step 3)
 
-Use the selected 037A reference and the same variant, source membership,
-training budget and B0 recipe. Prepare planned `b0_planet4.toml` and
-`b0_planet3.toml` under `configs/train/baseline_comparisons/`. Use the existing
-Planet 4-band red/green/blue/NIR and Planet 3-band false-color NIR/red/green
-band orders and their matching normalization entries. Train both from the same initialization policy
-as the reference and score all three models on matching imagery.
-
-The [Task 033G tiny walkthrough](033g_tiny_walkthrough_and_handoff.md) already
-exercised these spectral inputs. Production comparisons remain open. Verify
-the new recipes resolve to the expected bands, shared assignments and budget,
-and check that a copied bundle predicts on a tiny source with the correct bands.
-The 8-band reference remains the baseline by default. Review results before
-deciding whether any spectral variant should inform 037C.
-
-### Optional false-color DINOv3 follow-up
-
-Decide after the 3-band results. If selected, write a separate bounded contract
-for a DINOv3 run on false-color NIR/red/green. Use the 037B 3-band B0 run as
-its control, with matching imagery and band order from the
-[Planet 3-band recipe](../configs/train/planet3.toml). Agree on the model,
-how pretrained inputs are adapted, training budget and runtime checks at that
-point. Record whether the optional result changes the recipe going into 037C.
+The [037B task record](037b_spectral_comparison_launch.md) documents the two
+spectral recipes and validation results. The user selected the existing 8-band
+B0 reference for 037C and skipped the optional false-color DINOv3 comparison.
 
 ## 037C — Run LORO comparisons (slide step 4)
 
-Start after 037A and 037B decisions are recorded and the optional DINOv3 branch
-is complete or skipped. Default to the selected baseline variant and spectral
-recipe. A second BC variant across all folds is a separate production scope
+Use the selected with-BC 8-band B0 as the reference and use the 8-band recipe
+for the folds. A second BC variant across all folds is a separate production scope
 for the user to choose after the earlier results.
 
 Reuse existing `loro_001` through `loro_010` assignments. Extend
@@ -138,8 +119,6 @@ for the baseline-versus-LORO temporal comparison.
 
 ## User decisions required
 
-- After 037B, decide whether to run false-color DINOv3 and freeze the recipe
-  for LORO.
 - Before LORO production, decide whether to run only the selected BC variant
   or both. Confirm the scope and launch only after the tiny fold passes.
 
@@ -154,4 +133,4 @@ Keep the legacy workflow through 037C. Complete the cleanup separately in 037D.
 Outcome to record for each child: changed files, durable run/report paths,
 checks, decision, remaining limits and exact next action.
 
-Next action when selected: write the 037B contract using the [selected 8-band reference](037a_without_bc_launch.md#baseline-decision).
+Next action when selected: write the 037C launch contract for 8-band LORO.

@@ -2412,3 +2412,21 @@ It runs alpha 4 then 8, with validation and fixed training-sample predictions
 and shoreline/cluster reports after each arm. These stronger settings have
 maximum positive weights of 5 and 9. At the fixed 500 m cap their positive
 weights remain about 1.223 and 1.445.
+
+## Run the matched 8/4/3-band B0 comparison
+
+On the staged GPU host, run from the repository in tmux:
+
+```bash
+bash examples/run_task037b.sh /home/sky/data/analyses/task037b-spectral-01
+```
+
+Choose a fresh output directory. The [Task 037B launcher](../examples/run_task037b.sh)
+previews both recipes, reuses the saved 8-band reference predictions, trains
+the 4-band and 3-band models in sequence, and checks all three sets of
+predictions share the same pixel coverage before scoring. It writes
+segmentation, shoreline and temporal reports for all three arms. Open the
+geography CSVs for California and Baja, and each arm's `regions.csv` and
+`pair_summaries.csv` for regional results.
+[Task 037B](../tasks/037b_spectral_comparison_launch.md#launch) lists the
+outputs and selected reference.

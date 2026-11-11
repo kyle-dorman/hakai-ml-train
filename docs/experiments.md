@@ -276,8 +276,8 @@ predictions or constant absolute area error.
   by represented date, year, year-month and calendar month, pooling confusion
   counts before ratios. These are observation totals, not unique geographic area
   across acquisitions. Same-day overlapping observations are not silently mosaicked.
-  Keep California and Baja regions explicit; preserve zero-kelp cases and
-  undefined metrics. The [researcher recipe](quickstart.md#temporal-canopy-change)
+  Pool the declared evaluation scope for headline results and retain region
+  identities. Preserve zero-kelp cases and undefined metrics. The [researcher recipe](quickstart.md#temporal-canopy-change)
   describes outputs and the separate no-inference command.
 
 Do not choose favorable test dates or remove low-kelp periods to increase F1.
