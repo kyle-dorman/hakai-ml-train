@@ -35,17 +35,17 @@ the reports on tiny common dates. Check the launcher stops on failure.
 The user launches production in tmux. Review the validation results before
 any DINOv3 or 037C work. The 8-band model remains the default baseline.
 
-## Launch
+## Historical launch
 
-From the repository in tmux:
+The launcher and Python driver used for production are preserved in commit
+`b76b976`. Recover the source with:
 
 ```bash
-bash examples/run_task037b.sh /home/sky/data/analyses/task037b-spectral-01
+git show b76b976:examples/run_task037b.sh
+git show b76b976:examples/task037b.py
 ```
 
-The [launcher](../examples/run_task037b.sh) uses a fresh output directory and
-stops when a stage fails. It uses the machine paths from the two training
-recipes and prints directly to the terminal. Training runs are under
+Training runs are under
 `/home/sky/data/runs/planet4-cabc-b0-spectral-037b-70ep-*` and
 `/home/sky/data/runs/planet3-cabc-b0-spectral-037b-70ep-*`. The exact run paths
 are in `planet4-preview.json` and `planet3-preview.json` in the comparison folder.
