@@ -164,9 +164,15 @@ Refuse an existing report destination; do not silently replace prior evidence.
 
 | Existing implementation | Reuse/refactor | Existing correctness coverage |
 |---|---|---|
-| [nodata.py](../src/prepare/nodata.py): `declared_nodata_values()`, `nodata_mask()`, `nodata_value_text()` | Source-aware declarations, explicit fallback, dtype safety and all-band detection | [test_nodata.py](../tests/test_nodata.py) |
-| [merge_planet8b_regions.py](../scripts/merge_planet8b_regions.py): `derive_aligned_label()` | Nearest exact-grid categorical sampling, valid class-zero handling, independent footprint computation | Cleanup assertions in [test_merge_planet8b_regions.py](../tests/test_merge_planet8b_regions.py) |
-| [repair_planet8b_nodata_metadata.py](../scripts/repair_planet8b_nodata_metadata.py): label repair and `_label_audit()` | Missing-image label repair, retained source-ignore classes and QA invariants | [test_repair_planet8b_nodata_metadata.py](../tests/test_repair_planet8b_nodata_metadata.py) |
+| `src/prepare/nodata.py`: `declared_nodata_values()`, `nodata_mask()`, `nodata_value_text()` | Source-aware declarations, explicit fallback, dtype safety and all-band detection | [test_nodata.py](../tests/test_nodata.py) |
+| `scripts/merge_planet8b_regions.py`: `derive_aligned_label()` | Nearest exact-grid categorical sampling, valid class-zero handling, independent footprint computation | Cleanup assertions in `tests/test_merge_planet8b_regions.py` |
+| `scripts/repair_planet8b_nodata_metadata.py`: label repair and `_label_audit()` | Missing-image label repair, retained source-ignore classes and QA invariants | `tests/test_repair_planet8b_nodata_metadata.py` |
+
+037E navigation note: the source/test paths in this historical table were
+retired during the rebuild. All five are available in starting commit
+`ac933fd667c2ddb445b8a622d8404387a2d056e2`; use that revision with the
+[recorded source-recovery commands](037_baseline_comparisons_and_loro.md#dependencies-and-historical-recovery);
+the table describes the implementation available during 029B.
 
 Extract/refactor functions into the package; do not import `src.*`/`scripts.*`
 from the installed commands or wrap the old archive-repair CLI. Reuse organizer

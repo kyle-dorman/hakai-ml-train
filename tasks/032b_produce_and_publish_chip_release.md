@@ -14,7 +14,7 @@ summaries; no new framework, hashes or transfer receipts.
 
 Follow the entry route, then [032A](032a_collection_and_split_implementation.md),
 [032A.1](032a_1_nonoverlapping_chip_evaluation.md),
-[quickstart](../docs/quickstart.md#chip-cleaned-imagery),
+[quickstart](../docs/guides/preparation.md#chip-cleaned-imagery),
 [artifact policy](../docs/data_artifacts.md#box-project-organization-and-upload-verification),
 [documentation](../docs/documentation.md) and both final outcomes.
 No historical split debate or old checksum protocol is needed.

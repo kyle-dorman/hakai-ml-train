@@ -31,7 +31,7 @@ Follow the entry path, then read [architecture.md](../docs/architecture.md),
 [documentation.md](../docs/documentation.md), and the implemented preparation
 sections of [quickstart.md](../docs/quickstart.md). Read
 [Task 030B's completion outcome](030b_build_and_publish_cleaned.md#outcome-2026-10-27)
-and [Box recovery instructions](../docs/box_backup.md#cleaned-cabc-v1) before
+and [Box recovery instructions](../docs/reference/ca_bc_release.md#cleaned-cabc-v1) before
 selecting real inputs.
 
 Historical evidence is in [Task 003](003_extend_chipper_and_write_manifest.md),
@@ -317,7 +317,7 @@ computed from retained windows only when needed. No manifest inventory/hash laye
 The optional identity CSV supplies original source, dataset/release, region/date,
 crop offsets and dimensions. Require exact joins, reject duplicates/conflicts,
 and retain unknown fields explicitly. All crops of one original remain one
-source group for later splitting. The [quickstart](../docs/quickstart.md#chip-cleaned-imagery)
+source group for later splitting. The [quickstart](../docs/guides/preparation.md#chip-cleaned-imagery)
 owns the exact columns and operating recipes.
 
 Write once into fresh sibling `.<output>.incomplete`; stop on failure and rename

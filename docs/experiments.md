@@ -1,5 +1,44 @@
 # Experiment and checkpoint contract
 
+## Current Planet 8-band B0 baseline
+
+Use the B0 model-size run `planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z`
+as the selected 8-band reference after the [Task 037A validation decision](../tasks/037a_without_bc_launch.md#baseline-decision).
+It uses the
+[B0 recipe](../configs/train/model_size/b0.toml), with ordinary BCE plus Dice
+on the canonical chips with `variant = "augmented"` (with BC). Use its
+portable EMA bundle from completed epoch 16
+(`checkpoint_epoch = 15`) at probability threshold 0.5.
+
+The recoverable bundle is at
+`kelp-box:kelpseg/runs/model-size-runs/planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z/model`.
+After [connecting Box](box_backup.md#connect-box-on-a-local-machine), restore
+the complete bundle into a fresh external directory:
+
+```bash
+(
+  set -e
+  model_dir="$HOME/kelpseg-models/planet8-b0-epoch16-01"
+  test ! -e "$model_dir"
+  rclone copy kelp-box:kelpseg/runs/model-size-runs/planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z/model \
+    "$model_dir" --immutable --size-only --ignore-checksum
+  test -f "$model_dir/model.json"
+  test -f "$model_dir/weights.pt"
+)
+```
+
+Set `model` in a [prediction recipe](guides/prediction_reporting.md#predict-cleaned-source-tiffs)
+to this directory. Copy both files together; no training checkpoint, W&B login or
+original training-directory path is needed for inference.
+The task records retain the original host paths, validation report and backup
+verification. The distance-weighting alpha-0 run is an experiment control,
+not this selected baseline.
+
+The constructor default remains B3 and generic recipes may use smoothed
+BCE/Lovasz. Select the encoder and loss explicitly when reproducing the current
+B0 recipe; do not infer them from defaults. Supported encoders are `mit_b0`,
+`mit_b1`, `mit_b2` and `mit_b3`. Changing encoder starts a new experiment.
+
 ## Tracking and identity
 
 Keep W&B at `kdorman90-ucla/kelpseg`. The completed `planet8b-loro-v3` suite and
@@ -14,15 +53,14 @@ status, and output paths. Held-out region and adaptation case are explicit
 fields. Do not infer them from a run name. Recipes supply a descriptive `name`
 for the automatic `<name>-<UTC timestamp>` run ID and a separate `experiment`
 for assignment selection (`baseline` in the maintained training command).
-The completed 037C LORO workflow is archived in commit
-`609aa22fe27f2c0f41098b7055321da3ceb62f94`; its source recovery instructions and
-scientific decisions remain in [the task record](../tasks/037_baseline_comparisons_and_loro.md#037c-implementation-retirement--2026-11-12).
-Portable LORO bundle inference does not require that retired training code.
+Completed LORO study decisions and source recovery belong to
+[Task 037](../tasks/037_baseline_comparisons_and_loro.md#037c-implementation-retirement--2026-11-12).
+Portable LORO bundles use the maintained prediction commands.
 
 Local machine-readable records are required even when W&B is offline. Keep the
 implementation small; the legacy registry schema is not a compatibility target.
 Checkpoints, settings, dataset references, and compact results must be recoverable
-outside ephemeral compute, using Box as specified in `data_artifacts.md`.
+outside ephemeral compute, using the [artifact policy](data_artifacts.md).
 
 Metrics use one slash-separated phase prefix: `train/loss_step` for logged
 batch loss, `train/iou_step` for current-batch foreground IoU,
@@ -49,7 +87,7 @@ Each configured term logs unweighted `train/<name>`, `val/<name>` and
 as combined loss, so `loss = sum(weight * component)` up to rounding. Default
 recipes still use `bce` (0.1 label smoothing) and batch-pooled `lovasz` with weights
 0.7 and 0.3. CSV and W&B use the same component names. See
-[loss experiments](quickstart.md#configurable-loss-experiments) for supported
+[loss experiments](guides/training.md#configurable-loss-experiments) for supported
 terms, parameter conventions and TOML examples.
 CSV uses the same names. `val/pixels` records validation support and
 `trainer/optimizer_updates` records completed updates. Keep native Lightning
@@ -59,7 +97,7 @@ manual `wandb.log(step=...)` calls. This follows W&B guidance on
 and [Lightning logging](https://docs.coreweave.com/products/wandb/integrations/lightning).
 Optional native early stopping also monitors `val/iou` (mode max): patience counts
 validation checks, min_delta requires a strictly larger gain. Default patience 0
-disables it; BCE/Dice enables patience 10 and min_delta 0. The configured total
+disables it; the selected B0 recipe uses patience 20 and min_delta 0. The configured total
 epoch budget still defines the LR schedule, and best-model export is retained.
 Resume can increase an existing positive patience while keeping the saved best
 score and wait count. Other recipe and membership changes remain rejected.
@@ -67,13 +105,12 @@ A completed early-stopped run can continue under that increase; its model/report
 and settings/run metadata are moved into `completed-patience-<old patience>/`
 before fitting, preserving prior selected outputs. Current best/last checkpoints
 remain working recovery files and may be replaced normally. Dry-run is read-only.
-Checkpoint selection monitors `val/iou`; completed-epoch resume preserves the
-best score from preceding checkpoints that used `val_iou`. Existing W&B history
-retains its old names; a running process adopts new names only after restart.
+Checkpoint selection monitors `val/iou`. Resume requires the current callback
+and settings state; retired metric-name formats are not migrated.
 
 W&B prediction panels reuse existing forwards: a fixed validation sample across
 regions plus background chips, and four augmented training examples each epoch.
-The [quickstart](quickstart.md#prediction-panels-and-regional-metrics) describes
+The [training guide](guides/training.md#prediction-panels-and-regional-metrics) describes
 the media and regional metrics. Captions retain source/window identities;
 ignored pixels stay explicit. Media are diagnostics, not a representative score.
 Regional `val_region_<code>/` metrics pool validation pixels within each region,
@@ -90,7 +127,7 @@ area, boundary, patch and probability diagnostics across both scopes without
 loading a model. Report headings and outputs distinguish `chip_disjoint` from
 `tiff_tiled` coverage. The primary threshold comes from saved model metadata;
 train/validation sweeps are descriptive only and test reports omit them.
-See [post-training diagnostics](quickstart.md#post-training-validation-diagnostics)
+See [post-training diagnostics](guides/prediction_reporting.md#post-training-validation-diagnostics)
 for recipes, definitions, coverage exclusions and the float32 inference distinction.
 
 ## Initialization, fine tuning, and resume
@@ -104,7 +141,12 @@ Distinguish three operations:
 - Interrupted-run resume restores model, optimizer, scheduler, progress, and
   relevant averaging state for the same run and input identity.
 
-For new regions, identify the four cases in `product.md` separately. Keep fixed
+For new regions, identify the four cases in [product.md](product.md) separately.
+The installed `train` command currently starts from `encoder_weights = "imagenet"`
+or `"none"`, or resumes its own completed-epoch checkpoint. It has no recipe
+setting for initializing a fresh fit from a kelp bundle. Bundle loading supports
+inference; it is not a fine-tuning command. The complete transfer recipes and
+kelp-initialized fitting remain planned under Task 039. Keep fixed
 new/old held-out scopes. Choose combined-data initialization and sampling
 explicitly when that experiment is scoped; do not assume staged continuation.
 
@@ -113,73 +155,40 @@ recovery checkpoint as distinct artifacts. Record whether inference uses raw or
 averaged weights; preserve EMA semantics if retained. Test save/load and resume
 locally, including the difference from new fine-tuning initialization.
 
-## Selected rebuild baseline recipe
+## Preprocessing and training policy
 
-The installed training command uses PyTorch Lightning automatic optimization,
-native CSV logging/checkpointing and delayed EMA. It implements the historical
-starting optimizer, batch and schedule values recorded in the [contract](../tasks/033e_training_validation_and_ema.md#selected-starting-recipes).
-This preserves the new preprocessing and test isolation. The user selected the
-existing 0.7 smoothed-BCE / 0.3 Lovasz loss, EMA with decay 0.999, equal epochs
-for the BC comparison, and the newly measured **kelp-positive with-BC training
-statistics**, computed after a **5000 upper cap**, for normalization. Use raw-unit
-`(min(image, 5000) - mean) / std`, selecting statistics by band name and storing
-the cap and values directly in recipes/model bundles. Detect native nodata
-before clipping; training's final cap follows photometric augmentation and
-precedes standardization. Validation/prediction use the same cap and statistics.
-Training eligibility requires at least one kelp pixel per chip, using existing
-manifest counts after split selection. Keep background-only canonical chips
-and evaluation rows; report training exclusions separately. This filter belongs
-to Task 033 and does not change Task 032B's published inputs or assignments.
-The [Task 033 contract](../tasks/033_baseline_training_and_portable_models.md#selected-training-normalization)
-owns the exact values and estimation scope. Use one fixed baseline reference
-across spectral and BC variants; record its with-BC origin explicitly. A
-without-BC run using it is not independent of BC-derived preprocessing.
+Use raw-unit `(min(image, 5000) - mean) / std` with the exact band-named values
+in the chosen recipe and exported bundle. Detect native nodata before clipping.
+Training applies its final cap after photometric augmentation and before
+standardization; validation and prediction use the same cap and constants.
+Do not estimate replacement statistics when loading a model. Normalization
+provenance and qualifications for the completed LORO study remain in its
+[task/write-up](../tasks/037_baseline_comparisons_and_loro.md).
 
-This is a substantial change from the legacy Clay constants: Clay means are
-about 4.5–5.3 times larger than the selected estimates. Give the new recipe a
-distinct identity. Preserve the original normalization when loading a legacy
-checkpoint. The selected estimates were recomputed after clipping at 5000;
-earlier unclipped estimates are historical references. LORO cannot treat these
-baseline estimates as training-only when they include its held-out region.
-For Task 037C the user explicitly chose to reuse the selected baseline's
-normalization unchanged across all folds. Keep its exact band-named means,
-standard deviations and 5000 cap. The full-region LORO reports hold out model
-training and checkpoint selection, but do not claim training-only regional
-preprocessing: the fixed statistics include baseline training imagery from the
-held-out regions. Paired comparisons still use TIFFs unseen by both models.
+Training requires kelp-positive chips using manifest counts after split
+selection. Keep background-only chips in the canonical collection and evaluation;
+report training exclusions separately. Train/validation inputs use the same
+band selection, normalization and ignore handling as prediction.
 
-Keep ordinary training weights and EMA state in the recovery checkpoint; use
-EMA for validation and the selected portable model after averaging begins.
-Before the first averaging update, validate current weights. Augmentation
-parameters must be checked with previews from the same transforms used in
-training, including aligned masks and visible clipping/ignore behavior.
-The first pass is [033A's isolated class previews](../tasks/033a_individual_augmentation_previews.md).
-The user's 2026-11-02 direction replaces custom augmentation math with pinned
-stock Albumentations 2.0.8, using actual native constructor parameters. Preview
-and training use those implementations and the same input-domain scaling;
-strengths must not be translated to another implementation afterward.
-Preview adapters and the training Albumentations Compose use native uint16 /
-65535, stock operations, raw-unit restoration and the final 5000 model cap.
-Training then applies stock Normalize with the shared band-named constants
-and ToTensorV2 inside that Compose. Stock clipping and zero-nodata boundary effects
-are disclosed; there is no bespoke valid-weighted blur or mean-centered
-contrast. Labels/validity remain paired; spatial holes have ignored targets.
+The installed trainer uses Lightning automatic optimization, CSV logging,
+checkpointing and delayed EMA (decay 0.999). Recovery checkpoints preserve
+ordinary weights and EMA state. Validation and portable exports use EMA after
+averaging begins, and ordinary weights beforehand. Optional `checkpoint_epochs`
+retains listed one-based completed epochs in addition to best/last; it does not
+change validation selection.
 
-The [selected ranges and composition](../tasks/033_baseline_training_and_portable_models.md#limits-selected-after-isolated-review)
-use D4(p=1), then light Affine(p=0.5) outside SomeOf, followed by
-SomeOf(n=2, replace=False, p=1); all eight pool children have
-p=1 and equal selection eligibility. Stock SomeOf executes selected operations
-in configured list order. Task 033B's combined preview uses this actual recipe,
-the same kelp-rich training examples, clean/labeled close-ups and 2000 display
-ceiling. The user approved the initial combined outputs and added affine jitter
-during Task 033D review; the user also approved the updated affine previews. The recipe is saved
-as [native Albumentations JSON](../configs/augment/baseline.json), checked against
-the readable Python factory. Later training must consume this approved policy.
-The native-eight-band preview drops exactly one eligible input band; later
-3/4-band training must restrict dropout to that model's selected bands and
-preserve physical identity. Reuse one seeded pipeline with advancing random
-state in training; fixed per-draw seeds in the viewer are for inspection.
-Smooth illumination, haze and misregistration remain excluded.
+The augmentation policy is [native Albumentations JSON](../configs/augment/baseline.json):
+D4(p=1), light Affine(p=0.5), then SomeOf(n=2, replace=False, p=1).
+All eight pool children have equal eligibility; selected operations execute in
+configured list order. Preview and training use the same stock Albumentations
+2.0.8 operations and constructor parameters, native uint16/65535 scaling,
+raw-unit restoration and final 5000 cap. Training ends with Normalize and
+ToTensorV2. Spatial holes have ignored targets. Stock clipping and zero-nodata
+boundary effects remain visible in previews; there is no custom blur/contrast
+replacement. Dropout only uses the model's selected bands. Training advances
+one seeded pipeline; fixed viewer seeds are for inspection. Smooth illumination,
+haze and misregistration are excluded. See the [diagnostic guide](guides/diagnostics.md)
+for previews and the [training guide](guides/training.md) for settings.
 
 ## Portable prediction model
 
@@ -188,7 +197,7 @@ architecture settings, band names/order, normalization, and prediction settings
 including threshold. The installed Python loader predicts supplied image arrays
 offline without labels or original recipe paths. The installed `predict` command
 extends it to tiled/georeferenced source rasters with explicit sparse-window
-coverage; see the [prediction recipe](quickstart.md#predict-cleaned-source-tiffs).
+coverage; see the [prediction recipe](guides/prediction_reporting.md#predict-cleaned-source-tiffs).
 Keep recipe/model identity and averaging semantics explicit. Verify that copying
 the bundle to a fresh directory is enough to predict supplied imagery with the
 installed package, without the old training registry, original config-directory
@@ -207,19 +216,6 @@ cross-device/software bitwise equivalence is not promised. Resume requires the
 complete current settings and callback state; historical missing fields and
 metric names are not migrated. Partial-epoch recovery is unsupported.
 Bundle loading is model-only initialization and restores none of that training state.
-
-## Legacy gut check
-
-Task 025 captures a few preselected development chips using the downloaded
-SegFormer B3 checkpoint, saved inputs/labels, original-footprint probabilities,
-masks, and previews. It is a visual gut check, not a full training reproduction
-or a benchmark to tune against. Record device/precision and compare numerically
-only within a documented tolerance; no CUDA-equivalence claim is required.
-
-The checkpoint contains averaged inference weights under `state_dict` and
-separate ordinary training weights under `current_model_state`; reverify that
-loading contract during capture. Preserve its actual deterministic test
-preprocessing, including eight-band normalization and centered-pad inversion.
 
 ## Evaluation and comparison
 
@@ -255,10 +251,9 @@ validation or held-out fold. Keep CA source
 membership, band recipe, initialization, checkpoint/threshold selection rules
 and evaluation coverage matched. Declare the sampling and training budget so
 extra BC data and extra optimization are distinguishable experiment choices;
-those recipe details are selected in the training task.
+record these choices in the resolved recipe.
 
-Task [036B](../tasks/036b_temporal_error_analysis.md) implements temporal reporting
-from one saved Task 036 report; Task 037 reuses it for comparisons. The primary
+`temporal-report` reads one saved labeled report. The primary
 measure is agreement with the labels' proportional canopy change, not constant
 predictions or constant absolute area error.
 
@@ -287,7 +282,7 @@ predictions or constant absolute area error.
   counts before ratios. These are observation totals, not unique geographic area
   across acquisitions. Same-day overlapping observations are not silently mosaicked.
   Pool the declared evaluation scope for headline results and retain region
-  identities. Preserve zero-kelp cases and undefined metrics. The [researcher recipe](quickstart.md#temporal-canopy-change)
+  identities. Preserve zero-kelp cases and undefined metrics. The [researcher recipe](guides/diagnostics.md#temporal-canopy-change)
   describes outputs and the separate no-inference command.
 
 Do not choose favorable test dates or remove low-kelp periods to increase F1.
@@ -302,51 +297,10 @@ If claiming no training data from a future year, enforce that cutoff for all
 training regions, including 011/012. Region-specific later-date tests may have
 other regions' later imagery in training and must be described accordingly.
 
-## Current Planet 8-band B0 baseline
-
-Use the B0 model-size run `planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z`
-as the selected 8-band reference after the [Task 037A validation decision](../tasks/037a_without_bc_launch.md#baseline-decision).
-It uses the
-[B0 recipe](../configs/train/model_size/b0.toml), with ordinary BCE plus Dice
-on the canonical chips with `variant = "augmented"` (with BC). Use its
-portable EMA bundle from completed epoch 16
-(`checkpoint_epoch = 15`) at probability threshold 0.5.
-
-- Local bundle: `/home/sky/data/model-size-runs/planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z/model`
-- Box bundle: `kelp-box:kelpseg/runs/model-size-runs/planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z/model`
-- Validation report: `/home/sky/data/model-size-runs/planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z/validation-report/report.html`
-
-Both bundle files matched Box on 2026-11-10. The
-[Task 041 alpha 0 run](../tasks/041_distance_weighted_bce_experiment.md#baseline-decision)
-remains the control for the five-arm distance experiment.
-
 ## Local-to-GPU progression
 
-Use CPU float32 inference and tiny training/validation/checkpoint checks on the
-Mac. Validate all production plans and dataset paths before relocation. A
-fresh-directory small-data walkthrough must exercise Box fetch through the
-working pipeline. Local completion does not establish CUDA compatibility,
-mixed-precision behavior, throughput, or production memory requirements; check
-those on the selected GPU host before full experiments.
-
-[Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) owns the
-remote-first setup procedure with a small local checklist/bootstrap handoff, environment/data
-validation, hardware sizing, completed-epoch resume checks and initial baseline
-launch. It does not depend on tiled prediction or scoring. Later tasks can
-proceed locally while the baseline uses its fixed committed checkout, environment
-and recipe remotely; integrate setup fixes through separate commits rather than
-changing a running job. Task 042 reuses the setup procedure for the final
-researcher walkthrough and does not repeat the initial relocation/launch gate.
-
-
-Optional `checkpoint_epochs` retains specified one-based completed epochs in
-addition to best/last, without changing checkpoint selection or validation
-metrics. These native full checkpoints use the existing EMA save hooks and
-can be exported for later inference. See the [LR comparison recipe](quickstart.md#controlled-learning-rate-comparison)
-for the saved recipes and historical output root.
-
-
-Model-size recipes select `encoder_name` from `mit_b0`, `mit_b1`, `mit_b2`,
-or `mit_b3`. B3 remains the generic constructor default; current B0/B1 baseline
-recipes select their encoder explicitly. Portable exports record the encoder and reconstruct it
-when loaded; encoder changes are fresh experiments, not compatible resumes.
+Use CPU float32 inference and bounded training/checkpoint checks locally. Follow
+the [tiny walkthrough](quickstart.md) before a production experiment. Check
+CUDA, mixed precision, memory and throughput on the actual GPU host using
+[GPU setup](gpu_setup.md); local success does not establish those properties.
+Keep production code, environment and recipe fixed while a run executes.

@@ -44,7 +44,7 @@ Prepared recipes in `configs/train/lr_comparison/`:
 
 The retired `run_lr_comparisons.sh` launcher saved its outputs under
 `<data_root>/lr-comparison-runs/` and followed each training run with validation
-`predict-chips` and `report`. See the [current recipe](../docs/quickstart.md#controlled-learning-rate-comparison)
+`predict-chips` and `report`. See the [current recipe](../docs/reference/historical_recipes.md#controlled-learning-rate-comparison)
 for repeating an arm. A second-seed reference/winner pair remains a later
 decision.
 See [Task 034](034_gpu_machine_preparation_and_baseline_launch.md) for run evidence.

@@ -16,7 +16,7 @@ Follow `AGENTS.md`, `docs/index.md`, `docs/todo.md`, `tasks/README.md`, then rea
 [documentation](../docs/documentation.md), [splits/loading](../docs/architecture.md#splits-and-loading),
 [current research scope](../docs/product.md#california-target-and-temporal-consistency),
 [artifact policy](../docs/data_artifacts.md#box-project-organization-and-upload-verification),
-and [the implemented chip interface](../docs/quickstart.md#chip-cleaned-imagery).
+and [the implemented chip interface](../docs/guides/preparation.md#chip-cleaned-imagery).
 Task 031's outcome is the implementation handoff; earlier draft debates are
 [history](history/032_split_planning.md), not required reading.
 

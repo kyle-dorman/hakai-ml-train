@@ -1,139 +1,53 @@
 # Planet kelp segmentation
 
-A local rebuild of this fork into a small toolkit for binary kelp segmentation
-on Planet 8/4/3-band imagery. The workflow covers data preparation and chipping,
-training, evaluation, unlabeled inference, leave-one-region-out comparisons,
-and adaptation to new regions.
+A small Python toolkit for binary kelp segmentation on Planet 8/4/3-band
+imagery: prepare and chip data, train SegFormer models, map unlabeled imagery,
+and evaluate saved predictions against supplied labels.
 
-The installed `kelpseg` package currently provides help/version and read-only
-machine-path checks, byte-preserving raw organization from explicit catalogs,
-quick/full directory checks, shared cleanup, native-band chipping with optional
-labels, and source-level baseline/LORO split manifests. The chip loader selects
-8/4/3 bands and pads partial edges. Window selection keeps overlap for training;
-chip validation/test selection is disjoint and reports geometric coverage gaps.
-The `pixel-stats` command computes raw training-band means and sample standard
-deviations with an optional cap and manifest-based kelp-only chip filter.
-Installed `preview-augmentations` and `preview-pipeline` commands preview real
-Albumentations classes on training
-examples, with exact capped normalization and separately labeled backgrounds;
-see the [isolated previews](docs/quickstart.md#preview-individual-augmentations)
-and [combined pipeline preview](docs/quickstart.md#preview-the-combined-augmentation-pipeline).
-Preparation runs once into a fresh output and stops on failure, with no restart
-support. Installed Python helpers connect training/validation tensors to
-SegFormer B3, the selected loss and pooled confusion metrics; see
-[model inputs](docs/quickstart.md#model-and-training-inputs-python).
-The installed `train` command uses Lightning for fitting, validation, checkpoints
-and completed-epoch resume; see [training recipes](docs/quickstart.md#train-and-validate).
-[Portable bundles](docs/quickstart.md#copy-and-use-a-portable-model) predict supplied
-image arrays offline. [Tiled prediction](docs/quickstart.md#predict-cleaned-source-tiffs)
-writes georeferenced probabilities and masks from cleaned imagery without labels.
-`predict-chips` saves disjoint evaluation-chip predictions; both paths feed the
-shared [`report` command](docs/quickstart.md#post-training-validation-diagnostics),
-which produces labeled diagnostics without rerunning inference.
-[`temporal-report`](docs/quickstart.md#temporal-canopy-change) compares proportional
-canopy change against labels on common valid footprints using saved reports.
-The obsolete Planet scripts, class-path configs and checkout-only `src.*`
-implementation are retired. Historical Tasks 000–023 and starting commit
-`ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence;
-[Task 037](tasks/037_baseline_comparisons_and_loro.md#037d--retire-legacy-code)
-records replacements and source recovery. Current portable LORO bundles use
-the installed prediction commands.
+The selected CA/BC model is **8-band SegFormer B0, BCE + Dice, epoch-16 EMA,
+trained with BC**. Its identity and location are in the
+[experiment contract](docs/experiments.md#current-planet-8-band-b0-baseline).
+Tiny training is a workflow check, not a reproduction of this model.
 
 ## Start here
 
-Use the [researcher quickstart](docs/quickstart.md) for installation, local
-settings, command output, and fixes for common errors. For the external Linux
-GPU instance, follow the [GPU setup checklist](docs/gpu_setup.md); installation
-and GPU validation will be tested and refined on that machine. Development context is
-routed through [docs/index.md](docs/index.md) and [the roadmap](docs/todo.md).
-The legacy reference and provenance audit are complete;
-[Task 027](tasks/027_verify_box_and_back_up_raw_reference_audit.md) owns the
-raw/reference/audit backup and its verification status.
+Follow the [sequential tiny walkthrough](docs/quickstart.md) from installation
+through a copied model, predictions and a labeled report. It uses a small Box
+example and CPU training. Use [GPU setup](docs/gpu_setup.md) for production.
+The [documentation index](docs/index.md) routes detailed recipes and references.
 
-The toolkit uses one installable Python package, short explicit recipes,
-a locked uv environment, and no `scripts/` directory. Test as much of the workflow as
-practical on the Mac with small examples before moving to a GPU host. Full
-training is not intended for the Mac.
+## Install
 
-## Environment
-
-Use Python 3.12 and the locked uv environment:
+From this repository, with uv installed:
 
 ```bash
 uv python install 3.12
 uv sync --python 3.12 --frozen
-uv run kelpseg --help
-uv run kelpseg --version
+uv run --frozen kelpseg --help
 ```
 
-Create your local path settings as described in the quickstart, then run:
+The installed command calls reusable functions in `kelpseg`. Settings are plain
+recipe files; machine-specific paths and large artifacts stay outside Git.
+Preparation writes once to a fresh destination and stops on failure. Original
+imagery and labels are immutable. UCLA Box through rclone is the transfer and
+backup store; see [storage policy](docs/data_artifacts.md).
+
+## Development
+
+Read [AGENTS.md](AGENTS.md), [the queue](docs/todo.md) and the selected
+[task contract](tasks/README.md) before editing. Use Python 3.12 and the locked
+environment. Relevant focused tests accompany changes:
 
 ```bash
-uv run kelpseg check-paths --paths paths.local.toml
+uv run --frozen pytest
+uv run --frozen ruff format --check .
+uv run --frozen ruff check .
 ```
 
-The Typer command calls reusable Python functions. Workflow settings
-live in recipe files. The training command is
-`uv run kelpseg train --recipe <recipe-file>`.
-The recipe selects the variant and machine-paths file; each fit gets an automatic run ID.
-Use `--dry-run` to preview the inputs and update budget before fitting.
+`uv run --frozen pytest -q tests/test_repository_hygiene.py` checks repository
+file syntax, size, conflict markers and whitespace. No Git hooks are required.
+`uv build` creates the installable wheel and source distribution.
 
-Development checks use synthetic CPU fixtures, including fresh wheel/sdist
-installation outside the checkout:
-
-```bash
-uv run pytest
-uv run ruff format --check .
-uv run ruff check .
-```
-
-`pytest` includes repository hygiene checks for tracked and nonignored untracked
-files: YAML/JSON/TOML syntax, conflict markers, the 500 KiB file-size limit,
-mixed line endings, trailing whitespace and final newlines. Deleted files,
-symlinks and lockfiles are skipped. Run just these checks with
-`uv run pytest -q tests/test_repository_hygiene.py`. Ruff checks Python syntax
-and debugger statements as well as formatting/lint. Checks report errors without
-rewriting files; no Git hooks or pre-commit installation are needed. CI runs the
-same pytest and Ruff commands. Historical task records retain their original
-validation commands as evidence.
-
-Use `uv build` to create the wheel and source distribution. The default
-checkout environment includes the `dev` dependency group. Runtime dependencies
-include the optional W&B tracking integration used by training recipes; no
-legacy dependency group remains.
-
-## Data and experiments
-
-Raw archives, organized and cleaned intermediates, chips, generated split
-assignments, checkpoints, and results live outside Git. Keep preparation rules,
-configs, focused tests, and human-readable cleanup documentation in Git.
-UCLA Box through rclone is
-the target backup/transfer store; the existing local root is
-`/Volumes/x10pro/kelpseg`.
-
-The three dataset stages are **1 raw sources**, **2 organized intermediate**,
-and **3 cleaned intermediate**. Both intermediates stay unsplit; organization
-preserves source bytes, while cleanup records explicit transformations. The
-scoped audit is complete; existing repaired datasets remain historical evidence.
-See [docs/data_artifacts.md](docs/data_artifacts.md) for variant/provenance rules
-and [docs/cleanup_provenance.md](docs/cleanup_provenance.md) for established facts
-and remaining evidence limits. The organized and cleaned CA/BC releases are
-complete. The native-band CA/BC chip release, both baseline variants and all ten
-LORO folds are published with portable controls; the 13-crop tiny v2 is available
-from Box for offline split/chip/load and bounded training practice. See the
-[researcher guide](docs/quickstart.md#restore-and-use-the-full-cabc-chip-release).
-
-The local working set keeps cleaned imagery/chips and small controls/evidence.
-Raw ZIPs and organized payloads can be restored from Box; obsolete local datasets
-were evicted after archiving their small historical records. See
-[storage policy](docs/data_artifacts.md#current-local-working-set).
-
-The spectral comparison uses native 8 bands, RGB+NIR, NIR/red/green and RGB
-from the same acquisitions, each with and without the BC training regions. Start with the working SegFormer recipe; a possible RGB
-DINOv3 variant follows separately. New-region work compares direct transfer,
-kelp-checkpoint fine tuning, generic-pretrained fine tuning, and combined
-old/new training on fixed held-out test data.
-
-W&B remains `kdorman90-ucla/kelpseg`; new work uses new experiment identities.
-See [docs/product.md](docs/product.md) for the research contract and
-[docs/experiments.md](docs/experiments.md) for run and checkpoint rules.
+See [history and recovery](docs/history.md) for completed studies and retired
+code. New-region experiment recipes and a consolidated methods document remain
+in the [pending roadmap](docs/todo.md).

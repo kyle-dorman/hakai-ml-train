@@ -1,13 +1,15 @@
 # Architecture contract
 
-## Current implementation and replacement target
+## Current implementation
 
 The installed `src/kelpseg/` package provides the Typer command and read-only
 machine-path checks, generic byte-preserving organization, quick/full directory
 checks, shared cleanup, native-band chipping with optional labels, and source
 assignment/window-selection functions and streaming training-image pixel
-statistics. Installed model/input helpers connect these manifests to one
-SegFormer B3 (`mit_b3`) with 8/4/3 inputs and one logit. `training/data.py`
+statistics. Installed model/input helpers connect these manifests to
+SegFormer B0/B1/B2/B3 (`mit_b0` through `mit_b3`) with 8/4/3 inputs and one logit.
+B3 is the constructor default; the [selected recipe](experiments.md#current-planet-8-band-b0-baseline)
+uses B0 with ordinary BCE plus Dice. `training/data.py`
 loads kelp-positive training rows and representative validation; test rows stay
 metadata only. Shared preprocessing and the approved stock augmentation factory
 feed float32 tensors through an Albumentations Compose ending in Normalize
@@ -22,14 +24,11 @@ saves selected disjoint chip probabilities on source-coordinate canvases. Both
 feed `report`, which loads saved probabilities and aligned labels and shares
 metrics/figures without model inference. Completed-epoch resume uses native
 Trainer checkpoints with explicit random/sampling state.
-The maintained implementation is the installed `kelpseg` package. Task 037D
-retires root `trainer.py`, `scripts/`, legacy `src.*` modules and class-path
-YAML configs after replacement by preparation, training, prediction and
-reporting commands. Scientific correctness tests exercise the installed code.
-The active GPU bootstrap remains a standalone helper. Installed
-`preview-augmentations` and `preview-pipeline` commands call the existing
-training-only gallery functions with explicit path/sample options. Historical implementations and completed-study recovery references
-live in [Task 037](../tasks/037_baseline_comparisons_and_loro.md#037d--retire-legacy-code).
+The maintained implementation is the installed `kelpseg` package; the GPU
+bootstrap is a standalone shell helper. `preview-augmentations` and
+`preview-pipeline` call the same training-only augmentation functions used in
+training. Historical implementations and recovery references are indexed in
+[history](history.md).
 
 The package uses uv and `uv_build`, with no plugin framework, generic model zoo
 or manual per-fold config copies. New-region adaptation remains a later task.
@@ -55,70 +54,41 @@ complexity; prefer smaller functions and files with one clear purpose.
 
 ## Researcher interface
 
-The CLI uses Typer with `uv run kelpseg <command>` recipes. Keep a small root
-app and separate thin command handlers, backed by ordinary workflow
-functions callable from notebooks/tests without CLI context. Import heavy
-workflow code only when its command runs. Preparation modules live together in
-`src/kelpseg/prepare/`: `organize_inputs.py` loads/validates explicit declarations,
-`organize.py` copies/verifies bytes, `check.py` validates directory scopes,
-`clean_inputs.py` defines cleanup settings/plans, and `clean.py` writes/verifies
-separate derived outputs. `nodata.py` and `alignment.py` hold shared scientific
-functions. The one-time historical catalog bootstrap is retired; existing
-explicit catalog tables are normal organizer inputs. Keep these as explicit
-functions and ordinary loops;
-the CLI uses standard Python logging for progress, without a custom logging
-or orchestration layer. The installed
-training command is `uv run kelpseg train --recipe <recipe-file>`;
-`--resume <run/checkpoints/last.ckpt>` restores the same run from a completed
-epoch, with the same total budget and input identities. Multiworker continuation
-restarts worker augmentation streams and may change sample order. Exact replay
-requires zero workers and deterministic execution; preparation remains one pass. See
-[quickstart.md](quickstart.md) for working setup and preparation recipes.
+Use `uv run --frozen kelpseg <command>` with explicit recipe/path/output
+arguments. Thin Typer handlers call ordinary typed Python functions; notebooks
+and tests can call those functions directly. The [preparation guide](guides/preparation.md)
+provides schemas, command examples and the module map.
 
-The preparation surface is `organize`, `check`, shared `clean`, `chip`, `split`
-and `pixel-stats`;
-there is no BC-specific command or intermediate. Task 029B implements
-direct-directory
-checking/cleanup for imagery with optional paired labels, without requiring an
-organizer catalog. Quick checks inspect structure/headers; full checks scan all
-selected pixels and state any unavailable checks. Both are read-only. Cleanup
-uses the same functions for CA, BC and other explicitly supported inputs.
+`organize`, `check`, `clean`, `chip`, `split` and `pixel-stats` share the
+`src/kelpseg/prepare/` package. Directory checking/cleanup supports imagery with
+optional labels; an organizer catalog is not required. Quick checks inspect
+structure/headers; full checks scan selected pixels and state unavailable checks.
+Both are read-only. There is no BC-specific intermediate or command.
 
-Pixel statistics uses the declared native band order and true-size chip images,
-selects training rows from existing assignments, and optionally keeps only whole
-chips with positive manifest kelp counts. Native all-band-zero nodata is excluded
-before an explicit optional upper cap. Streaming float64 central moments produce
-means and sample standard deviations; overlap counts as repeated chip exposure.
-Labels, model preprocessing and artificial loading padding are not used.
+Machine paths are explicit, without automatic discovery. Organizer/path-file
+roots resolve relative to the path file. Direct-directory check/clean CLI paths
+resolve from the working directory; recipe references resolve relative to their
+recipe. Keep machine paths in one place and workflow settings in short recipes.
+Unknown settings fail with actionable errors. Preparation progress uses standard
+Python logging for phases, files and counts/bytes.
 
-Runtime dependencies cover implemented workflows: Typer, NumPy, Rasterio,
-Albumentations, OpenCV, Matplotlib, Torch, Lightning, TorchMetrics,
-segmentation-models-pytorch, SciPy, Pyogrio, PyProj, Shapely and W&B.
-Pixel-statistics computation imports NumPy and
-metadata helpers only; TIFF libraries are imported when TIFF workflows run.
-The default checkout adds only the `dev` group. There is no legacy dependency
-group; W&B remains a runtime dependency for the maintained tracking integration.
-Distribution checks install frozen runtime dependencies outside the checkout.
-Reusable functions return typed values and raise ordinary exceptions; CLI
-handlers own output and exit status. Organizer/path-file workflows use an
-explicit `--paths` file, with no discovery; relative roots resolve against that
-file. Direct-directory check/clean paths resolve from the working
-directory, with recipe references relative to the recipe file.
+`train --recipe <recipe-file>` creates run records, metrics, checkpoints and a
+portable bundle. `--resume <run/checkpoints/last.ckpt>` restores a completed
+epoch in the same run with matching schedule and input identities. Exact replay
+requires zero workers and deterministic execution; multiworker continuation
+restarts worker augmentation streams and can change sample order. Preparation
+remains one pass. See [training and resume](guides/training.md).
 
-Use short recipes with ordinary values for bands, learning rate, augmentations,
-dataset, and checkpoint. Keep machine-specific paths in one place; changing
-datasets or machines must not require source edits. Avoid Python class paths
-and config inheritance chains in the researcher interface. Keep most settings
-in recipes, with a few deliberate CLI options for recipe/path/output inputs.
+Pixel statistics uses true-size chip images in declared native band order,
+selecting training rows from existing assignments with optional kelp-positive
+chip eligibility. Exclude native all-band-zero nodata before the optional cap.
+Streaming float64 central moments yield means and sample standard deviations;
+overlap counts as repeated chip exposure. Labels, model preprocessing and
+artificial loading padding do not enter the calculation.
 
-Use one documented run-folder convention for resolved settings, checkpoints,
-metrics, and figures. Before expensive work, show resolved input/output paths,
-band order, and relevant dataset counts. Reject unknown settings and explain
-how to fix invalid inputs; keep technical context in logs.
-
-At task completion, check that routine changes use documented settings, the
-implementation is traceable through straightforward functions, and obsolete
-options/imports/dependencies are removed as replacements land.
+The frozen environment contains the maintained workflow dependencies and the
+checkout adds the `dev` group. Heavy libraries load when the corresponding
+workflow runs. No legacy dependency group is needed.
 
 ## Identity and preparation
 
@@ -127,25 +97,16 @@ source window, shape, CRS/transform, band names/order, dtype, label mapping, and
 nodata interpretation. Paths in portable manifests resolve from an explicit
 dataset root. Do not derive identity from mutable directories or list order.
 
-Raw imagery and labels are immutable. Inventory originals and explain existing
-repairs before implementing a new cleaning release. Historical CA/BC cleanup
-included grid alignment, source-aware image nodata, and label repairs; those
-rules require provenance, fixtures, and real examples rather than blind reuse.
+Raw imagery and labels are immutable. Preserve explicit source declarations and cleanup
+transformations when preparing a new release.
 
-Keep organization/renaming separate from cleanup. The implemented organizer for variant 2
-contains the current 369 pair identities (339 CA-family sources and 30 BC tiles),
-unchanged source image/label bytes, and no experimental split. Publish a stable
-region-code table and source/member/filename aliases with separate image/label
-hashes in the existing release; retain original paths even when long product
-names are unavailable. New work follows the simpler artifact policy without
-adding hashing or receipt machinery.
-Original grids need not match until the cleaning stage. The repaired historical
-merge supplies membership/provenance evidence, not original label payloads.
-See [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases)
-for stage boundaries and mapping requirements. Organization and cleanup are
-implemented, and the full CA/BC releases are complete. Source assignments are
-implemented. Task 032B produced and published one native-band chip release
-with portable baseline/LORO controls and the collection declaration.
+Keep organization/renaming separate from cleanup. Organization preserves source
+image/label bytes, region mappings and aliases in an unsplit intermediate.
+Original grids need not match until cleanup. The published CA/BC releases and
+portable chip/split controls are described in the
+[release reference](reference/ca_bc_release.md). New preparation uses plain
+manifests and the [artifact policy](data_artifacts.md), without new hashing or
+receipt machinery.
 
 Cleanup writes into a fresh sibling `.<output-name>.incomplete` directory and
 renames it to the requested output only after all checks pass. Failed runs leave
@@ -158,15 +119,12 @@ Cleaned imagery stores nodata as all-band zero and declares
 ignore value 3. Detect original nodata before normalizing values. For paired
 data, align labels and exclude outside-label coverage by writing image zero
 plus label 3. Image-only cleanup never blanks valid imagery because labels are
-absent. This deliberately changes derived image bytes and supersedes historical
-BC outside-coverage background filling; raw/organized payloads stay unchanged.
+absent. Raw/organized payloads stay unchanged.
 Detect retained all-zero value collisions instead of silently changing validity.
 Detailed coverage/reason rasters are optional and off by default; compact
 counts, transformation records, source/output references and asset dispositions
 remain required. Rewritten image and label sidecars must not reactivate stale
-metadata/masks/overviews. Existing scientific logic and correctness tests are
-reused, with explicit regression changes for the new policy. Task 029B records
-the migration map and bounded verification evidence.
+metadata/masks/overviews.
 
 Paired labels on the exact image grid are read directly without resampling.
 When grids differ, alignment reads the native label crop without masking,
@@ -195,12 +153,9 @@ Keep canonical background chips. Express nodata and training eligibility in
 metadata, retaining excluded identities/reasons. The installed chipper uses
 a configurable 512-pixel chip size, stride 256 and maximum of 50% image nodata;
 omit payloads only above that limit and keep their manifest records. Count
-actual source-window pixels, excluding artificial padding. The supporting
-[Task 031 study](../tasks/031_chipping_bands_and_tiny_walkthrough.md#512-pixel-analysis-outcome-2026-10-27)
-uses the approved 512/256 fixed grid with retained partial edge chips.
-Historical 1024/512 geometry does not become a new default. Task 033 explicitly
-selects kelp-positive training eligibility as a separate recipe setting; this
-does not remove canonical backgrounds or filter evaluation. Use ignore index
+actual source-window pixels, excluding artificial padding. Training selects
+kelp-positive chips separately; this does not remove canonical backgrounds or
+filter evaluation. Use ignore index
 `-100` for unscored labels and padding.
 
 `chip_inputs.py` validates a flat recipe, optional exact-key identity CSV and
@@ -219,7 +174,7 @@ are checked once during planning. Nodata and
 valid-imagery ignored targets have separate window counts. Those counts overlap;
 unique source coverage must be reconstructed from retained windows when needed.
 There is no parent authentication, hashing, receipt or recovery step in chipping.
-The [quickstart](quickstart.md#chip-cleaned-imagery) owns the recipe and CSV schema.
+The [preparation guide](guides/preparation.md#chip-cleaned-imagery) owns the recipe and CSV schema.
 
 ## Splits and loading
 
@@ -258,9 +213,7 @@ training inputs. These are manifest exclusions; canonical imagery stays intact.
 Keep 001–010 assignments identical across that comparison. The approved
 baseline uses reverse chronology for 001–008 and forward for 009/010; Task
 032A owns exact locked cutoffs and the approved external source assignments.
-Historical hard-link views
-implemented this policy; new workflows use portable manifests without requiring
-link trees. Training background exclusions never
+Workflows use portable manifests without requiring link trees. Training background exclusions never
 silently constrain evaluation. Validate all joins and leakage boundaries.
 
 Audit actual region/year/month and label support before choosing chronological
@@ -279,7 +232,7 @@ evaluation imagery; explicit known Planet metadata must agree with its original 
 
 The installed `split` command publishes only `collection.csv`,
 `chip_metadata.csv`, `assignments.csv`, `recipe.json` and `summary.json` through
-a fresh incomplete sibling. The chip metadata export reuses Task 031's exact
+a fresh incomplete sibling. The chip metadata export uses the declared
 identity columns and excludes satellite ID. `select_windows(chip_root,
 assignments, experiment="baseline", variant="base")` joins list-shaped chip
 source controls to original assignments and returns window rows with roles/
@@ -290,8 +243,7 @@ The installed selector returns all canonical retained assigned training windows,
 including overlap. The training loader further requires
 `kelp_pixels > 0` for train rows, using existing manifest counts. It reports
 eligible and excluded training counts without changing the canonical release,
-assignments or validation/test selection. Task 032B needs no rebuild or upload
-change for this training policy. For chip-based
+assignments or validation/test selection.  For chip-based
 validation/test, the selector visits existing windows in crop-key then numeric
 row/column order and reserves a disjoint subset in original TIFF coordinates.
 Crops of the same original share this exclusion, so their pixels cannot repeat.
@@ -305,7 +257,7 @@ edge/gap area and nodata-omitted window area. These areas exclude artificial
 padding and are not valid-label or model scores. Existing strides can leave
 interior gaps as well as edge strips. Keep source assignments separate from
 this window selection; both BC and all spectral variants share evaluation scope.
-See [the researcher recipes](quickstart.md#assign-sources-and-select-chip-windows).
+See [the researcher recipes](guides/preparation.md#assign-sources-and-select-chip-windows).
 
 ## Prediction and scoring
 
@@ -318,9 +270,10 @@ reporting; `report` reads the saved predictions without loading weights.
 
 Post-training tiled prediction and source-level scoring use the separate rules
 below. The image-only `predict` command provides the same saved probabilities
-for unlabeled mapping and labeled `report` evaluation. Labels are optional for scoring and must not be required to infer
-padding offsets or spatial alignment. Record padding placement explicitly and
-invert it before placing predictions on the source grid.
+for unlabeled mapping and labeled `report` evaluation. Labeled reporting is a
+separate optional step and requires labels; prediction does not use labels to
+infer padding offsets or spatial alignment. Record padding placement explicitly
+and invert it before placing predictions on the source grid.
 
 For overlap, average foreground probabilities at each covered source pixel,
 threshold once, and compute TIFF confusion counts. Sum those counts for region
@@ -340,8 +293,7 @@ threshold. Background-chip results remain chip-specific. Reporting requires
 saved predictions and referenced data, not a training run or loaded model.
 
 
-The archived legacy reference preserves the old chip grid, including omitted
-trailing strips and true-size undersized chips. Current tiled mapping
+Tiled mapping
 covers the full source geometrically before filtering windows. It skips windows
 with less than 20% native valid imagery by default (configurable; padding is
 excluded), retaining exactly 20% and always skipping entirely nodata windows.
@@ -352,7 +304,7 @@ windows. This policy does not change the existing training chip selection.
 Training chips use a fixed regular grid without shifting trailing windows
 inward. Store partial edge chips at their true source size; pad bottom/right
 during loading with image fill 0 and label ignore -100, recording true extents
-and padding offsets. Task 035 inference shifts its final bottom/right windows inward
+and padding offsets. Tiled inference shifts its final bottom/right windows inward
 to cover source edges with full-size inputs where possible. Training and inference grids
 need not match. Record actual inference offsets, avoid duplicate windows, and
 retain explicit padding/inversion for sources smaller than the input window.
@@ -365,7 +317,7 @@ Percentage changes use each series' own earlier kelp count; the primary error is
 predicted minus labeled percentage change in percentage points. Zero baselines
 remain undefined and small baselines are flagged without exclusion. Source
 calendar summaries are observation totals, not unique date-area mosaics. See
-[the temporal recipe](quickstart.md#temporal-canopy-change) for interval and
+[the temporal recipe](guides/diagnostics.md#temporal-canopy-change) for interval and
 pair-selection settings.
 
 ## Shore-distance diagnostics
@@ -412,7 +364,7 @@ preferred imagery display); this is visualization only, never model preprocessin
 Shoreline panels share a yellow boundary, with a metre colorbar for distance.
 Region/split distributions describe observed labeled support, not unique habitat
 area or optimizer exposure. Commands and interpretation are in
-[the shore-distance recipe](quickstart.md#shore-distance-coverage-and-validation-diagnostics).
+[the shore-distance recipe](guides/diagnostics.md#shore-distance-coverage-and-validation-diagnostics).
 
 ## Local verification
 
@@ -423,9 +375,7 @@ existing tests for source-aware nodata, split leakage, manifest joins, overlap,
 centered padding, and corruption handling as implementations are replaced.
 CUDA behavior and production resource sizing remain remote-host checks.
 
-Establish automated focused CPU checks with the package task. These use small
-self-contained fixtures without Box/W&B access, a GPU, or large downloads.
-Start the reusable real-data walkthrough only after Box setup and the cleaned
-variant 3 are established (Task 031, after Tasks 027 and 030B). Extend it through
-each later stage; the final handoff rehearses the complete workflow. Fetch its
-small external subset once, then allow routine checks without online services.
+Focused CPU fixtures run without Box/W&B access, a GPU or large downloads.
+The [tiny walkthrough](quickstart.md) fetches a small real-data example once
+and then exercises installed preparation, training, copied-model prediction
+and reporting. CUDA behavior and production sizing require the GPU host.

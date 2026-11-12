@@ -1,4 +1,8 @@
-# Original collections and cleanup provenance
+# Historical collections and cleanup provenance
+
+This is a historical audit record, not the current operating contract. Use the
+[preparation guide](guides/preparation.md) for current cleanup and the
+[release reference](reference/ca_bc_release.md) for restoration.
 
 Task 026 completed a read-only local audit on 2026-10-26. The earlier task
 records already contain the main cleanup decisions. Six selected source traces
@@ -105,49 +109,26 @@ Keep image nodata and label class 3 distinct when reading the old QA tables.
 
 ## Current rebuild cleanup policy
 
-The installed preparation surface is shared `organize`, two-tier `check`, and
-`clean`; there is no separate BC command/intermediate. The historical results above
-remain evidence for the old derived data. The new
-[Task 029B contract](../tasks/029b_clean_organized_sources.md) supersedes the
-historical BC background-fill rule: outside annotation coverage in paired data
-becomes all-band image zero plus label 3. Cleaned image metadata declares
-nodata 0; cleaned label metadata declares nodata 3, preserving valid label 0.
-Original nodata must be identified before normalization. Raw/organized sources
-remain unchanged; new image hashes and transformation counts are expected.
+The current [preparation guide](guides/preparation.md#clean-into-a-separate-directory)
+owns cleanup instructions. It supersedes the historical BC background-fill rule:
+paired pixels outside annotation are image nodata zero and stored label ignore 3,
+mapped to -100 for loss/scoring exclusion. Image-only preparation remains
+independent of labels. Raw and organized sources remain unchanged.
 
-Coverage/reason arrays can be used internally; persistent QA masks are optional
-and off by default. Keep counts, original/output grids, policies, hashes and
-companion dispositions so ignored pixels need no manual mask inspection.
-Image-only processing does not require labels or remove valid imagery for lack
-of annotations. Existing logic/tests are reused with explicit assertions for
-these new decisions, rather than claiming historical pixel equality everywhere.
-
-The current alignment reads raw native label crops and uses Rasterio nearest
-reprojection directly. It preserves class-zero water and computes footprint
-coverage without using source masks or nodata metadata. Its supported paired
-scope is same-CRS, north-up unrotated imagery and single-band `uint8` labels;
-other grids/dtypes fail explicitly. This replaces the earlier virtual-raster
-wrapper without changing the declared categories or exclusion policy.
-
-All preparation runs from beginning to end in one attempt. A failure leaves a clearly
-marked incomplete directory and never publishes the final release. A new run
-starts over; there is no automatic recovery or reuse of unfinished output.
-
-## Remaining limits and later preparation
+## Historical audit limits and subsequent disposition
 
 - The three source ZIPs and historically inventoried CA/BC folders account for the observed
   scope, but no independent delivery manifest establishes that they exhaust
-  all original deliveries. Preserve their candidate status.
+  all original deliveries. This records the audit scope, not an open task.
 - All 325 companion-mask grids match their CA image grids; mask meanings were
-  not decoded. Preserve them and establish their semantics before using them.
+  not decoded; the current pipeline does not use them as active masks.
 - Six CA and 31 BC image headers name the eight physical bands as
   `coastal_blue, blue, green_i, green, yellow, red, rededge, nir`. The other
-  333 CA and five BC headers are untagged or generic. Do not extend those names
-  to every source merely from channel count or a conventional RGB display.
+  333 CA and five BC headers were untagged or generic. This is the recorded
+  header inventory; current recipes use the declared band order.
 - Historical background filling does not independently establish negative
-  annotation truth beyond the BC mosaic's coverage. The cleaned release retains
-  coverage provenance; scoring must explicitly state its labeled/scored scope. Existing
-  processing history and new scientific interpretation are separate questions.
+  annotation truth beyond the BC mosaic's coverage. Current paired cleanup
+  excludes that footprint through image nodata and ignored labels.
 - Archive listings and recorded CRCs/sizes are not fresh integrity checks or
   proof of a verified backup. Task 027 owns transfer and backup verification.
 
@@ -170,4 +151,54 @@ assignments remain separate. Source delivery train/val names are provenance,
 not adopted experimental memberships. The repaired historical merge cannot
 supply original label bytes; its archived manifest identifies source members
 preserved in the raw Box delivery. The current release/mapping contract is
-owned by [data_artifacts.md](data_artifacts.md#planned-raw-intermediate-and-cleaned-releases).
+owned by [data_artifacts.md](data_artifacts.md#raw-organized-and-cleaned-releases).
+
+
+## Historical local evidence
+
+A bounded inventory on 2026-10-26 found the artifacts below. Their paths/counts
+describe that historical inventory, not current local availability. Task 032C
+evicted the bulk payloads and retained small controls/snapshots in the history
+archive above. Payload hashes were not rerun by that inventory. The original
+collection's full historical delivery membership remains unconfirmed.
+
+| Family | Existing location | Inventory |
+|---|---|---|
+| California sources | `/Volumes/x10pro/kelpseg/ca` | 339 paired image/label TIFFs |
+| BC source family | `/Volumes/x10pro/kelpseg/bc/Planet8bSR_BC_Labelled` | 30 tile pairs and six full-scene pairs |
+| Previously cleaned merge | `/Volumes/x10pro/kelpseg/merged_all_regions_v1` | 369 pairs across 12 region IDs |
+| Previously filtered chips | `/Volumes/x10pro/kelpseg/chips_all_regions_1024_512_v1` | 4,602 NPZs, 367 sources, 12 regions |
+| Repaired transfer archive | `/Volumes/x10pro/kelpseg/archives/planet8b_all_regions_1024_512_v2.zip` | 44,859,496,084 bytes; checksum sidecar present |
+
+The downloaded reference checkpoint is
+`/Users/kyledorman/Downloads/kelp_ps8b_segformer_b3_epoch-62_val-iou-0.7047.ckpt`.
+Task 025 preserved a verified copy and six preselected development-chip results
+under `/Volumes/x10pro/kelpseg/references/legacy_ps8b_v1` before source removal.
+Its completion manifest, original pairs, probabilities, masks, visually checked
+previews, hashes, and standalone verifier are also backed up on Box.
+See [Task 025](../tasks/025_capture_legacy_reference.md#outcome-2026-10-26) for
+capture semantics and validation. Treat this versioned reference as immutable.
+
+Task 026's read-only audit reconciled CA's 339 IDs to 325 `ca_data.zip` families
+plus 14 `extra_data.zip` mappings, and identified the older 289-pair `merged_ds`
+and reconstructed `hakai_match` as derived collections. Its verified report is
+at `/Volumes/x10pro/kelpseg/audits/task026_originals_v1`. See
+[cleanup_provenance.md](cleanup_provenance.md) for observed lineage, prior
+cleanup decisions, and historical audit observations. Archive indexes
+were listed without verifying payloads; original-delivery completeness remains
+unconfirmed. Raw ZIPs and the organized Box release preserve source/companion
+payloads; local historical controls and snapshots preserve the cleanup evidence.
+
+
+## Historical experiment artifacts
+
+Tasks 000–023 and starting commit
+`ac933fd667c2ddb445b8a622d8404387a2d056e2` retain the old study's provenance.
+Remote paths in those records are historical and do not establish a live host
+or surviving outputs. Inventory any local exports separately.
+
+Task 023's corrected schema-3 `predictions_all_retained_v2` and
+`comparisons/matched_tiffs_all_retained_v2` are the historical primary results.
+Earlier all-retained-v1 and non-overlap prediction/report packages have the
+undersized center-padding crop bug and are invalid for scientific use on the
+affected imagery. Preserve that distinction if recovering old artifacts.

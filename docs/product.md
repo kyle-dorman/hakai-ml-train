@@ -9,22 +9,18 @@ and adaptation to new regions. Remove unrelated applications and frameworks.
 
 ## Model comparisons
 
-The initial reference is the downloaded eight-band SegFormer B3 kelp model.
-Task 025 preserved six original chip/label/prediction examples and previews
-as a visual reference before legacy source removal. Exact historical training
-reproduction and backward-compatible code/config APIs are not requirements.
+The selected reference is the eight-band SegFormer B0 with ordinary BCE plus
+Dice, trained with BC; its epoch-16 EMA bundle is the current model. See
+[experiments](experiments.md#current-planet-8-band-b0-baseline) for the recipe
+and recoverable bundle. The toolkit supports four spectral recipes from the
+same native acquisitions: `planet8` (native eight), `planet4` (red/green/blue/nir),
+`planet3` (nir/red/green), and `planet_RGB` (red/green/blue). Preserve these explicit
+orders and match source membership when comparing them.
 
-The initial spectral comparison uses four recipes from the same native
-eight-band acquisitions: `planet8` (native eight), `planet4` (red/green/blue/nir),
-`planet3` (nir/red/green false color), and `planet_RGB` (red/green/blue).
-Confirm physical band identity from source metadata and preserve these explicit
-orders. Keep source membership and evaluation policy comparable.
-Do not treat old multiclass RGB/RGBI configs as valid Planet binary recipes.
-
-Keep the working SegFormer recipe as the first model family. Small controlled
-changes to augmentations and learning rate are in scope. A possible RGB
-DINOv3 initialization experiment follows a working baseline; broad model or
-architecture sweeps are outside the core rebuild.
+Completed spectral/BC/LORO comparisons are indexed in [history](history.md).
+RGB DINOv3 was skipped for this study; it remains an optional later controlled
+experiment. Broad architecture sweeps, unrelated model families, backward
+compatibility and exact historical training reproduction are outside scope.
 
 ## California target and temporal consistency
 
@@ -49,7 +45,7 @@ date across regions and crops. Each group can contribute to only one of train,
 validation and test; the same spacecraft on different days may cross partitions.
 Keep regional date groups intact too. The approved baseline uses reverse
 chronology for 001–008 and forward for 009/010; exact assignments are locked
-in Task 032A before model evaluation.
+before model evaluation.
 The baseline is then a region-specific temporal holdout, not a uniform future-
 year benchmark. LORO still supplies the primary geographic generalization test.
 
@@ -62,7 +58,7 @@ those dates to improve F1. Detailed evaluation requirements live in
 
 ## New regions
 
-All datasets, including the current CA/BC scope, follow the same raw → organized
+Prepare datasets, including new regions, through the same raw → organized
 → cleaned stages under their own dataset/release identities. Preserve every
 published release; select any dataset or combination with an explicit collection
 manifest. "Baseline" and "new region" describe roles in a particular experiment,
@@ -70,7 +66,7 @@ not privileged dataset storage or ingestion paths. The ingestion and
 provenance flow is owned by
 [data_artifacts.md](data_artifacts.md#adding-regions-and-combined-datasets).
 
-Support four separately identified cases:
+Task 039 will provide complete recipes for four separately identified cases:
 
 1. Evaluate an existing kelp checkpoint on new-region imagery without adaptation.
 2. Fine-tune a kelp checkpoint on new-region training data and evaluate it.

@@ -1,85 +1,26 @@
 # Documentation index
 
-Start with `AGENTS.md`, then [todo.md](todo.md) and the selected task under
-[tasks](../tasks/README.md).
+Start with the [tiny walkthrough](quickstart.md) for one complete CPU example.
+The [selected model](experiments.md#current-planet-8-band-b0-baseline) is the
+8-band B0 BCE + Dice epoch-16 EMA model trained with BC.
 
-The current work rebuilds this fork for Planet 8/4/3-band binary kelp
-segmentation. The installed package provides CLI/path checks, byte-preserving
-organization, quick/full directory checks, shared cleanup, and native-band
-chipping with optional labels, source-level baseline/LORO assignments and
-manifest-based window selection with overlapping training and disjoint chip
-validation/test. Streaming NumPy pixel statistics use selected training images
-with an explicit optional cap. A NumPy loader selects bands and pads partial
-edges. Installed `preview-augmentations` and `preview-pipeline` commands use exact stock Albumentations
-classes and capped normalization on training examples only. Full CA/BC chips, split controls and tiny v2 are published on Box; see
-the [restore recipe](quickstart.md#restore-and-use-the-full-cabc-chip-release). Preparation writes run once into a fresh output and stop on failure.
-Installed Python helpers provide manifest-selected training/validation tensors,
-SegFormer B3 and loss/confusion functions. The obsolete Planet implementation is retired;
-[Task 037D](../tasks/037_baseline_comparisons_and_loro.md#037d--retire-legacy-code)
-records the replacement map and historical recovery references. The installed `train` command provides Lightning
-training, validation, EMA, portable models and completed-epoch resume. Python
-bundle loading predicts supplied image arrays; the
-[installed tiny walkthrough](quickstart.md#tiny-v2-installed-training-walkthrough)
-covers all four spectral recipes and both variants. The separate
-[validation report](quickstart.md#post-training-validation-diagnostics) adds
-post-training boundary/patch/probability diagnostics and false-color examples.
-[Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) is complete:
-GPU setup, baseline comparisons and B0/B1 handoff are recorded; tiled/georeferenced
-prediction is implemented by `predict` in [Task 035](../tasks/035_image_only_tiled_inference.md).
-[Task 036](../tasks/036_shared_scoring_and_reports.md) implements `predict-chips`
-and one shared `report` command for saved chip/TIFF predictions;
-[Task 036B](../tasks/036b_temporal_error_analysis.md) adds `temporal-report`
-for labeled percentage-change comparisons and dated summaries.
-[Task 040](../tasks/040_shore_distance_diagnostics.md) implements
-`prepare-shoreline`, `shore-inventory`, and optional distance-binned diagnostics
-in `report`, including label cluster-size relationships, expected training-window
-exposure, joint region/distance/full-source-size recall with acquisition support,
-and log-scaled shoreline examples. All 369 sources and saved chip/TIFF validation reports are analyzed;
-see the [shore-distance recipe](quickstart.md#shore-distance-coverage-and-validation-diagnostics). Tasks 000–023 describe the
-preceding completed PS8B study.
+| Goal | Read |
+|---|---|
+| Install and complete a tiny workflow | [Quickstart](quickstart.md) |
+| Organize, check, clean, chip and select sources | [Preparation guide](guides/preparation.md) |
+| Set training options, use bundles or resume | [Training guide](guides/training.md) |
+| Map imagery and score saved predictions | [Prediction and reporting](guides/prediction_reporting.md) |
+| Preview augmentation or inspect shoreline/temporal diagnostics | [Diagnostics](guides/diagnostics.md) |
+| Set up a GPU host | [GPU setup](gpu_setup.md) |
+| Restore current CA/BC releases | [Release reference](reference/ca_bc_release.md) |
+| Back up or restore artifacts | [Box operations](box_backup.md) |
+| Choose storage roots and artifact identities | [Storage policy](data_artifacts.md) |
+| Understand scientific scope and claims | [Product contract](product.md) |
+| Understand implemented pipeline boundaries | [Architecture](architecture.md) |
+| Identify models, runs and checkpoint rules | [Experiments](experiments.md) |
+| Find prior studies, audit evidence or retired code | [History](history.md) |
 
-[Task 041](../tasks/041_distance_weighted_bce_experiment.md) implements a controlled
-B0 distance-weighted BCE recall screen. See the
-[preparation and launch recipe](quickstart.md#run-the-b0-distance-weighted-bce-screen).
-
-[Task 037C](../tasks/037_baseline_comparisons_and_loro.md#037c-production-results-and-researcher-summary--2026-11-12)
-is complete: ten 8-band B0 LORO runs with unchanged baseline normalization,
-full-region and matched baseline reports, and an illustrated researcher
-summary. Its one-off implementation is preserved in commit `609aa22` and
-retired from the maintained checkout. The task record links source recovery,
-the saved summary and example images for later communication; nothing has
-been sent.
-
-## Read by task
-
-- [quickstart.md](quickstart.md): researcher setup, available commands, paths,
-  output/errors, and reusable Python functions.
-- [gpu_setup.md](gpu_setup.md): remote-first Linux GPU setup checklist;
-  verified host installation and tiny CUDA checks; Task 034 records launch readiness.
-- [product.md](product.md): research scope, experiments, scientific boundaries.
-- [architecture.md](architecture.md): current-to-target pipeline, identity,
-  splitting, prediction and metric contracts.
-- [box_backup.md](box_backup.md): verified Box paths and recovery recipes.
-- [data_artifacts.md](data_artifacts.md): storage, original-data uncertainty,
-  cleanup provenance, Box, and Git policy.
-- [cleanup_provenance.md](cleanup_provenance.md): observed collection lineage,
-  recorded cleanup decisions, and unresolved data semantics from Task 026.
-- [experiments.md](experiments.md): initialization, resume, W&B, checkpoints,
-  comparisons, and local/remote validation.
-- [documentation.md](documentation.md): read before changing durable docs.
-- [todo.md](todo.md): current task, next action, and ordered roadmap.
-- [backlog.md](backlog.md): optional unselected ideas.
-- [tasks/README.md](../tasks/README.md): task contracts and historical records.
-
-Read only the documents needed for the selected task. Current-facing documents
-own decisions; detailed historical runs and outcomes remain in numbered tasks.
-
-[Task 037D](../tasks/037_baseline_comparisons_and_loro.md#037d-cleanup-outcome--2026-11-12)
-records implemented legacy retirement: the installed workflows replace the old scripts,
-modules, configs and dependency group. Fresh installation, 955 tests and the
-bounded preparation/train/copied-model prediction/report walkthrough pass.
-037D is closed after local commit `4152cc8` and final review (975 tests).
-[037E](../tasks/037e_documentation_cleanup.md) is ready for docs cleanup but not
-started; [038](../tasks/038_methods_documentation.md) will write methods afterward.
-New-region recipes and final handoff are now roadmap slots 039 and 042;
-completed 040/041 are unchanged. Only task setup has been performed.
+For development, read [AGENTS.md](../AGENTS.md), [the queue](todo.md),
+[task rules](../tasks/README.md) and the selected numbered task. For documentation
+changes, also read [documentation ownership](documentation.md).
+[Backlog](backlog.md) contains unselected ideas, not scheduled work.

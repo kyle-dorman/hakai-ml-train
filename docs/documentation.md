@@ -8,8 +8,21 @@ or substantially rewriting durable docs.
 
 - `AGENTS.md`: concise repository operating contract and entry path.
 - `README.md`: human-facing current-project orientation and setup.
-- `docs/quickstart.md`: copyable researcher recipes for implemented workflows,
-  local settings, expected output, and common error fixes.
+- `docs/quickstart.md`: one sequential tiny workflow from installation through
+  preparation, training, copied-model inference and labeled reporting.
+- `docs/guides/preparation.md`: detailed input schemas, paths, preparation,
+  split/window selection and pixel statistics.
+- `docs/guides/training.md`: reusable training settings, loss/model options,
+  initialization, portable models and completed-epoch resume.
+- `docs/guides/prediction_reporting.md`: prediction/report commands, outputs,
+  interpretation and errors.
+- `docs/guides/diagnostics.md`: augmentation, shoreline and temporal diagnostics.
+- `docs/reference/ca_bc_release.md`: release-specific locations, inventories,
+  restoration commands and trusted historical verification references.
+- `docs/box_backup.md`: general current restore and backup operations.
+- `docs/history.md`: compact completed-study and recovery router.
+- Historical recipe references: preserved launch instructions, explicitly
+  historical; numbered tasks still own results and scientific qualifications.
 - `docs/gpu_setup.md`: remote GPU access, bootstrap, authentication and data
   staging; distinguish locally checked instructions from remote validation.
 - `docs/index.md`: read/skip router; it does not duplicate owned content.
@@ -42,11 +55,13 @@ or substantially rewriting durable docs.
 - Use the current Planet 8/4/3-band binary kelp scope. Retire unrelated
   legacy examples as their implementations are removed. Distinguish planned
   replacement commands and policies from behavior already implemented.
-- Start the short researcher quickstart with Task 028; add copyable operating
-  recipes as each workflow becomes available. Keep development task histories
-  separate. Begin the reusable tiny walkthrough after Box and cleaned-data
-  establishment, in Task 031; later stages extend it. At handoff, record where
-  another researcher following the guide needs help and fix those gaps.
+- Keep the quickstart sequential and small. Extend focused guides for advanced
+  options; do not append completed-study narratives to operating instructions.
+  At handoff, record where a researcher needs help and fix those gaps.
+- Until Task 038 supplies a methods document, retain essential split isolation,
+  nodata/ignore, padding, reconstruction and coverage rules in architecture.
+  LORO-specific normalization provenance and claim qualifications belong in its
+  task/write-up. Historical audit questions do not become current blockers.
 
 ## Task outcomes
 

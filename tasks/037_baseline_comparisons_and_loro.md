@@ -353,7 +353,7 @@ rerun them into those existing directories. Logs are
 `/home/sky/data/analyses/task037c-smoke-03.log`. Production subsequently completed; the Bash command above is retained as
 historical launch evidence and must not be rerun into the existing outputs.
 
-The [quickstart](../docs/quickstart.md#completed-loro-study)
+The [quickstart](../docs/reference/historical_recipes.md#completed-loro-study)
 contains the operating recipe. Routine use relies on flat external settings
 and machine paths. Legacy code remains for separately scoped 037D. Changes
 remain uncommitted. Production results and actual stopping points are recorded
