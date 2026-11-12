@@ -1368,8 +1368,8 @@ Each fit receives `<name>-<UTC timestamp>` automatically, printed with the
 resolved output location. Rename a copied recipe in TOML to distinguish a
 comparison; the filename itself does not determine the run name. `experiment`
 selects the assignment scope and is recorded separately from the descriptive
-name. This training stage supports `baseline`; LORO needs its later fold-specific
-normalization work. Dry-run IDs are previews, not reservations;
+name. Training supports `baseline` and `loro_001` through `loro_010`; LORO
+recipes use the same approved baseline normalization values unchanged. Dry-run IDs are previews, not reservations;
 a later fit gets its own ID. Unknown settings and empty validation produce
 errors. Fresh runs refuse existing output folders; explicit resume uses the saved run identity.
 
@@ -2284,11 +2284,9 @@ CUDA sizing and production execution remain separate GPU-host work.
 
 The [GPU setup checklist](gpu_setup.md) covers access, Linux bootstrap,
 authentication and Box data staging. [Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md)
-is in progress: test and refine installation and the GPU workflow on the remote
-host, then launch one baseline after its checks pass.
-
-Scoring, LORO model comparisons and adding a
-region remain later tasks. The reusable walkthrough
+is complete. Source prediction, segmentation and temporal reporting are
+implemented; see their recipes above. LORO launch preparation is described below;
+new-region adaptation remains later work. The reusable walkthrough
 above covers preparation, training/validation, portable image-array probabilities
 and completed-epoch resume. Automated CPU fixtures
 need no Box/W&B login, GPU or model-weight download.
@@ -2412,3 +2410,56 @@ It runs alpha 4 then 8, with validation and fixed training-sample predictions
 and shoreline/cluster reports after each arm. These stronger settings have
 maximum positive weights of 5 and 9. At the fixed 500 m cap their positive
 weights remain about 1.223 and 1.445.
+
+## Run the prepared 8-band LORO suite
+
+The Task 037C suite uses the selected with-BC B0 recipe, `augmented` assignments
+for regions 001–010, and the unchanged baseline normalization with its 5000 cap.
+BC regions 011/012 are training-only, with spacecraft/day exclusions enforced.
+Each fold selects its checkpoint on its own validation imagery; test reports
+never select the recipe, checkpoint or threshold. As explicitly requested,
+normalization stays fixed from the baseline, including its held-out-region
+training imagery; full-region results do not claim region-independent
+preprocessing.
+
+On the current GPU host, run this once from your existing tmux session:
+
+```bash
+bash /home/sky/hakai-ml-train/examples/run_task037c.sh /home/sky/data/analyses/task037c-loro-04
+```
+
+The launcher trains and reports one fold before starting the next and stops
+on failure. It refuses existing run outputs. It does not resume partial work.
+The prepared folder contains `fold-plan.csv` and each fold's `train.toml`,
+`preview.json`, `normalization.json` (unchanged reference values), full/paired
+TIFF manifests and labels.
+Training outputs are under the machine's `runs_root`; their exact paths are
+in each preview. Prediction and reporting outputs stay under the suite folder.
+
+After completion, start with `summary/segmentation.csv` and
+`summary/temporal.csv`: `region = all` contains pooled headlines, with region
+rows retained. `full` describes all held-out-region TIFFs; `paired` compares
+LORO and baseline only on TIFFs unseen in either model's training or checkpoint
+selection. Confusion counts are pooled before computing segmentation scores.
+The paired reports require identical grids and finite pixel coverage and use
+the same date pairs. Temporal percentage-error headlines use pairs defined
+for both models; undefined/unsupported pairs remain in `summary/pairs.csv`.
+`summary/unmatched.csv` records excluded TIFFs, and `summary/training.csv`
+records planned/actual updates and selected epochs. Each fold also has
+`reports/{full,paired-loro,paired-baseline}-{segmentation,temporal}/report.html`.
+
+For a fresh suite, set the machine roots in `paths.local.toml` and prepare a
+new output directory before launching. Preparation verifies assignments, unchanged baseline normalization and
+training budgets:
+
+```bash
+uv run python examples/task037c.py prepare /absolute/fresh-suite
+```
+
+The selected baseline bundle is located under `data_root/model-size-runs/`
+with the exact identity recorded in [the experiment contract](experiments.md#current-planet-8-band-b0-baseline).
+For a bounded CPU rehearsal, use `uv run python examples/task037c.py smoke
+/absolute/fresh-smoke`. This synthetic check trains one B0 update and uses a
+copied model for both reporting arms to verify mechanics; its scores are not
+a scientific comparison. See [Task 037C](../tasks/037_baseline_comparisons_and_loro.md#037c--run-loro-comparisons-slide-step-4)
+for verification evidence and the production handoff.

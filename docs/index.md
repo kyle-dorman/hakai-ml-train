@@ -41,6 +41,12 @@ preceding completed PS8B study.
 B0 distance-weighted BCE recall screen. See the
 [preparation and launch recipe](quickstart.md#run-the-b0-distance-weighted-bce-screen).
 
+[Task 037C](../tasks/037_baseline_comparisons_and_loro.md#037c-production-results-and-researcher-summary--2026-11-12)
+is complete: ten 8-band B0 LORO runs with unchanged baseline normalization,
+full-region and matched baseline reports, and an illustrated researcher
+summary. The task record links the saved summary and example images for later
+communication; nothing has been sent.
+
 ## Read by task
 
 - [quickstart.md](quickstart.md): researcher setup, available commands, paths,

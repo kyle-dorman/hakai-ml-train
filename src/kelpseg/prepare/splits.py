@@ -75,6 +75,34 @@ def validate_assignments(rows: list[dict]) -> None:
     )
 
 
+def validate_loro_assignments(rows: list[dict], experiment: str) -> None:
+    """Require exact held-out region membership and training-only BC roles."""
+    validate_assignments(rows)
+    held_out = experiment.removeprefix("loro_")
+    test = [row for row in rows if row["split"] == "test"]
+    if not test or any(
+        (row["region"] == held_out) != (row["split"] == "test") for row in rows
+    ):
+        raise PreparationError(
+            f"{experiment}: test must contain all and only region {held_out} sources."
+        )
+    if any(
+        row["region"] in ("011", "012") and row["split"] not in ("train", "unused")
+        for row in rows
+    ):
+        raise PreparationError(f"{experiment}: BC sources are training-only.")
+    test_days = {_satellite_day(row) for row in test}
+    if any(
+        row["region"] != held_out
+        and _satellite_day(row) in test_days
+        and row["split"] != "unused"
+        for row in rows
+    ):
+        raise PreparationError(
+            f"{experiment}: held-out spacecraft/day companions must be unused."
+        )
+
+
 def assign_sources(collection: list[dict], recipe: dict) -> list[dict]:
     """Assign originals once; all their crops and spectral variants inherit it."""
     logger.info(
@@ -367,6 +395,8 @@ def select_windows(
         selected[key] = row
     if not selected:
         raise PreparationError(f"No assignments for {experiment}/{variant}.")
+    if experiment.startswith("loro_"):
+        validate_loro_assignments(list(selected.values()), experiment)
     logger.info(
         "Matched %d original assignments for %s/%s", len(selected), experiment, variant
     )

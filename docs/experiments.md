@@ -13,7 +13,7 @@ budget, participating regions, checkpoint selection, Git commit, runtime,
 status, and output paths. Held-out region and adaptation case are explicit
 fields. Do not infer them from a run name. Recipes supply a descriptive `name`
 for the automatic `<name>-<UTC timestamp>` run ID and a separate `experiment`
-for assignment selection (currently `baseline` only).
+for assignment selection (`baseline` or `loro_001` through `loro_010`).
 
 Local machine-readable records are required even when W&B is offline. Keep the
 implementation small; the legacy registry schema is not a compatibility target.
@@ -137,6 +137,12 @@ distinct identity. Preserve the original normalization when loading a legacy
 checkpoint. The selected estimates were recomputed after clipping at 5000;
 earlier unclipped estimates are historical references. LORO cannot treat these
 baseline estimates as training-only when they include its held-out region.
+For Task 037C the user explicitly chose to reuse the selected baseline's
+normalization unchanged across all folds. Keep its exact band-named means,
+standard deviations and 5000 cap. The full-region LORO reports hold out model
+training and checkpoint selection, but do not claim training-only regional
+preprocessing: the fixed statistics include baseline training imagery from the
+held-out regions. Paired comparisons still use TIFFs unseen by both models.
 
 Keep ordinary training weights and EMA state in the recovery checkpoint; use
 EMA for validation and the selected portable model after averaging begins.

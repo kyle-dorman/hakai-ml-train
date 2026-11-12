@@ -72,9 +72,12 @@ class TrainingSettings:
             raise ValueError(
                 "name must start with a letter or digit and use only letters, digits, '.', '_' or '-'."
             )
-        if self.experiment != "baseline":
+        if self.experiment != "baseline" and (
+            not isinstance(self.experiment, str)
+            or not re.fullmatch(r"loro_(00[1-9]|010)", self.experiment)
+        ):
             raise ValueError(
-                "Only experiment = 'baseline' is supported here; LORO requires fold-specific normalization and is not supported by this command yet."
+                "experiment must be baseline or a fold from loro_001 through loro_010."
             )
         if self.variant not in ("base", "augmented"):
             raise ValueError("variant must be 'base' or 'augmented'.")
