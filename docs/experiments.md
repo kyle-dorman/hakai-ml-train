@@ -335,7 +335,7 @@ validation, hardware sizing, completed-epoch resume checks and initial baseline
 launch. It does not depend on tiled prediction or scoring. Later tasks can
 proceed locally while the baseline uses its fixed committed checkout, environment
 and recipe remotely; integrate setup fixes through separate commits rather than
-changing a running job. Task 039 reuses the setup procedure for the final
+changing a running job. Task 042 reuses the setup procedure for the final
 researcher walkthrough and does not repeat the initial relocation/launch gate.
 
 

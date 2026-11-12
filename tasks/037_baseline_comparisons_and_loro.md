@@ -2,7 +2,8 @@
 
 Status: 037A, 037B and 037C complete; 037C is closed. The with-BC epoch-16 EMA remains the
 selected 8-band reference. All ten LORO runs and reports are complete, using
-unchanged baseline normalization. 037D remains open at the user's request; implementation and validation outcomes are below.
+unchanged baseline normalization. 037D is closed by user direction on 2026-11-12; implementation and validation
+outcomes are below. Task 037E is ready for documentation cleanup but not started.
 
 **Researcher summary with example images:**
 [read the illustrated summary](/home/sky/data/analyses/task037c-loro-04/results-writeup/results.html)
@@ -126,7 +127,7 @@ results and legacy cleanup remain later work.
 
 ## 037D — Retire legacy code
 
-Status: Open — implementation reviewed; do not close without user direction.
+Status: Complete and closed — 2026-11-12, by explicit user direction.
 
 ### Abstract and inputs
 
@@ -154,7 +155,8 @@ validation; do not restore the LORO launcher or begin Task 038.
 
 ### User decisions required and non-goals
 
-None. Cleanup, review and a local commit are authorized; keep 037D open. Preserve all external data,
+None. The user authorized cleanup, review, local commit and subsequent closure.
+Preserve all external data,
 runs, bundles, predictions, reports and unrelated edits. Normalization stays
 unchanged. No production training, researcher messages, pushes,
 recovery machinery or Task 038. The LORO implementation remains preserved in
@@ -178,8 +180,8 @@ recovery machinery or Task 038. The LORO implementation remains preserved in
 
 Removed files and consumer/replacement map, retained scientific coverage,
 checkpoint/source recovery references, dependency changes, external validation
-artifacts, check results, limitations and exact next action. Commit the reviewed
-changes locally, leave 037D open, and do not start 038.
+artifacts, check results, limitations and exact next action. The reviewed changes
+are committed locally and 037D is closed. Task 037E is next, not started.
 
 ## Temporal reporting scope
 
@@ -216,9 +218,9 @@ Keep the legacy workflow through 037C. Complete the cleanup separately in 037D.
 Outcome to record for each child: changed files, durable run/report paths,
 checks, decision, remaining limits and exact next action.
 
-Next action: review the uncommitted 037D cleanup. Task 038 remains unstarted;
-select and bound its contract in a separate chat. Researcher communication
-remains deferred until requested.
+Next action: select Task 037E documentation cleanup when requested. Its contract
+is ready; no cleanup has started. Task 038 methods follows 037E. Researcher
+communication remains deferred until requested.
 
 
 ## 037C launch preparation outcome — 2026-11-11
@@ -772,3 +774,38 @@ retained package versions and scientific/augmentation implementations are
 unchanged. No unresolved review findings remain. The reviewed changes are
 ready for the authorized local commit. **037D remains open** for the user's
 next direction; do not push, close the task or start 038.
+
+
+## 037D closure and documentation-task setup — 2026-11-12
+
+The user explicitly closed 037D after its review and local commit
+`4152cc839586d81d89df31c0e1d9f3cc12d55db0`. This supersedes the earlier request
+to keep it open. The reviewed implementation, preview CLI follow-up and
+pytest/Ruff validation replacement are complete; the final full suite passed
+975 tests. No unresolved implementation blocker remains. No push was requested
+or performed; previous external artifact/backup limitations remain as recorded.
+
+Created [Task 037E](037e_documentation_cleanup.md), ready but not started, for
+focused current documentation and historical-content separation. Created
+[Task 038](038_methods_documentation.md), planned after 037E, for the methods
+document. The former 038 new-region slot moves to 039; the former 039 final
+handoff moves to 042, avoiding the already completed 040 and 041 tasks.
+Historical task references retain their original numbers; the current queue
+and live cross-references use the new assignments.
+
+The task contracts capture the user's decisions: LORO normalization provenance
+belongs in its task/write-up; split isolation and nodata/ignore/padding/overlap/
+coverage methods belong in 038; outside-label coverage is already excluded
+through nodata/ignore handling. Band-identity uncertainty and original-delivery
+completeness are not core-doc caveats or new audit tasks. Existing historical
+evidence is preserved.
+
+This handoff changes task files and routing only; no documentation cleanup or
+methods drafting has begun. Exact next action: start 037E only when requested,
+using its contract. 038, 039 and 042 remain pending. Task setup is uncommitted.
+
+
+Setup validation: all 18 repository-hygiene checks pass, 315 current relative
+Markdown targets/anchors resolve, and `git diff --check` passes. Only the task
+contracts, closure/status routing and two live task-number references changed.
+No runtime tests, training or documentation reorganization were needed.

@@ -78,5 +78,8 @@ own decisions; detailed historical runs and outcomes remain in numbered tasks.
 records implemented legacy retirement: the installed workflows replace the old scripts,
 modules, configs and dependency group. Fresh installation, 955 tests and the
 bounded preparation/train/copied-model prediction/report walkthrough pass.
-037D remains open at the user's request after review/local commit. Do not push
-or start Task 038.
+037D is closed after local commit `4152cc8` and final review (975 tests).
+[037E](../tasks/037e_documentation_cleanup.md) is ready for docs cleanup but not
+started; [038](../tasks/038_methods_documentation.md) will write methods afterward.
+New-region recipes and final handoff are now roadmap slots 039 and 042;
+completed 040/041 are unchanged. Only task setup has been performed.

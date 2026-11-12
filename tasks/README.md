@@ -82,12 +82,17 @@ are authorized by Task 024.
 | [036B](036b_temporal_error_analysis.md) | Local analysis implementation/smoke | Complete | Proportional canopy change relative to labels; 1–13 and 29–47 days; reuse saved 036 reports |
 | [037A](037a_without_bc_launch.md) | Production comparison | Complete | With-BC B0 epoch-16 EMA selected for 037B |
 | [037B](037b_spectral_comparison_launch.md) | Production comparison | Complete | 8-band retained for 037C; DINOv3 skipped |
-| [037](037_baseline_comparisons_and_loro.md) | Comparison and cleanup | 037A–C complete; 037D open | Cleanup and follow-ups implemented; review and local commit authorized; keep 037D open, no push or 038 |
+| [037](037_baseline_comparisons_and_loro.md) | Comparison and cleanup | 037A–D closed | 037D and follow-ups committed locally as 4152cc8; 975 tests pass |
+| [037E](037e_documentation_cleanup.md) | Documentation only | Ready, not started | Focus current docs, separate history; methods authoring deferred to 038 |
+| [038](038_methods_documentation.md) | Documentation only | Planned, not started | Write methods after 037E; no new implementation |
 | [040](040_shore_distance_diagnostics.md) | Preparation/reporting | Complete | 369 land/distance and cluster-ID grids; region/split cluster, label and sampler-exposure inventory; concise log-imagery and joint region/distance/size reports; code quality pass and 53-TIFF parity verified; closed |
 | [041](041_distance_weighted_bce_experiment.md) | Training experiment | Complete | Alpha 0 retained as the experiment control; plain BCE plus Dice B0 adopted as baseline |
 
-Tasks 038–039 remain roadmap slots in [docs/todo.md](../docs/todo.md). Task 034
-owns initial GPU setup/launch; the final researcher handoff reuses it.
+Pending execution order is **037E → 038 → 039 → 042**. Task 039 (new-region
+recipes, formerly 038) and Task 042 (final handoff, formerly 039) remain roadmap
+slots in [docs/todo.md](../docs/todo.md), to be contracted when selected.
+Completed Tasks 040/041 retain their numbers. Historical task records retain
+old numbering as evidence. Task 034 owns initial GPU setup; 042 reuses it.
 
 ## Historical queue: Tasks 000–023
 
