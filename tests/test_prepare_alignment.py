@@ -1,11 +1,10 @@
-"""Scientific regression fixtures shared with the historical align/repair logic."""
+"""Scientific alignment regressions retained from the historical repair workflow."""
 
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 import rasterio
-from merge_planet8b_regions import derive_aligned_label
 from rasterio.enums import Resampling
 from rasterio.transform import from_origin
 from rasterio.warp import transform_bounds
@@ -35,7 +34,7 @@ def write_raster(path, data, transform, *, nodata=None, crs="EPSG:32610"):
         target.write(data)
 
 
-def test_package_alignment_matches_legacy_exact_expected_grid(tmp_path):
+def test_package_alignment_matches_exact_expected_grid(tmp_path):
     image_path, label_path = tmp_path / "image.tif", tmp_path / "label.tif"
     image = np.ones((8, 4, 4), dtype=np.uint16)
     image[:, 1, 1] = 0
@@ -46,8 +45,6 @@ def test_package_alignment_matches_legacy_exact_expected_grid(tmp_path):
         from_origin(1, 3, 1, 1),
         nodata=0,
     )
-    legacy_path = tmp_path / "legacy.tif"
-    old = derive_aligned_label(image_path, label_path, legacy_path, "fixture")
     with rasterio.open(image_path) as source, rasterio.open(label_path) as labels:
         result = np.empty((4, 4), dtype=np.uint8)
         coverage = np.empty((4, 4), dtype=bool)
@@ -59,10 +56,8 @@ def test_package_alignment_matches_legacy_exact_expected_grid(tmp_path):
                 coverage[row : row + 2, col : col + 2] = valid
         original_nodata = nodata_mask(image, (0,) * 8, band_axis=0)
         result = repair_label_block(result, original_nodata, coverage)
-    with rasterio.open(legacy_path) as historical:
-        np.testing.assert_array_equal(result, historical.read(1))
     assert result.tolist() == [[3, 3, 3, 3], [3, 3, 1, 3], [3, 1, 0, 3], [3, 3, 3, 3]]
-    assert int((~coverage).sum()) == old.outside_source_label_pixels == 12
+    assert int((~coverage).sum()) == 12
     assert audit_label_block(original_nodata, result) == {
         "total": 16,
         "image_nodata": 1,
@@ -117,12 +112,9 @@ def test_six_trace_behaviors_in_bounded_fixtures(tmp_path, trace):
     if trace in {"ordinary_ca", "within_bc"}:
         assert coverage.all() and repaired[0, 1] == 0
     if trace == "outside_bc":
-        historical = tmp_path / "historical.tif"
-        derive_aligned_label(
-            image_path, label_path, historical, "bc", assign_outside_nodata=False
-        )
-        with rasterio.open(historical) as old:
-            assert np.all(old.read(1)[~coverage & ~missing] == 0)
+        # The current shared policy excludes outside-label pixels even in BC;
+        # the historical BC workflow instead filled these eleven cells as water.
+        assert np.all(repaired[~coverage & ~missing] == 3)
         assert int(np.count_nonzero(~coverage & ~missing)) == 11
 
 

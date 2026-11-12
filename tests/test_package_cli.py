@@ -20,7 +20,8 @@ def test_help_keeps_explicit_subcommand_and_no_future_commands() -> None:
     assert "organize" in result.stdout
     assert "split" in result.stdout
     assert "pixel-stats" in result.stdout
-    assert "preview-augmentations" not in result.stdout
+    assert "preview-augmentations" in result.stdout
+    assert "preview-pipeline" in result.stdout
     assert {"train", "predict"} <= {command.name for command in app.registered_commands}
     # CI may color individual pieces of an option; compare the displayed text.
     assert "--version" in unstyle(result.stdout)

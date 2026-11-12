@@ -13,7 +13,7 @@ Task 029B added quick/full directory checking and shared cleanup, verified with
 ordinary-directory fixtures, installed distributions and the two-pair real smoke.
 Preparation code is grouped in `kelpseg.prepare` with clearly commented small
 functions and default phase/file/count progress logs.
-Later workflows retain legacy code until their replacements; originals remain immutable.
+Installed workflows replace the retired legacy implementation; originals remain immutable.
 
 Task 030B is [complete](../tasks/030b_build_and_publish_cleaned.md#outcome-2026-10-27):
 all 369 cleaned pairs passed full QA, exact Box checksums, bounded restoration
@@ -136,8 +136,16 @@ is complete. The user skipped DINOv3.
 are closed: all ten folds, paired/full reports and an illustrated researcher
 summary are saved. The one-off implementation is preserved in commit `609aa22`
 and retired from the maintained checkout; recovery instructions are in the task. Communication is deferred until the user requests it;
-nothing is sent or scheduled. Next implementation task when selected: 037D
-legacy cleanup. Backup of the new artifacts remains unverified.
+nothing is sent or scheduled. [037D cleanup](../tasks/037_baseline_comparisons_and_loro.md#037d-cleanup-outcome--2026-11-12)
+has implemented cleanup but **remains open at the user's request**: obsolete
+scripts/modules/configs and the legacy dependency group
+are retired; 955 tests, fresh installation and the bounded copied-model walkthrough
+pass. The two augmentation preview launchers are now installed commands; the
+`examples/` wrappers are removed. Pre-commit is replaced by pytest repository hygiene and Ruff checks in CI
+and local instructions. The combined review passed, including 975 tests; the
+changes are ready for the authorized local commit. Keep 037D open for the user's
+next direction; do not push, close it or start 038. Backup of the new artifacts
+remains unverified.
 The completed full 53-TIFF validation predictions have now been analyzed with
 Task 036B: 62 spatially supported pairs, 61 with defined percentage errors.
 See its task record for results and coverage limits. Task 034 remote setup and experiment handoff is complete.
@@ -180,7 +188,7 @@ selected; split further if needed.
 | [041](../tasks/041_distance_weighted_bce_experiment.md) | Distance-weighted BCE recall experiment — complete | Alpha 0 retained as the experiment control; plain BCE plus Dice B0 adopted as baseline |
 | [037A](../tasks/037a_without_bc_launch.md) | Equal-budget no-BC comparison — complete | With-BC B0 epoch-16 EMA selected on paired validation |
 | [037B](../tasks/037b_spectral_comparison_launch.md) | Matched 4-band and 3-band B0 validation — complete | 8-band retained for 037C; DINOv3 skipped |
-| [037](../tasks/037_baseline_comparisons_and_loro.md) | Baseline comparisons, LORO and legacy cleanup | 037A/B/C closed; 037C source archived in 609aa22 and one-off code retired; summary linked in task; 037D pending |
+| [037](../tasks/037_baseline_comparisons_and_loro.md) | Baseline comparisons, LORO and legacy cleanup | 037A–C complete; 037D open by user request, cleanup and follow-ups implemented; local review/commit authorized; no push or 038 |
 | 038 | New-region experiment recipes | Use prepared regional and combined collection versions; four cases, fixed test scopes, explicit initialization and reset/resume behavior |
 | 039 | Final researcher handoff and complete-workflow rehearsal | Rehearse the finished preparation/train/predict/score/transfer recipes after LORO and legacy cleanup. Reuse Task 034 setup. |
 

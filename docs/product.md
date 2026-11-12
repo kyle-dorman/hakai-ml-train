@@ -10,8 +10,8 @@ and adaptation to new regions. Remove unrelated applications and frameworks.
 ## Model comparisons
 
 The initial reference is the downloaded eight-band SegFormer B3 kelp model.
-Capture a handful of original chips, labels, predictions, and previews as a
-visual gut check before removing legacy code. Exact historical training
+Task 025 preserved six original chip/label/prediction examples and previews
+as a visual reference before legacy source removal. Exact historical training
 reproduction and backward-compatible code/config APIs are not requirements.
 
 The initial spectral comparison uses four recipes from the same native

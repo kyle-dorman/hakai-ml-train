@@ -134,8 +134,9 @@ uv run ruff format --check .
 uv run ruff check .
 ```
 
-Run `uv run pre-commit run --all-files` for broad code changes. There are existing
-focused tests under `tests/`; lint is not behavioral proof. Record preexisting
+Run `uv run pytest -q tests/test_repository_hygiene.py` for repository file
+checks (also included in the full test suite). No pre-commit hooks are used.
+There are existing focused tests under `tests/`; lint is not behavioral proof. Record preexisting
 unrelated failures explicitly. For docs-only work, inspect Markdown/diffs,
 verify links, and run `git diff --check`.
 

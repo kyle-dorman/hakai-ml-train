@@ -14,6 +14,7 @@ from kelpseg.cli.paths import check_paths_command
 from kelpseg.cli.pixel_stats import pixel_stats_command
 from kelpseg.cli.predict import predict_command
 from kelpseg.cli.predict_chips import predict_chips_command
+from kelpseg.cli.previews import preview_augmentations_command, preview_pipeline_command
 from kelpseg.cli.report import report_command
 from kelpseg.cli.shore_inventory import shore_inventory_command
 from kelpseg.cli.shoreline import prepare_shoreline_command
@@ -66,3 +67,6 @@ app.command("temporal-report")(temporal_report_command)
 app.command("prepare-shoreline")(prepare_shoreline_command)
 app.command("shore-inventory")(shore_inventory_command)
 app.command("prepare-chip-distances")(prepare_chip_distances_command)
+
+app.command("preview-augmentations")(preview_augmentations_command)
+app.command("preview-pipeline")(preview_pipeline_command)

@@ -73,7 +73,7 @@ def trainer(tmp_path, callbacks, epochs=2):
     )
 
 
-def test_scheduler_matches_retained_endpoints():
+def test_scheduler_matches_fixed_warmup_and_cosine_landmarks():
     parameter = nn.Parameter(torch.ones(()))
     optimizer = torch.optim.AdamW([parameter], lr=3e-4)
     schedule = LinearWarmupCosineDecayLR(optimizer, 140, 10, 3e-5)
@@ -82,18 +82,13 @@ def test_scheduler_matches_retained_endpoints():
         optimizer.step()
         schedule.step()
         values.append(optimizer.param_groups[0]["lr"])
-    from src.schedulers import LinearWarmupCosineDecayLR as RetainedScheduler
-
-    reference_optimizer = torch.optim.AdamW([nn.Parameter(torch.ones(()))], lr=3e-4)
-    reference = RetainedScheduler(
-        reference_optimizer, total_steps=140, warmup_steps=10, min_lr=3e-5
-    )
-    reference_values = [reference_optimizer.param_groups[0]["lr"]]
-    for _ in range(140):
-        reference_optimizer.step()
-        reference.step()
-        reference_values.append(reference_optimizer.param_groups[0]["lr"])
-    assert values == reference_values
+    # Independent numerical landmarks from the historical 140-update schedule.
+    # Check the cosine interior as well as warmup/peak/floor, without importing
+    # the retired training implementation as a second oracle.
+    assert values[:11] == pytest.approx([step * 3e-5 for step in range(11)])
+    assert values[36] == pytest.approx(0.0002742172942406179)
+    assert values[75] == pytest.approx(0.000165)
+    assert values[114] == pytest.approx(0.0000557827057593821)
     assert values[0] == 0
     assert values[5] == pytest.approx(1.5e-4)
     assert values[10] == pytest.approx(3e-4)

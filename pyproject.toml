@@ -9,6 +9,7 @@ dependencies = [
     "lightning>=2.5.1,<2.6.2",
     "matplotlib>=3.10.5,<4",
     "numpy>=2,<3",
+    "opencv-python-headless>=4.13.0.92",
     "pyogrio>=0.11,<1",
     "pyproj>=3.7,<4",
     "rasterio>=1.4,<2",
@@ -18,6 +19,7 @@ dependencies = [
     "torch>=2.11.0",
     "torchmetrics>=1.7.3,<2",
     "typer>=0.25.1,<0.26",
+    "wandb>=0.21.0",
 ]
 
 [project.scripts]
@@ -29,31 +31,18 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.1.0",
+    "PyYAML>=6,<7",
     "pytest>=8.4.2",
     "ruff>=0.11.2",
     "uv_build>=0.12.12,<0.13",
 ]
-legacy = [
-    "huggingface-hub>=1.4.1",
-    "jsonargparse[signatures]>=4.49,<5",
-    "numpy>=2,<3",
-    "opencv-python-headless>=4.13.0.92",
-    "PyYAML>=6,<7",
-    "torchvision>=0.26.0",
-    "tqdm>=4.67.1",
-    "wandb>=0.21.0",
-]
-
-[tool.uv]
-default-groups = ["dev", "legacy"]
-
 [tool.ruff.lint]
 extend-select = [
     "B",
     "SIM",
     "I",
+    "T100",
 ]
 
 [tool.pytest.ini_options]
-pythonpath = [".", "scripts"]
+pythonpath = ["."]

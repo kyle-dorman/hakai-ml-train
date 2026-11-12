@@ -313,12 +313,26 @@ def test_bounded_gallery_reads_training_only_and_writes_native_assets(
     monkeypatch.setattr(
         "kelpseg.augmentation_debug.preview.render_panel", bounded_render
     )
-    assert (
-        preview_augmentations(
-            chips, "assignments.csv", "augmented", output, seed=33, positive_samples=1
-        )
-        == output
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(
+        app,
+        [
+            "preview-augmentations",
+            "--chips",
+            str(chips),
+            "--assignments",
+            "assignments.csv",
+            "--output",
+            str(output),
+            "--seed",
+            "33",
+            "--positive-samples",
+            "1",
+        ],
     )
+    assert result.exit_code == 0, result.output
+    assert str(output / "index.html") in result.output
+    assert "Loading training preview" in result.output
     assert len(opened) == 3
     assert set(opened) == {row["payload"] for row in rows if row["split"] == "train"}
     assert all(path.read_bytes() == content for path, content in source_bytes.items())
@@ -392,10 +406,10 @@ def test_missing_chip_input_reports_ordinary_file_error(tmp_path):
         )
 
 
-def test_cli_remains_lightweight_without_a_preview_subcommand(tmp_path):
+def test_cli_and_preview_help_remain_lightweight(tmp_path):
     result = CliRunner().invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "preview-augmentations" not in result.output
+    assert "preview-augmentations" in result.output
     code = """
 import importlib.abc
 import sys
@@ -408,7 +422,11 @@ sys.meta_path.insert(0, BlockWorkflowImports())
 from kelpseg.cli import app
 result = CliRunner().invoke(app, ['--help'])
 assert result.exit_code == 0, result.output
-assert 'preview-augmentations' not in result.output
+assert 'preview-augmentations' in result.output
+for command in ('preview-augmentations', 'preview-pipeline'):
+    result = CliRunner().invoke(app, [command, '--help'])
+    assert result.exit_code == 0, result.output
+    assert '--chips' in result.output and '--positive-samples' in result.output
 """
     process = subprocess.run(
         [sys.executable, "-c", code],
@@ -426,7 +444,7 @@ import importlib.abc
 import sys
 class BlockModelWorkflows(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split('.')[0] in {'lightning','wandb','transformers','segmentation_models_pytorch'} or fullname.startswith(('kelpseg.models','src.models')):
+        if fullname.split('.')[0] in {'lightning','wandb','transformers','segmentation_models_pytorch'} or fullname.startswith('kelpseg.models'):
             raise AssertionError('Unexpected model workflow import: ' + fullname)
 sys.meta_path.insert(0, BlockModelWorkflows())
 from kelpseg.augmentation_debug.preview import preview_augmentations
@@ -455,3 +473,38 @@ def test_closeup_prefers_visible_kelp_boundary_over_tiny_fringe():
     label[0, 0] = 1
     y0, x0, y1, x1 = closeup_window(label)
     assert 0.3 < np.mean(label[y0:y1, x0:x1] == 1) < 0.8
+
+
+@pytest.mark.parametrize("command", ["preview-augmentations", "preview-pipeline"])
+def test_preview_cli_errors_and_logging_restoration(tmp_path, command):
+    import logging
+
+    logger = logging.getLogger("kelpseg")
+    before = logger.level, logger.propagate, list(logger.handlers)
+    args = [
+        command,
+        "--chips",
+        str(tmp_path / "missing"),
+        "--assignments",
+        str(tmp_path / "assignments.csv"),
+        "--output",
+        str(tmp_path / "gallery"),
+    ]
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 1
+    assert "Error:" in result.output and "recipe.json" in result.output
+    assert (logger.level, logger.propagate, logger.handlers) == before
+    assert not (tmp_path / "gallery").exists()
+    (tmp_path / "gallery").mkdir()
+    result = CliRunner().invoke(app, args)
+    assert result.exit_code == 1 and "exists" in result.output.lower()
+    for option, value in [
+        ("--seed", "-1"),
+        ("--positive-samples", "0"),
+        ("--positive-samples", "17"),
+    ]:
+        result = CliRunner().invoke(app, [*args, option, value])
+        assert result.exit_code == 2
+    if command == "preview-pipeline":
+        result = CliRunner().invoke(app, [*args, "--draws", "33"])
+        assert result.exit_code == 2

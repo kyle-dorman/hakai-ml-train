@@ -360,7 +360,7 @@ assert Path('temporal-report/report.html').is_file()
             cwd=unrelated,
         )
         # A stock transform and its raw-unit adapter must work from runtime
-        # dependencies alone, outside the temporary legacy environment.
+        # dependencies alone, outside the checkout environment.
         run(
             python,
             "-I",
@@ -395,7 +395,8 @@ assert Path('temporal-report/report.html').is_file()
             cwd=unrelated,
         )
         # Model/input helpers must import and compute using runtime dependencies
-        # alone. The real B3 optimizer checks run separately and sequentially.
+        # alone. timm may import the supported W&B integration when installed.
+        # The real B3 optimizer checks run separately and sequentially.
         run(
             python,
             "-I",
@@ -422,7 +423,7 @@ assert Path('temporal-report/report.html').is_file()
             "loss,_=BinaryObjective()(x,y); loss.backward(); "
             "assert torch.isfinite(loss) and torch.isfinite(x.grad).all(); "
             "metrics=build_metrics(); metrics.update((x[:,0]>=0).long(),y); assert metrics.compute()['iou'].item()==1.; "
-            "assert not any(n in sys.modules for n in ('src','scripts','lightning','wandb')); "
+            "assert not any(n in sys.modules for n in ('src','scripts','lightning')); "
             "assert not any(n.startswith('kelpseg.augmentation_debug') for n in sys.modules)",
             cwd=unrelated,
         )
@@ -449,7 +450,7 @@ assert Path('temporal-report/report.html').is_file()
             "'version': importlib.metadata.version('kelpseg'), "
             "'legacy': {name: importlib.util.find_spec(name) is not None "
             "for name in ('src', 'scripts', 'torchgeo', "
-            "'wandb')}}))",
+            "'jsonargparse')}}))",
             cwd=unrelated,
         )
         identity = json.loads(probe)
@@ -457,6 +458,30 @@ assert Path('temporal-report/report.html').is_file()
         assert identity["version"] == version
         assert not any(identity["legacy"].values()), identity
         assert "check-paths" in run(command, "--help", cwd=unrelated)
+        for preview_command in ("preview-augmentations", "preview-pipeline"):
+            assert "--positive-samples" in run(
+                command, preview_command, "--help", cwd=unrelated
+            )
+            error = subprocess.run(
+                [
+                    str(command),
+                    preview_command,
+                    "--chips",
+                    "missing-chips",
+                    "--assignments",
+                    "missing.csv",
+                    "--output",
+                    "fresh-gallery",
+                ],
+                cwd=unrelated,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            assert error.returncode == 1
+            assert "recipe.json" in error.stderr
+
         assert version in run(command, "--version", cwd=unrelated)
         assert version in run(python, "-I", "-m", "kelpseg", "--version", cwd=unrelated)
 

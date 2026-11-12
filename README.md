@@ -13,7 +13,8 @@ labels, and source-level baseline/LORO split manifests. The chip loader selects
 chip validation/test selection is disjoint and reports geometric coverage gaps.
 The `pixel-stats` command computes raw training-band means and sample standard
 deviations with an optional cap and manifest-based kelp-only chip filter.
-Exploratory Python examples preview real Albumentations classes on training
+Installed `preview-augmentations` and `preview-pipeline` commands preview real
+Albumentations classes on training
 examples, with exact capped normalization and separately labeled backgrounds;
 see the [isolated previews](docs/quickstart.md#preview-individual-augmentations)
 and [combined pipeline preview](docs/quickstart.md#preview-the-combined-augmentation-pipeline).
@@ -31,9 +32,12 @@ shared [`report` command](docs/quickstart.md#post-training-validation-diagnostic
 which produces labeled diagnostics without rerunning inference.
 [`temporal-report`](docs/quickstart.md#temporal-canopy-change) compares proportional
 canopy change against labels on common valid footprints using saved reports.
-Retained legacy Planet code/tests
-support the ongoing rebuild; unrelated applications have been removed. Historical Tasks 000–023 and
-starting commit `ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence.
+The obsolete Planet scripts, class-path configs and checkout-only `src.*`
+implementation are retired. Historical Tasks 000–023 and starting commit
+`ac933fd667c2ddb445b8a622d8404387a2d056e2` remain as evidence;
+[Task 037](tasks/037_baseline_comparisons_and_loro.md#037d--retire-legacy-code)
+records replacements and source recovery. Current portable LORO bundles use
+the installed prediction commands.
 
 ## Start here
 
@@ -46,8 +50,8 @@ The legacy reference and provenance audit are complete;
 [Task 027](tasks/027_verify_box_and_back_up_raw_reference_audit.md) owns the
 raw/reference/audit backup and its verification status.
 
-The target is one simple installable Python package, short explicit recipes,
-strong uv defaults, and no `scripts/` directory. Test as much of the workflow as
+The toolkit uses one installable Python package, short explicit recipes,
+a locked uv environment, and no `scripts/` directory. Test as much of the workflow as
 practical on the Mac with small examples before moving to a GPU host. Full
 training is not intended for the Mac.
 
@@ -68,8 +72,8 @@ Create your local path settings as described in the quickstart, then run:
 uv run kelpseg check-paths --paths paths.local.toml
 ```
 
-The Typer command calls reusable Python functions. Most later workflow settings
-will live in recipe files. The training command is
+The Typer command calls reusable Python functions. Workflow settings
+live in recipe files. The training command is
 `uv run kelpseg train --recipe <recipe-file>`.
 The recipe selects the variant and machine-paths file; each fit gets an automatic run ID.
 Use `--dry-run` to preview the inputs and update budget before fitting.
@@ -81,12 +85,22 @@ installation outside the checkout:
 uv run pytest
 uv run ruff format --check .
 uv run ruff check .
-uv run pre-commit run --all-files
 ```
 
+`pytest` includes repository hygiene checks for tracked and nonignored untracked
+files: YAML/JSON/TOML syntax, conflict markers, the 500 KiB file-size limit,
+mixed line endings, trailing whitespace and final newlines. Deleted files,
+symlinks and lockfiles are skipped. Run just these checks with
+`uv run pytest -q tests/test_repository_hygiene.py`. Ruff checks Python syntax
+and debugger statements as well as formatting/lint. Checks report errors without
+rewriting files; no Git hooks or pre-commit installation are needed. CI runs the
+same pytest and Ruff commands. Historical task records retain their original
+validation commands as evidence.
+
 Use `uv build` to create the wheel and source distribution. The default
-checkout environment includes `dev` and temporary `legacy` dependency groups;
-only the new package's runtime dependencies are required to install its wheel.
+checkout environment includes the `dev` dependency group. Runtime dependencies
+include the optional W&B tracking integration used by training recipes; no
+legacy dependency group remains.
 
 ## Data and experiments
 

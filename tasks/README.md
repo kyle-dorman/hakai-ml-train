@@ -82,7 +82,7 @@ are authorized by Task 024.
 | [036B](036b_temporal_error_analysis.md) | Local analysis implementation/smoke | Complete | Proportional canopy change relative to labels; 1–13 and 29–47 days; reuse saved 036 reports |
 | [037A](037a_without_bc_launch.md) | Production comparison | Complete | With-BC B0 epoch-16 EMA selected for 037B |
 | [037B](037b_spectral_comparison_launch.md) | Production comparison | Complete | 8-band retained for 037C; DINOv3 skipped |
-| [037](037_baseline_comparisons_and_loro.md) | Ordered comparison and cleanup plan | 037A/B/C closed | 037C source preserved in 609aa22 and one-off code retired; illustrated summary/recovery linked in task; 037D pending |
+| [037](037_baseline_comparisons_and_loro.md) | Comparison and cleanup | 037A–C complete; 037D open | Cleanup and follow-ups implemented; review and local commit authorized; keep 037D open, no push or 038 |
 | [040](040_shore_distance_diagnostics.md) | Preparation/reporting | Complete | 369 land/distance and cluster-ID grids; region/split cluster, label and sampler-exposure inventory; concise log-imagery and joint region/distance/size reports; code quality pass and 53-TIFF parity verified; closed |
 | [041](041_distance_weighted_bce_experiment.md) | Training experiment | Complete | Alpha 0 retained as the experiment control; plain BCE plus Dice B0 adopted as baseline |
 

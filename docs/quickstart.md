@@ -5,9 +5,10 @@ checks ordinary image directories, cleans imagery with optional paired labels,
 chips cleaned TIFFs into one native-band collection, assigns source splits,
 computes training-image pixel statistics, and trains/validates recipe-selected
 models with portable bundles and completed-epoch resume. Image-only tiled
-prediction writes georeferenced probabilities and masks. Scientific scoring
-remains a later task; see [the roadmap](todo.md). Retained legacy Planet code
-is development/reference material, outside the installed package.
+prediction writes georeferenced probabilities and masks. `predict-chips` saves
+evaluation-chip probabilities, `report` scores either prediction format against
+labels, and `temporal-report` compares labeled canopy change. New-region
+adaptation remains later work; see [the roadmap](todo.md).
 
 ## Install
 
@@ -20,10 +21,9 @@ uv run kelpseg --help
 uv run kelpseg --version
 ```
 
-Normal checkout setup includes developer tools and dependencies needed by the
-retained Planet correctness tests. The installed package itself currently needs
-Typer, NumPy, Rasterio, Albumentations, Matplotlib, Torch, Lightning,
-TorchMetrics and segmentation-models-pytorch (including their dependencies). Help/version do not
+Normal checkout setup includes the package and developer tools. Package
+dependencies cover preparation, training, prediction, reporting and optional
+W&B tracking; the retired workflows need no extra install group. Help/version do not
 import the geospatial stack. Organization dry-run reads declarations only;
 check and clean dry-run inspect TIFF headers. Split dry-run reads metadata only.
 
@@ -828,19 +828,26 @@ The selected full-precision baseline values remain in the
 
 ## Preview individual augmentations
 
-This is an exploratory Python example, separate from the installed preparation
-CLI. It uses the actual **Albumentations 2.0.8** classes and their native
+The installed `preview-augmentations` command uses the actual **Albumentations 2.0.8** classes and their native
 parameters; there is no custom augmentation math or separate parameter schema.
 The preview generators, display helpers, trial sweeps and HTML live together in
 [`kelpseg/augmentation_debug/`](../src/kelpseg/augmentation_debug/). The approved
 training factory and raw-data adapter stay outside that debug package.
 
-Set `DATA_ROOT` and a fresh `OUTPUT` in
-[`examples/augmentation_previews.py`](../examples/augmentation_previews.py), then run:
+Choose the canonical chips, assignments and a fresh output directory:
 
 ```bash
-uv run python examples/augmentation_previews.py
+uv run kelpseg preview-augmentations --chips /data/chips/ca_bc/v1 --assignments /data/splits/ca_bc/v1/assignments.csv --output /data/analyses/my-isolated-previews-01
 ```
+
+After installation, `kelpseg preview-augmentations` works from any directory
+when that environment is active. Alternatively, use
+`uv run --project /absolute/path/to/hakai-ml-train kelpseg preview-augmentations`
+with the same absolute input/output options from another directory. No Python
+file needs editing to choose paths. Options default to `--variant augmented`,
+`--seed 33` and `--positive-samples 14` (allowed range 1–16), plus two background
+controls. A smaller collection may require fewer positive samples. Run
+`kelpseg preview-augmentations --help` for the available options.
 
 Open its `index.html` in a browser. Choose one operation, then flip the 16
 examples with the previous/next buttons or arrow keys while keeping the same
@@ -914,13 +921,18 @@ outputs are refused before payload reads; choose a new directory for each run.
 
 ## Preview the combined augmentation pipeline
 
-Set `DATA_ROOT` and a fresh `OUTPUT` in
-[`examples/augmentation_pipeline_preview.py`](../examples/augmentation_pipeline_preview.py),
-then run:
+Use the same path/sample options with the installed `preview-pipeline` command:
 
 ```bash
-uv run python examples/augmentation_pipeline_preview.py
+uv run kelpseg preview-pipeline --chips /data/chips/ca_bc/v1 --assignments /data/splits/ca_bc/v1/assignments.csv --output /data/analyses/my-pipeline-previews-01 --draws 8
 ```
+
+`--draws` defaults to 8 and accepts 1–32. The variant, seed and positive-sample
+count have the same defaults as the individual preview. This command also runs
+from any directory with the installed environment active or `uv run --project`.
+Both commands log progress and print the gallery's `index.html` path. Missing
+inputs, insufficient training examples and existing output directories produce
+an error; choose a fresh destination for each run.
 
 Open its `index.html`. Flip the same 16 training examples or use **Next draw**
 to inspect eight seeded draws per example. **Inspect affine** compares D4 alone
@@ -2286,7 +2298,7 @@ CUDA sizing and production execution remain separate GPU-host work.
 The [GPU setup checklist](gpu_setup.md) covers access, Linux bootstrap,
 authentication and Box data staging. [Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md)
 is complete. Source prediction, segmentation and temporal reporting are
-implemented; see their recipes above. LORO launch preparation is described below;
+implemented; see their recipes above. The completed LORO study is linked below;
 new-region adaptation remains later work. The reusable walkthrough
 above covers preparation, training/validation, portable image-array probabilities
 and completed-epoch resume. Automated CPU fixtures
@@ -2428,3 +2440,26 @@ results and illustrated researcher summary. Completed artifacts remain under
 [illustrated summary](/home/sky/data/analyses/task037c-loro-04/results-writeup/results.html)
 or `summary/segmentation.csv` and `summary/temporal.csv` for pooled and regional
 results. Do not relaunch into the completed output directories.
+
+
+## Retired workflow replacements
+
+Use the installed commands and flat TOML recipes above for current work:
+
+| Retired workflow | Current interface |
+|---|---|
+| Raw merge and directory validation scripts | `kelpseg organize`, `kelpseg check`, `kelpseg clean` |
+| Hard-linked baseline/fold datasets and destructive background filtering | `kelpseg split` and manifest selection; `train` selects kelp-positive training chips while retaining canonical backgrounds |
+| Legacy nodata analysis | `kelpseg check --full` and chip manifests/coverage summaries |
+| Root `trainer.py` and class-path YAML recipes | `kelpseg train --recipe <recipe.toml>`; use `--dry-run` before fitting |
+| Prediction/evaluation scripts | `kelpseg predict` or `kelpseg predict-chips`, then `kelpseg report` |
+| Historical suite comparisons | Saved segmentation/temporal tables and `kelpseg temporal-report`; recover the completed LORO source only for historical inspection |
+| Archive and transfer scripts | Ordinary explicit rclone copies in the [Box recipes](box_backup.md) |
+
+The old `scripts/` directory, legacy `src.*` modules and YAML configs are no
+longer part of the toolkit. The active `bootstrap_gpu.sh` and installed augmentation
+preview commands remain supported. The [Task 037 cleanup record](../tasks/037_baseline_comparisons_and_loro.md#037d--retire-legacy-code)
+records removal details and Git recovery references. The immutable
+[legacy checkpoint reference](data_artifacts.md) and completed runs remain
+outside Git; removing source does not convert those historical checkpoints
+into current portable bundles.

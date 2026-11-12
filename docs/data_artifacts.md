@@ -11,8 +11,9 @@ Track source, preparation/split algorithms, small hand-authored configs,
 focused fixtures/tests, human cleanup documentation, and task records in Git.
 Store real dataset manifests and generated split assignments with versioned
 external data releases. Large imagery, chips, archives, checkpoints, predictions,
-and generated reports stay outside Git. Historical tracked split CSVs remain as
-small legacy records; external copies are preserved in Task 032A. New generated splits are external. Keep current
+and generated reports stay outside Git. The historical generated split CSV is retired from Git; its external copy
+was preserved in Task 032A and its source history remains in the pre-cleanup
+commit recorded in Task 037D. New generated splits are external. Keep current
 split-generation rules in Git.
 
 `rclone` is installed and a remote named `kelp-box` is configured. Task 027 verified the project folder, account limits, small round trip, and backup. See [Box backup and recovery](box_backup.md) for actual paths and recipes.
@@ -95,8 +96,8 @@ For all tasks, the user's current direction is plain manifests, ordinary
 functions and minimal bookkeeping. Do not add new hashing, checksum catalogs,
 authentication catalogs, transfer receipts or verification frameworks. This
 supersedes the heavier requirements in older contracts. Existing published
-hashes/receipts and implemented legacy command behavior remain documented as
-historical evidence and current behavior; they are not requirements for new work.
+hashes/receipts and retired legacy command behavior remain documented as
+historical evidence; they are not requirements for new work.
 
 Use ordinary explicit rclone copies and compare relative paths, file counts and
 sizes. Test a bounded representative restore by opening/loading the actual data

@@ -2,7 +2,7 @@
 
 Status: 037A, 037B and 037C complete; 037C is closed. The with-BC epoch-16 EMA remains the
 selected 8-band reference. All ten LORO runs and reports are complete, using
-unchanged baseline normalization. 037D remains a planning draft.
+unchanged baseline normalization. 037D remains open at the user's request; implementation and validation outcomes are below.
 
 **Researcher summary with example images:**
 [read the illustrated summary](/home/sky/data/analyses/task037c-loro-04/results-writeup/results.html)
@@ -126,13 +126,60 @@ results and legacy cleanup remain later work.
 
 ## 037D — Retire legacy code
 
-Start after 037C verifies the replacement LORO workflow. Inventory the old
-entry points, configs, tests, and dependency group. Remove legacy pieces whose
-workflows have replacements, keep the archived references and useful scientific
-tests, and preserve the active GPU bootstrap and documented examples. Verify a
-fresh frozen install, the full test suite, formatting and lint, and the tiny
-prepare, train, predict and report walkthrough. Record the removed code and how
-to find the historical workflow in Git. Write the cleanup contract when selected.
+Status: Open — implementation reviewed; do not close without user direction.
+
+### Abstract and inputs
+
+Retire checkout-only Planet workflows now that installed `kelpseg` replacements
+are available. The inspected working tree was clean at
+`f850a314bd3bb77a6c49375266c627cb379b8f4c`. Inputs are that tree, existing
+correctness tests, current recipes and external tiny-v2 data. Stop at cleanup
+validation; do not restore the LORO launcher or begin Task 038.
+
+### Implementation contract and outputs
+
+1. Trace consumers and remove the 13 `scripts/` files, root `trainer.py`,
+   checkout-only modules outside `src/kelpseg`, `configs/kelp-ps8b/`, and generated
+   root `planet8b_temporal_image_splits.csv` once replacements are confirmed.
+2. Remove tests solely for obsolete plumbing. Preserve scientific correctness
+   coverage of alignment, nodata, padding, overlap, pooled metrics and splits
+   against maintained implementations; use fixed expected alignment arrays.
+3. Remove the `legacy` dependency group and script import path. Promote W&B
+   (current training/GPU login) and OpenCV (augmentation/reporting) to runtime.
+   Refresh the lock without unrelated upgrades; explain retained dependencies.
+4. Preserve the active GPU bootstrap, installed augmentation preview tools, current TOML recipes,
+   installed behavior, historical task evidence and archived checkpoint references.
+   Update README/current docs, queue and outcome with replacement commands and
+   historical recovery. No new framework or replacement suite launcher.
+
+### User decisions required and non-goals
+
+None. Cleanup, review and a local commit are authorized; keep 037D open. Preserve all external data,
+runs, bundles, predictions, reports and unrelated edits. Normalization stays
+unchanged. No production training, researcher messages, pushes,
+recovery machinery or Task 038. The LORO implementation remains preserved in
+`609aa22fe27f2c0f41098b7055321da3ceb62f94`; do not reverse retirement `f850a31`.
+
+### Validation and acceptance
+
+- Fresh external environment: `UV_PROJECT_ENVIRONMENT=<fresh-path> uv sync
+  --python 3.12 --frozen`; verify installed CLI and W&B imports.
+- Full `uv run --frozen pytest -q`, including isolated wheel/sdist installs.
+- `uv run ruff format --check .`, `uv run ruff check .`,
+  `uv run pytest -q tests/test_repository_hygiene.py`, Markdown links and
+  `git diff --check`.
+- External tiny-v2 preparation, bounded CPU training with fixed normalization,
+  copied-bundle image-only prediction and labeled report. Record exact commands,
+  input/output paths, support counts and limitations in the outcome.
+- No `scripts/` directory or live imports of removed modules; preserve current
+  GPU/researcher workflows. Record remaining legacy dependencies or blockers.
+
+### Outcome to record
+
+Removed files and consumer/replacement map, retained scientific coverage,
+checkpoint/source recovery references, dependency changes, external validation
+artifacts, check results, limitations and exact next action. Commit the reviewed
+changes locally, leave 037D open, and do not start 038.
 
 ## Temporal reporting scope
 
@@ -169,8 +216,9 @@ Keep the legacy workflow through 037C. Complete the cleanup separately in 037D.
 Outcome to record for each child: changed files, durable run/report paths,
 checks, decision, remaining limits and exact next action.
 
-Next action: review the saved researcher summary when ready to communicate the results;
-037D is the next implementation task when selected.
+Next action: review the uncommitted 037D cleanup. Task 038 remains unstarted;
+select and bound its contract in a separate chat. Researcher communication
+remains deferred until requested.
 
 
 ## 037C launch preparation outcome — 2026-11-11
@@ -439,3 +487,288 @@ archived training integration is not needed to use the completed models.
 Both the preservation snapshot and the subsequent cleanup are local Git
 commits; nothing has been pushed. The full preservation commit above is the
 reference for recovering the original LORO workflow.
+
+
+## 037D cleanup outcome — 2026-11-12
+
+### Inventory, consumers and replacements
+
+The initial checkout was clean at `f850a314bd3bb77a6c49375266c627cb379b8f4c`.
+Consumer tracing found no legacy imports in `src/kelpseg`, the active GPU
+bootstrap, augmentation examples or maintained TOML recipes. The old scripts,
+class-path YAML configs and checkout-only `src.*` modules formed a closed
+workflow; their remaining consumers were obsolete tests and historical docs.
+
+| Removed paths/workflow | Maintained replacement or retirement reason |
+|---|---|
+| `scripts/merge_planet8b_regions.py`, `validate_planet8b_raw_merge.py`, `planet8b_metadata.py` | Installed `kelpseg organize`, `check`, `clean` and explicit catalog/source metadata |
+| `scripts/analyze_planet8b_nodata.py`, `src/prepare/` | `check --full`, canonical chip manifests and manifest-selected training exclusions; keep canonical backgrounds |
+| `scripts/materialize_planet8b_folds.py`, root `planet8b_temporal_image_splits.csv` | `kelpseg split`, current split rules and external assignments; no hard-linked views |
+| `scripts/package_planet8b_dataset.py` | Ordinary rclone transfer/backup recipes and external releases; no package/receipt framework |
+| `trainer.py`, `src/data.py`, `src/models/`, `src/callbacks.py`, `src/schedulers.py`, `src/losses.py` | `kelpseg train --recipe <TOML>` and installed training, EMA, model and loss functions |
+| `scripts/build_planet8b_run_context.py`, `run_planet8b_experiments.py`, `src/run_context.py`, all 12 `configs/kelp-ps8b/` YAML files | Installed flat recipes and ordinary run metadata; historical suite launcher retired |
+| `scripts/evaluate_planet8b_run.py`, `run_planet8b_predictions.py`, `compare_planet8b_matching_tiffs.py`, `src/evaluation/` | `kelpseg predict`, `predict-chips`, `report`, `temporal-report`; completed specialized paired comparisons remain saved/archived |
+| `scripts/benchmark_planet8b_batch_size.py` | Retired old class-path benchmark; current GPU sizing guidance and bounded `train` recipes remain in `docs/gpu_setup.md` |
+| `scripts/create_planet8b_region_footprints.py` | Unconsumed old-manifest helper; no current CLI promises dissolved footprint export, so no new replacement was invented |
+| `src/__init__.py`, obsolete `.gitignore` family exceptions, pytest `scripts` import path | Installed package is the maintained import surface |
+
+The entire `scripts/` directory is gone, including its ignored bytecode cache.
+No installed production module or normalization value changed. Kept
+`bootstrap_gpu.sh`, both augmentation examples/tools, current TOML configs,
+all external originals/releases/runs/checkpoints/bundles/predictions/reports,
+and the immutable Task 025 checkpoint/reference evidence and Task 027 backup
+references. The root generated split CSV remains recoverable in Git and in
+Task 032A's external controls; current assignments are not modified.
+
+Removed twelve legacy-only test files: `test_analyze_planet8b_nodata.py`,
+`test_compare_planet8b_matching_tiffs.py`, `test_epoch_test_diagnostics.py`,
+`test_evaluate_planet8b_run.py`, `test_materialize_planet8b_folds.py`,
+`test_merge_planet8b_regions.py`, `test_package_planet8b_dataset.py`,
+`test_remove_bg_only_tiles.py`, `test_run_context.py`,
+`test_run_planet8b_experiments.py`, `test_run_planet8b_predictions.py`, and
+`test_validate_planet8b_raw_merge.py`. Their plumbing is no longer supported.
+
+Scientific regression coverage remains in the installed suites: organizer,
+check/clean and alignment tests replace merge/validation fixtures; chip/split/
+training-data tests cover inclusive nodata boundaries, retained backgrounds,
+identity joins and disjoint evaluation; prediction/reporting/validation-report/
+chip-loading/model-bundle tests cover padding inversion, overlap averaging
+before thresholding, unique-pixel counts, ignored/uncovered pixels, pooled
+confusion and undefined ratios. `test_prepare_alignment.py` retains its exact
+expected grid and six historical trace cases without importing the retired
+implementation. `test_training_loop.py` retains warmup/cosine numeric landmarks.
+Epoch-wise held-out test diagnostics are intentionally not retained: current
+training selects on validation and reports held-out predictions separately.
+
+### Dependencies and historical recovery
+
+`pyproject.toml` removes the `legacy` group and default-group override.
+W&B and directly used OpenCV move to runtime dependencies for current training,
+GPU login, augmentation and reporting. `uv.lock` drops `jsonargparse`,
+`docstring-parser`, `typeshed-client` and `importlib-resources`, with no retained
+package upgrades. NumPy remains direct; Hugging Face Hub, torchvision, tqdm
+and PyYAML remain required transitively by supported ML/tracking libraries.
+There is no remaining legacy-only dependency group or implementation blocker.
+The distribution test now expects W&B availability and jsonargparse absence.
+
+Inspect all pre-037D source without changing this checkout:
+
+```bash
+git show f850a314bd3bb77a6c49375266c627cb379b8f4c:trainer.py
+git show f850a314bd3bb77a6c49375266c627cb379b8f4c:scripts/evaluate_planet8b_run.py
+mkdir /absolute/fresh-pre-037d-source
+git archive f850a314bd3bb77a6c49375266c627cb379b8f4c | tar -x -C /absolute/fresh-pre-037d-source
+```
+
+This recovery copy is historical source, not a current supported installation.
+The separate 037C LORO preservation commit remains
+`609aa22fe27f2c0f41098b7055321da3ceb62f94`; retirement commit `f850a31` was
+not reversed. Original starting history remains `ac933fd`. Current portable
+bundles need none of the removed source; historical Lightning checkpoints are
+not automatically converted to current bundles.
+
+Changed supporting docs: README, documentation index, quickstart, architecture,
+product, artifact policy, task table and queue. Routine researcher changes still
+use flat settings and explicit installed commands; the quickstart contains the
+replacement map. No production training was launched and no researcher messages were sent.
+
+
+### External walkthrough and validation evidence
+
+Successful bounded rehearsal: `/home/sky/data/analyses/task037d-walkthrough-03/`.
+The input is the existing real tiny-v2 collection at
+`/home/sky/data/data/examples/tiny_ca_bc/v2`. `run.sh` contains the exact
+stop-on-failure sequence; `walkthrough.log` records its completed execution:
+
+```bash
+bash /home/sky/data/analyses/task037d-walkthrough-03/run.sh
+```
+
+This is a historical verification command; do not rerun into these occupied
+outputs. The script invokes installed `split`, `chip`, `train --dry-run`,
+`train`, `predict`, and `report`, with external flat recipes and copied-bundle
+verification between training and prediction. For a new attempt use fresh
+paths in every recipe. Thirteen real TIFF crops produce 54 retained chips
+(151,535,749 payload bytes). Selection contains 20 training candidates,
+11 kelp-positive eligible training windows, 2 validation, 7 test and 25 unused.
+The B0 fit performs one CPU optimizer update and one validation batch with
+random initialization; it is a mechanics check, not a scientific score.
+Eight-band mean/std and the 5000 cap exactly match the unchanged baseline.
+
+The saved run is
+`runs/task037d-tiny-b0-20261112T170535651070Z/` under that walkthrough root.
+`copied-model/` produces identical probabilities on 4,096 pixels. Image-only
+prediction processes the documented 768×768 validation TIFF with four overlapping
+windows, covering all 589,824 valid pixels. `report/report.html` is complete,
+with 589,824 scoreable pixels and no nodata, ignored pixels or coverage gaps.
+The two earlier attempts, `task037d-walkthrough-01` and `-02`, stopped on
+external driver mistakes (overbroad recipe substitution and a helper named
+`copy.py` shadowing the standard library). Each restarted in a fresh directory;
+no partial output was reused and no repository defect was found by these stops.
+
+Fresh frozen environment created at
+`/home/sky/data/analyses/task037d-validation/environment` with Python 3.12.11
+and 113 installed packages. Imports of `kelpseg`, W&B and OpenCV passed;
+jsonargparse is absent. Validation logs are saved in the parent directory.
+
+```bash
+UV_PROJECT_ENVIRONMENT=/home/sky/data/analyses/task037d-validation/environment uv sync --python 3.12 --frozen
+UV_PROJECT_ENVIRONMENT=/home/sky/data/analyses/task037d-validation/environment OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 CUDA_VISIBLE_DEVICES='' WANDB_MODE=offline HF_HUB_OFFLINE=1 NO_ALBUMENTATIONS_UPDATE=1 uv run --frozen pytest -q
+uv lock --check
+uv run --frozen ruff format --check .
+uv run --frozen ruff check .
+uv run --frozen pre-commit run --all-files
+git diff --check
+```
+
+The focused scientific suite passed 238 tests. The first full run passed 954
+tests and found one stale distribution assertion: model-library `timm` imports
+W&B when present. The assertion now permits this supported runtime integration
+while keeping preparation lazy-import checks and retired-module exclusions.
+`pytest.log` preserves that failure; `pytest-final.log` records the final run.
+
+
+Final full-suite result: **955 passed, 92 library/deprecation warnings**, including
+both isolated wheel and sdist installations. No unresolved test failure remains.
+Ruff format/check and pre-commit pass. All 305 relative Markdown file targets
+and 132 anchors in current docs, the task router and Task 037 resolve;
+`git diff --check` passes. All 53 deleted files were verified present in the
+pre-cleanup commit. Installed package source, GPU bootstrap, augmentation
+examples and training recipes have no diff; retained lock versions are unchanged.
+
+### Limits and exact next action
+
+037D is complete and all changes remain uncommitted for review. No production
+training, external source mutation, researcher communication, commit or push
+was performed. The tiny CPU run validates mechanics only; production throughput
+was not remeasured. Backup of the previously completed LORO/new analysis roots
+remains unverified, as already recorded; cleanup did not change Box or claim a
+new backup. No legacy-only dependency or cleanup blocker remains.
+
+Exact next action: review and commit the 037D diff when desired. Task 038 is the
+next implementation slot, but is **not started**: select it separately and write
+its bounded new-region recipe contract. Researcher messaging stays deferred.
+
+
+## 037D preview CLI follow-up — 2026-11-12
+
+Status: Complete. The user requested installed `preview-augmentations` and
+`preview-pipeline` commands and removal of the two example launchers. Preserve
+all existing uncommitted cleanup. Add thin lazy-import handlers in
+`src/kelpseg/cli/previews.py`, explicit path/sample/seed options and pipeline draw
+count; retain existing function defaults, selection, normalization and rendering.
+Remove only the two tracked example files, update current docs and exercise
+real bounded galleries through the CLI plus invalid inputs and lightweight help.
+Run relevant preview/distribution tests, Ruff and pre-commit. No Task 038 work,
+production training or commits. Outcome and validation follow below.
+
+
+Follow-up outcome: added `src/kelpseg/cli/previews.py` and registered both
+commands with lazy imports. Required options are `--chips`, `--assignments`
+and `--output`. Preserved defaults: augmented variant, seed 33, 14 positive
+samples plus two background controls; pipeline draws default to 8. Numeric
+bounds match the existing functions. Commands log progress, print `index.html`,
+report ordinary errors and restore caller logging. Removed both example Python
+files and the now-empty `examples/` directory. Augmentation implementations,
+selection, display, trial constructors and normalization have no changes.
+
+README, quickstart, architecture and index now describe installed commands,
+including running from another directory through an active environment or
+`uv run --project /absolute/path/to/hakai-ml-train kelpseg ...`. The earlier
+037D statements about preserving example launchers describe the initial cleanup;
+this explicit user-requested follow-up supersedes them while retaining the tools.
+
+Existing bounded gallery tests now invoke both commands from a separate working
+directory, retaining training-only payload checks, unchanged-input checks and
+rendered metadata/normalization assertions. Tests cover bad paths, occupied
+outputs, numeric options, logging restoration and help without heavy imports.
+Both isolated wheel/sdist installs exercise command help and missing-input errors.
+The focused preview/augmentation/CLI/distribution run passed 98 checks and exposed
+one outdated CLI-help assertion expecting no preview command. After updating it,
+all 26 package-CLI tests passed. Thus all 99 selected tests pass across the two
+runs; no unresolved failure remains. Logs: `preview-cli-tests.log` and
+`preview-cli-help-tests.log` in `/home/sky/data/analyses/task037d-validation/`.
+Ruff format/check, pre-commit (including the new untracked handler explicitly),
+current Markdown links/anchors and `git diff --check` pass. The earlier full
+955-test validation remains recorded above; this follow-up used focused checks.
+
+All earlier uncommitted changes are preserved. No new training, production
+artifacts or dependencies were introduced. Exact next action: review the
+uncommitted cleanup and CLI follow-up together; Task 038 remains unstarted.
+
+
+## 037D validation tooling follow-up — 2026-11-12
+
+Status: Complete. Replace pre-commit with existing Ruff/pytest validation,
+per the user's request. Remove `.pre-commit-config.yaml` and the dev dependency;
+retain syntax/debug checks through Ruff and repository file checks through
+`tests/test_repository_hygiene.py`. Check tracked and nonignored untracked files,
+skip deleted files and lockfiles, and report without rewriting. Update CI,
+README and AGENTS validation instructions; preserve historical task evidence.
+Validate the checker, frozen install, full tests and Ruff. Preserve all previous
+uncommitted work; no commits, hooks, training or Task 038 changes.
+
+
+Implementation: removed `.pre-commit-config.yaml` and the dev dependency.
+The lock removes pre-commit plus cfgv, distlib, identify, nodeenv,
+python-discovery and virtualenv, without upgrading retained packages.
+PyYAML is now declared directly in dev for repository YAML checks (it was
+already installed transitively). Ruff `T100` replaces debugger-statement checks;
+Ruff already checks Python syntax and formatting. `tests/test_repository_hygiene.py`
+checks JSON/YAML/TOML parsing, merge markers, 500 KiB size limit, mixed line
+endings, trailing whitespace and final newlines. It reads tracked and nonignored
+untracked files, skips symlinks/deleted files/lockfiles, reports paths/errors,
+and never rewrites files. File-size checks now cover all selected files rather
+than only newly added files. It is one ordinary pytest test with focused fixtures
+for malformed files and Git selection, not a new command framework.
+
+CI includes hygiene in its normal pytest step and retains Ruff checks. README
+and AGENTS give the same local validation path; historical pre-commit results
+are retained as evidence, not current instructions. No hook is installed or
+required, and no user Git hooks were changed. The focused checker passed all
+11 tests; a Ruff probe confirmed a debugger call produces T100; frozen sync and
+`uv lock --check` passed, and `pre_commit` is absent from the environment.
+
+
+Validation outcome: **968 tests passed**, including repository hygiene and both
+isolated distribution installs, with 92 existing library/deprecation warnings.
+Full output is `/home/sky/data/analyses/task037d-validation/no-precommit-tests.log`.
+Ruff format/check and `git diff --check` pass. No unresolved blocker remains.
+The exact current commands are:
+
+```bash
+uv run --frozen pytest -q
+uv run --frozen ruff format --check .
+uv run --frozen ruff check .
+```
+
+For a quick file-only check, use
+`uv run --frozen pytest -q tests/test_repository_hygiene.py`.
+All previous cleanup and preview CLI edits remain uncommitted. Exact next
+action: review the combined 037D changes; Task 038 remains unstarted.
+
+
+## 037D review and commit — 2026-11-12
+
+The user requested review of the complete cleanup and follow-ups, authorized a
+local commit if sound, and explicitly requested that 037D remain open. This
+supersedes the earlier uncommitted-only handoffs and completion status. No push
+or Task 038 work is authorized. The current task remains 037D after committing.
+
+Independent reviews checked legacy consumers/dependency removal/scientific test
+coverage and the preview CLI/repository checker. No legacy-removal or preview
+behavior blocker was found. Review reproduced one checker gap: malformed
+UTF-8 or NUL-containing JSON/YAML/TOML could be skipped as binary. Known config
+formats now reject those inputs; focused regressions also verify binary assets
+remain allowed. Current routers have been corrected to keep 037D open.
+
+
+Final review validation: **975 tests passed**, with 92 existing library warnings,
+including isolated wheel/sdist installs and 18 checker regressions. Log:
+`/home/sky/data/analyses/task037d-validation/review-final-tests.log`.
+Ruff format/check, lock consistency, current Markdown links/anchors and diff
+whitespace checks pass. Every removed file remains recoverable from `f850a31`;
+retained package versions and scientific/augmentation implementations are
+unchanged. No unresolved review findings remain. The reviewed changes are
+ready for the authorized local commit. **037D remains open** for the user's
+next direction; do not push, close the task or start 038.

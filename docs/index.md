@@ -10,12 +10,13 @@ chipping with optional labels, source-level baseline/LORO assignments and
 manifest-based window selection with overlapping training and disjoint chip
 validation/test. Streaming NumPy pixel statistics use selected training images
 with an explicit optional cap. A NumPy loader selects bands and pads partial
-edges. Isolated and combined augmentation previews use exact stock Albumentations
+edges. Installed `preview-augmentations` and `preview-pipeline` commands use exact stock Albumentations
 classes and capped normalization on training examples only. Full CA/BC chips, split controls and tiny v2 are published on Box; see
 the [restore recipe](quickstart.md#restore-and-use-the-full-cabc-chip-release). Preparation writes run once into a fresh output and stop on failure.
 Installed Python helpers provide manifest-selected training/validation tensors,
-SegFormer B3 and loss/confusion functions. Retained legacy Planet implementations
-support the ongoing replacement. The installed `train` command provides Lightning
+SegFormer B3 and loss/confusion functions. The obsolete Planet implementation is retired;
+[Task 037D](../tasks/037_baseline_comparisons_and_loro.md#037d--retire-legacy-code)
+records the replacement map and historical recovery references. The installed `train` command provides Lightning
 training, validation, EMA, portable models and completed-epoch resume. Python
 bundle loading predicts supplied image arrays; the
 [installed tiny walkthrough](quickstart.md#tiny-v2-installed-training-walkthrough)
@@ -72,3 +73,10 @@ been sent.
 
 Read only the documents needed for the selected task. Current-facing documents
 own decisions; detailed historical runs and outcomes remain in numbered tasks.
+
+[Task 037D](../tasks/037_baseline_comparisons_and_loro.md#037d-cleanup-outcome--2026-11-12)
+records implemented legacy retirement: the installed workflows replace the old scripts,
+modules, configs and dependency group. Fresh installation, 955 tests and the
+bounded preparation/train/copied-model prediction/report walkthrough pass.
+037D remains open at the user's request after review/local commit. Do not push
+or start Task 038.

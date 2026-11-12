@@ -22,22 +22,17 @@ saves selected disjoint chip probabilities on source-coordinate canvases. Both
 feed `report`, which loads saved probabilities and aligned labels and shares
 metrics/figures without model inference. Completed-epoch resume uses native
 Trainer checkpoints with explicit random/sampling state.
-The checkout retains legacy Planet
-`src.*` modules, root `trainer.py`, `scripts/`, relevant configs, and focused tests until their
-replacements land. Unrelated application/model/export families are removed.
-The legacy recipe is `configs/kelp-ps8b/generalization/segformer_b3_v3.yaml`.
-The old evaluator still imports `src.models.smp` and its loss/optimizer helpers;
-the historical multi-run launcher still calls `trainer.py` and its configured
-data, scheduler and EMA classes. Array probabilities do not replace those
-source-raster/scoring and suite consumers. Retain these modules and their
-checkout dependencies until Tasks 035–037 replace the relevant consumers;
-new baseline work uses only the installed `kelpseg train` workflow.
+The maintained implementation is the installed `kelpseg` package. Task 037D
+retires root `trainer.py`, `scripts/`, legacy `src.*` modules and class-path
+YAML configs after replacement by preparation, training, prediction and
+reporting commands. Scientific correctness tests exercise the installed code.
+The active GPU bootstrap remains a standalone helper. Installed
+`preview-augmentations` and `preview-pipeline` commands call the existing
+training-only gallery functions with explicit path/sample options. Historical implementations and completed-study recovery references
+live in [Task 037](../tasks/037_baseline_comparisons_and_loro.md#037d--retire-legacy-code).
 
-The package uses uv and `uv_build`. The completed replacement will have no
-`scripts/` directory, plugin framework, generic model zoo, or manual per-fold
-config copies.
-Task contracts introduce commands as they are implemented; this design is not
-an assertion that they already work.
+The package uses uv and `uv_build`, with no plugin framework, generic model zoo
+or manual per-fold config copies. New-region adaptation remains a later task.
 
 ```text
 variant 1: raw, immutable source deliveries
@@ -72,7 +67,7 @@ functions. The one-time historical catalog bootstrap is retired; existing
 explicit catalog tables are normal organizer inputs. Keep these as explicit
 functions and ordinary loops;
 the CLI uses standard Python logging for progress, without a custom logging
-or orchestration layer. Later tasks add model workflow commands. The installed
+or orchestration layer. The installed
 training command is `uv run kelpseg train --recipe <recipe-file>`;
 `--resume <run/checkpoints/last.ckpt>` restores the same run from a completed
 epoch, with the same total budget and input identities. Multiworker continuation
@@ -97,14 +92,13 @@ means and sample standard deviations; overlap counts as repeated chip exposure.
 Labels, model preprocessing and artificial loading padding are not used.
 
 Runtime dependencies cover implemented workflows: Typer, NumPy, Rasterio,
-Albumentations, Matplotlib, Torch, Lightning, TorchMetrics and
-segmentation-models-pytorch.
+Albumentations, OpenCV, Matplotlib, Torch, Lightning, TorchMetrics,
+segmentation-models-pytorch, SciPy, Pyogrio, PyProj, Shapely and W&B.
 Pixel-statistics computation imports NumPy and
 metadata helpers only; TIFF libraries are imported when TIFF workflows run.
-Checkout-only dependencies for retained code live in the default `legacy`
-group alongside `dev`; plain frozen setup includes both. New workflows promote
-their dependencies into runtime as implemented. Distribution checks install
-only frozen runtime dependencies, independently of legacy checkout tests.
+The default checkout adds only the `dev` group. There is no legacy dependency
+group; W&B remains a runtime dependency for the maintained tracking integration.
+Distribution checks install frozen runtime dependencies outside the checkout.
 Reusable functions return typed values and raise ordinary exceptions; CLI
 handlers own output and exit status. Organizer/path-file workflows use an
 explicit `--paths` file, with no discovery; relative roots resolve against that
@@ -346,8 +340,8 @@ threshold. Background-chip results remain chip-specific. Reporting requires
 saved predictions and referenced data, not a training run or loaded model.
 
 
-The old chip grid omits some trailing edge strips and has true-size undersized
-chips. Preserve its behavior for the legacy reference. Task 035 mapping
+The archived legacy reference preserves the old chip grid, including omitted
+trailing strips and true-size undersized chips. Current tiled mapping
 covers the full source geometrically before filtering windows. It skips windows
 with less than 20% native valid imagery by default (configurable; padding is
 excluded), retaining exactly 20% and always skipping entirely nodata windows.

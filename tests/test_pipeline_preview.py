@@ -7,9 +7,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 from matplotlib import image as mpl_image
+from typer.testing import CliRunner
 
 from kelpseg.augmentation_debug.display import write_viewer
 from kelpseg.augmentation_debug.pipeline import preview_pipeline
+from kelpseg.cli import app
 from kelpseg.prepare.check import PreparationError
 from kelpseg.preprocessing import BAND_NAMES, MEAN, STD
 
@@ -81,18 +83,27 @@ def test_gallery_reads_training_only_and_keeps_four_paired_views_per_draw(
 
     monkeypatch.setattr(np, "load", training_load)
     output = tmp_path / "pipeline gallery"
-    assert (
-        preview_pipeline(
-            chips,
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(
+        app,
+        [
+            "preview-pipeline",
+            "--chips",
+            str(chips),
+            "--assignments",
             "assignments.csv",
-            "augmented",
-            output,
-            seed=33,
-            positive_samples=1,
-            draws=2,
-        )
-        == output
+            "--output",
+            str(output),
+            "--seed",
+            "33",
+            "--positive-samples",
+            "1",
+            "--draws",
+            "2",
+        ],
     )
+    assert result.exit_code == 0, result.output
+    assert str(output / "index.html") in result.output
     assert len(opened) == 3
     assert set(opened) == {row["payload"] for row in rows if row["split"] == "train"}
     assert all(path.read_bytes() == data for path, data in before.items())

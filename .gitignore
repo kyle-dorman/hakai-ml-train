@@ -164,8 +164,5 @@ fabric.properties
 data
 checkpoints
 
-!/src/kelp-pa-aco/training/checkpoints/
-
-src/kelp-pa-aco/training/wandb/
 train/wandb/
 lightning_logs/
