@@ -72,7 +72,7 @@ def test_cpu_recipe_separates_bounded_float32_smoke():
         {"name": ""},
         {"name": "../escape"},
         {"name": 3},
-        {"experiment": "loro_011"},
+        {"experiment": "loro_001"},
         {"paths_file": ""},
         {"variant": "unknown"},
         {"epochs": True},

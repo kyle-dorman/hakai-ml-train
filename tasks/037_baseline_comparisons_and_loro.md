@@ -76,6 +76,10 @@ B0 reference for 037C and skipped the optional false-color DINOv3 comparison.
 
 ## 037C — Run LORO comparisons (slide step 4)
 
+This completed contract and its launch commands describe the preserved study.
+The task-specific implementation has been retired; see
+[implementation recovery](#037c-implementation-retirement--2026-11-12).
+
 Run one 8-band B0 suite using the existing `augmented` assignments for
 `loro_001` through `loro_010`. Each fold holds out all source TIFFs in its named
 region. BC regions 011 and 012 are eligible for training only, subject to the
@@ -299,7 +303,7 @@ rerun them into those existing directories. Logs are
 `/home/sky/data/analyses/task037c-smoke-03.log`. Production subsequently completed; the Bash command above is retained as
 historical launch evidence and must not be rerun into the existing outputs.
 
-The [quickstart](../docs/quickstart.md#run-the-prepared-8-band-loro-suite)
+The [quickstart](../docs/quickstart.md#completed-loro-study)
 contains the operating recipe. Routine use relies on flat external settings
 and machine paths. Legacy code remains for separately scoped 037D. Changes
 remain uncommitted. Production results and actual stopping points are recorded
@@ -360,7 +364,8 @@ Exact next action: when the user is ready, draft a message to the other
 researchers using the saved summary and images. Nothing has been sent or
 scheduled; the user explicitly deferred communication. 037D remains the next
 implementation task when separately selected. Box backup remains unverified,
-and all repository edits remain uncommitted.
+and repository edits were uncommitted at the summary handoff; see the later
+closure and retirement commits below.
 
 
 ## 037C closure and implementation preservation — 2026-11-12
@@ -369,10 +374,68 @@ The user closed 037C and requested a Git snapshot of the completed workflow
 before retiring its task-specific code. This snapshot preserves the launcher,
 preflight/smoke drivers, paired reporting, training integration, tests, methods
 and results history. Generated data, models and the illustrated summary remain
-at the external paths above. The snapshot commit will be recorded in the
-following cleanup outcome so the implementation can be inspected or recovered.
+at the external paths above. The preservation commit is
+`609aa22fe27f2c0f41098b7055321da3ceb62f94`. Recovery commands are recorded below.
 
 The authorized follow-up retires the 037C examples, suite-specific reporting
 helpers and fold special cases in training run/settings. Shared preparation
 isolation checks and generic prediction/reporting remain useful. This is a
 bounded 037C cleanup, not the broader 037D legacy retirement.
+
+
+## 037C implementation retirement — 2026-11-12
+
+**Preservation commit: `609aa22fe27f2c0f41098b7055321da3ceb62f94`**
+(`Close Task 037C and preserve completed LORO workflow`). This is the complete
+snapshot to inspect or recover: it contains the launcher, preparation/smoke
+drivers, suite reporting, fold training integration, tests and task history.
+The subsequent cleanup commit removes these one-off consumers from the maintained
+checkout. No production models, predictions, reports or researcher-summary
+artifacts were removed.
+
+Inspect the history without changing the current checkout:
+
+```bash
+git show --stat 609aa22fe27f2c0f41098b7055321da3ceb62f94
+git show 609aa22fe27f2c0f41098b7055321da3ceb62f94:examples/run_task037c.sh
+git show 609aa22fe27f2c0f41098b7055321da3ceb62f94:examples/task037c.py
+git show 609aa22fe27f2c0f41098b7055321da3ceb62f94:src/kelpseg/reporting/loro.py
+```
+
+For a complete source copy, extract the preserved tree into a **fresh** directory:
+
+```bash
+mkdir /absolute/fresh-loro-source
+git archive 609aa22fe27f2c0f41098b7055321da3ceb62f94 | tar -x -C /absolute/fresh-loro-source
+```
+
+The archived source requires the external data/model paths recorded in this
+task. Its generated recipes and output paths under `task037c-loro-04` describe
+the completed study, not empty destinations for another launch.
+
+Removed: `examples/run_task037c.sh`, `examples/task037c.py`,
+`examples/task037c_smoke.py`, `reporting/loro.py`, `reporting/loro_summary.py`,
+and their task-specific launcher/reporting/training tests. Restored ordinary
+baseline-only training in `training/run.py` and `training/settings.py`.
+Preserved source-assignment isolation checks and moved their correctness tests
+into `tests/test_splits.py`. Unrelated augmentation examples and generic
+training, prediction, segmentation and temporal reporting remain available.
+
+Current docs now point to historical recovery instead of advertising the removed
+launcher. This closes 037C and its bounded implementation cleanup; the wider
+037D legacy removal remains a separate task when selected. The next optional
+researcher-facing action is to draft a message from the saved illustrated
+summary when requested. Nothing has been sent or scheduled.
+
+
+Cleanup validation: all **1,024 tests passed**, plus 171 focused settings,
+training, split and bundle checks. Ruff format/check, pre-commit, Markdown
+link targets and `git diff --check` passed. The preserved commit was checked
+to contain every retired source file. A real region-003 portable bundle and
+a copy in a fresh temporary directory produced identical probabilities on
+4,096 valid pixels using the current generic loader. This verifies that the
+archived training integration is not needed to use the completed models.
+
+Both the preservation snapshot and the subsequent cleanup are local Git
+commits; nothing has been pushed. The full preservation commit above is the
+reference for recovering the original LORO workflow.

@@ -153,11 +153,6 @@ def run_training(
     sources = json.loads((chips / "sources.json").read_text())
     train_rows = inputs["train"].rows
     val_rows = inputs["val"].rows
-    held_out = (
-        settings.experiment.removeprefix("loro_")
-        if settings.experiment != "baseline"
-        else None
-    )
     report = {
         "run_id": run_id,
         "output": str(output),
@@ -181,15 +176,10 @@ def run_training(
         },
         "regions": sorted({r["region"] for r in train_rows}),
         "releases": sorted({(r["dataset_id"], r["release_id"]) for r in train_rows}),
-        "held_out_region": held_out,
+        "held_out_region": None,
         "adaptation_case": None,
         "augmentation": build_training_augmentation(settings.seed).to_dict(),
-        "normalization_scope": (
-            "fixed kelp-positive with-BC baseline training statistics, capped at 5000; "
-            "may include the held-out region, reused by user instruction"
-            if held_out
-            else "kelp-positive with-BC training, capped at 5000"
-        ),
+        "normalization_scope": "kelp-positive with-BC training, capped at 5000",
         "model": f"SegFormer / {settings.encoder_name}",
         "selection": "maximum pooled validation foreground IoU, earliest ties, threshold 0.5",
         "validation_weights": "current before optimizer update 101; EMA thereafter",

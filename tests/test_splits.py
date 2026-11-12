@@ -20,6 +20,7 @@ from kelpseg.prepare.splits import (
     select_windows,
     summarize_assignments,
     validate_assignments,
+    validate_loro_assignments,
     write_splits,
 )
 
@@ -791,3 +792,46 @@ def test_nondividing_stride_reports_interior_gaps_without_duplicate_pixels(
     assert_disjoint(rows, "val")
     assert active_rectangles(rows, "val") == [(0, 0, 512, 512), (0, 600, 512, 500)]
     assert "uncovered edges/gaps 45056;" in caplog.text
+
+
+def _loro_rows() -> list[dict]:
+    """Return distinct-date assignments for a held-out region and other-region training."""
+    return [
+        source(region, day, experiment="loro_001", variant="augmented", split=split)
+        for region, day, split in (
+            ("002", "2021-01-01", "train"),
+            ("002", "2021-01-02", "train"),
+            ("002", "2021-01-03", "val"),
+            ("001", "2021-01-04", "test"),
+        )
+    ]
+
+
+@pytest.mark.parametrize(
+    "mistake",
+    ["heldout_train", "other_test", "bc_val", "companion_train", "companion_val"],
+)
+def test_fold_assignment_mistakes_fail(mistake: str) -> None:
+    """Reject incorrect held-out, BC and spacecraft/date memberships."""
+    rows = _loro_rows()
+    if mistake == "heldout_train":
+        rows[-1]["split"] = "train"
+    elif mistake == "other_test":
+        rows[0]["split"] = "test"
+    elif mistake == "bc_val":
+        rows[2]["region"] = "011"
+    else:
+        rows[0]["acquisition_date"] = rows[-1]["acquisition_date"]
+        rows[0]["split"] = mistake.removeprefix("companion_")
+    with pytest.raises(PreparationError):
+        validate_loro_assignments(rows, "loro_001")
+
+
+def test_bc_companion_excluded_and_same_spacecraft_other_day_allowed() -> None:
+    """Allow training-only BC except companions of the held-out spacecraft/date."""
+    rows = _loro_rows()
+    rows[0]["region"] = "011"
+    rows[1]["region"] = "012"
+    rows[1]["split"] = "unused"
+    rows[1]["acquisition_date"] = rows[-1]["acquisition_date"]
+    validate_loro_assignments(rows, "loro_001")

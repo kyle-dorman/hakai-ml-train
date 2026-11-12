@@ -13,7 +13,11 @@ budget, participating regions, checkpoint selection, Git commit, runtime,
 status, and output paths. Held-out region and adaptation case are explicit
 fields. Do not infer them from a run name. Recipes supply a descriptive `name`
 for the automatic `<name>-<UTC timestamp>` run ID and a separate `experiment`
-for assignment selection (`baseline` or `loro_001` through `loro_010`).
+for assignment selection (`baseline` in the maintained training command).
+The completed 037C LORO workflow is archived in commit
+`609aa22fe27f2c0f41098b7055321da3ceb62f94`; its source recovery instructions and
+scientific decisions remain in [the task record](../tasks/037_baseline_comparisons_and_loro.md#037c-implementation-retirement--2026-11-12).
+Portable LORO bundle inference does not require that retired training code.
 
 Local machine-readable records are required even when W&B is offline. Keep the
 implementation small; the legacy registry schema is not a compatibility target.

@@ -133,8 +133,9 @@ is complete. The user selected the with-BC B0 epoch-16 EMA reference.
 [Task 037B validation](../tasks/037b_spectral_comparison_launch.md#production-results)
 is complete. The user skipped DINOv3.
 [037C production and summary](../tasks/037_baseline_comparisons_and_loro.md#037c-production-results-and-researcher-summary--2026-11-12)
-are complete: all ten folds, paired/full reports and an illustrated researcher
-summary are saved. Communication is deferred until the user requests it;
+are closed: all ten folds, paired/full reports and an illustrated researcher
+summary are saved. The one-off implementation is preserved in commit `609aa22`
+and retired from the maintained checkout; recovery instructions are in the task. Communication is deferred until the user requests it;
 nothing is sent or scheduled. Next implementation task when selected: 037D
 legacy cleanup. Backup of the new artifacts remains unverified.
 The completed full 53-TIFF validation predictions have now been analyzed with
@@ -179,7 +180,7 @@ selected; split further if needed.
 | [041](../tasks/041_distance_weighted_bce_experiment.md) | Distance-weighted BCE recall experiment — complete | Alpha 0 retained as the experiment control; plain BCE plus Dice B0 adopted as baseline |
 | [037A](../tasks/037a_without_bc_launch.md) | Equal-budget no-BC comparison — complete | With-BC B0 epoch-16 EMA selected on paired validation |
 | [037B](../tasks/037b_spectral_comparison_launch.md) | Matched 4-band and 3-band B0 validation — complete | 8-band retained for 037C; DINOv3 skipped |
-| [037](../tasks/037_baseline_comparisons_and_loro.md) | Baseline comparisons, LORO and legacy cleanup | 037A/B/C complete; illustrated 037C summary linked in task record for later communication; 037D pending |
+| [037](../tasks/037_baseline_comparisons_and_loro.md) | Baseline comparisons, LORO and legacy cleanup | 037A/B/C closed; 037C source archived in 609aa22 and one-off code retired; summary linked in task; 037D pending |
 | 038 | New-region experiment recipes | Use prepared regional and combined collection versions; four cases, fixed test scopes, explicit initialization and reset/resume behavior |
 | 039 | Final researcher handoff and complete-workflow rehearsal | Rehearse the finished preparation/train/predict/score/transfer recipes after LORO and legacy cleanup. Reuse Task 034 setup. |
 

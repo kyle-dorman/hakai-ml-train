@@ -44,8 +44,10 @@ B0 distance-weighted BCE recall screen. See the
 [Task 037C](../tasks/037_baseline_comparisons_and_loro.md#037c-production-results-and-researcher-summary--2026-11-12)
 is complete: ten 8-band B0 LORO runs with unchanged baseline normalization,
 full-region and matched baseline reports, and an illustrated researcher
-summary. The task record links the saved summary and example images for later
-communication; nothing has been sent.
+summary. Its one-off implementation is preserved in commit `609aa22` and
+retired from the maintained checkout. The task record links source recovery,
+the saved summary and example images for later communication; nothing has
+been sent.
 
 ## Read by task
 
