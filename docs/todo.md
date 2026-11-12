@@ -2,6 +2,11 @@
 
 ## Current status and next action
 
+Task **038B repository naming is complete**; current instructions use `kelpseg`.
+The [outcome](../tasks/038b_repository_naming.md#outcome) records validation and
+retained historical references. The user authorized committing these text edits;
+repository and checkout renaming remain separate actions.
+
 Task **038A CI help-text checks is complete**; its
 [outcome](../tasks/038a_ci_help_text.md#outcome) records the fix and 20 passing
 checks with terminal styling forced. The user authorized committing the fix;

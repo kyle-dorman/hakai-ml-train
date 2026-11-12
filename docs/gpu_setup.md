@@ -47,10 +47,12 @@ All remaining commands run on the Linux instance unless explicitly labeled Mac.
 
 The instance needs Git and GitHub SSH access. If cloning reports `Permission
 denied (publickey)`, configure your GitHub SSH access there before continuing.
+Copy the SSH URL from the repository's **Code → SSH** menu and replace
+`REPOSITORY_SSH_URL` below. Use `kelpseg` as the local checkout folder name.
 
 ```bash
-git clone git@github.com:kyle-dorman/hakai-ml-train.git
-cd hakai-ml-train
+git clone REPOSITORY_SSH_URL kelpseg
+cd kelpseg
 git rev-parse HEAD
 ```
 

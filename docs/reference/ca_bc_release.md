@@ -40,8 +40,8 @@ rclone copy kelp-box:kelpseg/transfers/task027_raw_reference_audit_v1/receipts "
 
 # The checksum check reads every restored ZIP. Verify the two packages too.
 cd /tmp
-uv run --no-sync --project /path/to/hakai-ml-train python -I "$DEST/references/legacy_ps8b_v1/verify_package.py"
-uv run --no-sync --project /path/to/hakai-ml-train python -I "$DEST/audits/task026_originals_v1/verify_package.py"
+uv run --no-sync --project /path/to/kelpseg python -I "$DEST/references/legacy_ps8b_v1/verify_package.py"
+uv run --no-sync --project /path/to/kelpseg python -I "$DEST/audits/task026_originals_v1/verify_package.py"
 )
 ```
 

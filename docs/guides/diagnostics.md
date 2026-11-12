@@ -20,7 +20,7 @@ uv run kelpseg preview-augmentations --chips /data/chips/ca_bc/v1 --assignments 
 
 After installation, `kelpseg preview-augmentations` works from any directory
 when that environment is active. Alternatively, use
-`uv run --project /absolute/path/to/hakai-ml-train kelpseg preview-augmentations`
+`uv run --project /absolute/path/to/kelpseg kelpseg preview-augmentations`
 with the same absolute input/output options from another directory. No Python
 file needs editing to choose paths. Options default to `--variant augmented`,
 `--seed 33` and `--positive-samples 14` (allowed range 1–16), plus two background

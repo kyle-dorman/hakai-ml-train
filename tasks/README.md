@@ -86,6 +86,7 @@ are authorized by Task 024.
 | [037E](037e_documentation_cleanup.md) | Documentation only | Complete; reviewed |
 | [038](038_methods_documentation.md) | Documentation only | Complete |
 | [038A](038a_ci_help_text.md) | CI test repair | Complete |
+| [038B](038b_repository_naming.md) | Documentation naming | Complete |
 | [040](040_shore_distance_diagnostics.md) | Preparation/reporting | Complete |
 | [041](041_distance_weighted_bce_experiment.md) | Training experiment | Complete |
 
