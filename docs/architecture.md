@@ -1,5 +1,8 @@
 # Architecture contract
 
+Scientific explanations are owned by [methods](methods.md); this document owns
+the implementation boundaries and interfaces.
+
 ## Current implementation
 
 The installed `src/kelpseg/` package provides the Typer command and read-only
@@ -189,38 +192,12 @@ IDs so known renamed copies cannot leak between train, validation and test.
 This uses identity declarations, without new content-hash discovery. Resolve
 conflicting annotation versions before selecting a collection's scoring labels.
 
-Chips inherit source-level assignments, and acquisition-date groups remain
-intact in the temporal baseline. Match source assignments across spectral
-variants. Within each experiment/fold, a `(satellite_id, UTC date)` group
-contributes to only one of train/validation/test, including all regional crops.
-The same spacecraft on different dates can cross partitions. Record spacecraft
-ID explicitly in collection/split metadata using the declared filename convention
-or supplied metadata; never mistake a crop suffix for it. Reconcile regional
-cutoffs jointly. Forward/reverse chronology can vary by region, with choices
-fixed before model results are seen.
-
-LORO test is the complete held-out region; train/validation exclude
-that region. Current LORO folds cover regions 001–010, including Baja. Reproduce
-the historical source policy for the other evaluation regions: their temporal
-training and validation sources retain those roles and their temporal test
-sources remain unused. Regions 011/012 are training-only and toggled together
-in the with/without comparison; neither contributes validation or a test fold.
-The with-BC `augmented` variant is the primary baseline; `base` without both
-regions is the comparison. These names identify membership, not scientific rank.
-For every LORO fold, also leave other-region companions sharing a held-out
-test spacecraft/date unused. Apply the same group-isolation rule to optional
-training inputs. These are manifest exclusions; canonical imagery stays intact.
-Keep 001–010 assignments identical across that comparison. The approved
-baseline uses reverse chronology for 001–008 and forward for 009/010; Task
-032A owns exact locked cutoffs and the approved external source assignments.
-Workflows use portable manifests without requiring link trees. Training background exclusions never
-silently constrain evaluation. Validate all joins and leakage boundaries.
-
-Audit actual region/year/month and label support before choosing chronological
-boundaries; the sparse collection does not support a uniform annual design.
-LORO geographic generalization is the primary California deployment concern.
-Keep later-date/future-year tests and the temporal-consistency reporting in
-[experiments.md](experiments.md#evaluation-and-comparison) explicit.
+[Partitioning methods](methods.md#partitioning-observations) define original-source,
+region/date and physical-spacecraft/day isolation, temporal directions, optional
+BC membership and LORO companion exclusions. Keep source assignments identical
+across spectral comparisons. LORO assignment generation remains installed;
+completed study training orchestration and its qualifications are archived in
+[Task 037](../tasks/037_baseline_comparisons_and_loro.md).
 
 `split_inputs.py` reads trusted cleaned controls or explicit CSV rows without
 opening TIFFs; full cleaned chip keys come from canonical image references.
@@ -239,86 +216,38 @@ source controls to original assignments and returns window rows with roles/
 reasons and paths resolved from the explicit chip root. Omitted windows stay
 unused without payloads. Selection reads no arrays and creates no fold copies.
 
-The installed selector returns all canonical retained assigned training windows,
-including overlap. The training loader further requires
-`kelp_pixels > 0` for train rows, using existing manifest counts. It reports
-eligible and excluded training counts without changing the canonical release,
-assignments or validation/test selection.  For chip-based
-validation/test, the selector visits existing windows in crop-key then numeric
-row/column order and reserves a disjoint subset in original TIFF coordinates.
-Crops of the same original share this exclusion, so their pixels cannot repeat.
-Retained overlapping candidates become `unused` with reason `evaluation_overlap`;
-all canonical rows and payloads remain available. Nodata-omitted nominal windows
-keep their omission reason and are not replaced by overlapping alternatives.
-
-Reuse existing chips rather than adding edge payloads. Log geometric input
-footprint (union of crops), disjoint-grid area, retained selected area, uncovered
-edge/gap area and nodata-omitted window area. These areas exclude artificial
-padding and are not valid-label or model scores. Existing strides can leave
-interior gaps as well as edge strips. Keep source assignments separate from
-this window selection; both BC and all spectral variants share evaluation scope.
-See [the researcher recipes](guides/preparation.md#assign-sources-and-select-chip-windows).
+The selector returns retained assigned training windows; `training/data.py`
+requires `kelp_pixels > 0` for optimization and records exclusions. Validation/test
+window selection is disjoint in original coordinates, including overlapping crops.
+Canonical payloads and omitted-window reasons remain unchanged. See
+[chip scope and coverage](methods.md#canonical-chips-and-evaluation-scope) for the
+selection method and [preparation recipes](guides/preparation.md#assign-sources-and-select-chip-windows)
+for settings and coverage outputs.
 
 ## Prediction and scoring
 
-During training, validate ordinary non-overlapping chips and aggregate their
-confusion counts; validation alone selects checkpoints. Test remains held out
-until model selection is complete. This chip scope is reported with its coverage
-and does not claim a stitched full-TIFF score. The installed Lightning training command uses this validation scope.
-The separate `predict-chips` command saves this disjoint scope for post-training
-reporting; `report` reads the saved predictions without loading weights.
+Training validation uses disjoint chips and selects checkpoints by validation IoU.
+`predict-chips` saves validation or sampled training probabilities for reporting;
+held-out TIFFs use `predict` followed by `report` after model selection is frozen.
+The image-only predictor reads a portable bundle and cleaned imagery, preserving
+georeferencing and explicit window/padding placement without labels. It averages
+overlapping probabilities before thresholding and records sparse-window coverage.
+See [prediction methods](methods.md#label-independent-tiled-prediction).
 
-Post-training tiled prediction and source-level scoring use the separate rules
-below. The image-only `predict` command provides the same saved probabilities
-for unlabeled mapping and labeled `report` evaluation. Labeled reporting is a
-separate optional step and requires labels; prediction does not use labels to
-infer padding offsets or spatial alignment. Record padding placement explicitly
-and invert it before placing predictions on the source grid.
+`report` has separate chip and TIFF input paths that share original-source
+assembly, metrics and figures. It requires saved predictions and matching labels,
+not model weights or a training run. Exact cleaned-label grids are required
+without resampling. Declared crop overlaps are combined before scoring, with
+conflicting valid labels rejected. Metadata retains identities, offsets, split,
+model and threshold. [Scoring methods](methods.md#scoring-and-coverage) own pooled
+counts and coverage semantics; [the guide](guides/prediction_reporting.md) owns
+commands, schemas and output interpretation.
 
-For overlap, average foreground probabilities at each covered source pixel,
-threshold once, and compute TIFF confusion counts. Sum those counts for region
-and dataset metrics. Ignore-index and uncovered pixels do not contribute.
-Preserve georeferencing and report source coverage, including omitted windows
-or nodata exclusions. Labeled and unlabeled paths must predict identically for
-the same image and recipe.
-
-The report reads chip and TIFF inputs through two explicit plain-function paths,
-then shares metrics, aggregation and views. Chip inputs retain disjoint-window
-gaps; TIFF inputs retain image-only tiling coverage. Exact cleaned-label grids
-are required without resampling. Declared overlapping crops of one original
-are combined before scoring once; valid overlapping labels must agree. Keep
-native validity, finite-prediction coverage and valid labels as separate masks.
-Report metadata preserves source identity, original offsets, split, model and
-threshold. Background-chip results remain chip-specific. Reporting requires
-saved predictions and referenced data, not a training run or loaded model.
-
-
-Tiled mapping
-covers the full source geometrically before filtering windows. It skips windows
-with less than 20% native valid imagery by default (configurable; padding is
-excluded), retaining exactly 20% and always skipping entirely nodata windows.
-Report resulting uncovered valid pixels separately from native nodata; neither
-is background. Overlapping retained windows can recover coverage in skipped
-windows. This policy does not change the existing training chip selection.
-
-Training chips use a fixed regular grid without shifting trailing windows
-inward. Store partial edge chips at their true source size; pad bottom/right
-during loading with image fill 0 and label ignore -100, recording true extents
-and padding offsets. Tiled inference shifts its final bottom/right windows inward
-to cover source edges with full-size inputs where possible. Training and inference grids
-need not match. Record actual inference offsets, avoid duplicate windows, and
-retain explicit padding/inversion for sources smaller than the input window.
-Apply the same image-only window rules during labeled scoring.
-
-The installed `temporal-report` reads one completed labeled report and its saved
-prediction/label references. It reuses original-source reconstruction and compares
-configured elapsed-day pairs on common scoreable pixels without resampling.
-Percentage changes use each series' own earlier kelp count; the primary error is
-predicted minus labeled percentage change in percentage points. Zero baselines
-remain undefined and small baselines are flagged without exclusion. Source
-calendar summaries are observation totals, not unique date-area mosaics. See
-[the temporal recipe](guides/diagnostics.md#temporal-canopy-change) for interval and
-pair-selection settings.
+`temporal-report` reads one completed labeled report and its saved references.
+It reuses source reconstruction and compares date pairs without new inference
+or resampling. [Temporal methods](methods.md#temporal-comparisons-on-a-common-footprint)
+define common support and change errors; [the temporal recipe](guides/diagnostics.md#temporal-canopy-change)
+owns settings and outputs.
 
 ## Shore-distance diagnostics
 

@@ -16,6 +16,8 @@ The [selected model](experiments.md#current-planet-8-band-b0-baseline) is the
 | Back up or restore artifacts | [Box operations](box_backup.md) |
 | Choose storage roots and artifact identities | [Storage policy](data_artifacts.md) |
 | Understand scientific scope and claims | [Product contract](product.md) |
+| Draft the paper methods | [Paper methods summary](paper_methods.md) |
+| Understand the implemented scientific workflow | [Methods](methods.md) |
 | Understand implemented pipeline boundaries | [Architecture](architecture.md) |
 | Identify models, runs and checkpoint rules | [Experiments](experiments.md) |
 | Find prior studies, audit evidence or retired code | [History](history.md) |

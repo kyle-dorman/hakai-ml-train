@@ -1,5 +1,7 @@
 # Prediction and labeled reports
 
+For the scientific rationale and evaluation scopes, see [methods](../methods.md).
+
 Use the [tiny walkthrough](../quickstart.md) first. These sections provide detailed options and reusable recipes. Run steps sequentially and stop if a command fails. Use fresh output names.
 
 ## Post-training validation diagnostics
@@ -134,7 +136,11 @@ selected disjoint windows in source coordinates; gaps remain unknown. TIFF
 inference averages overlapping window probabilities before thresholding. Reports
 count each covered, valid labeled original-source pixel once, including declared
 cropped inputs sharing an original grid. Neither scope guarantees complete
-scoreable coverage, and their scores are not directly interchangeable.
+scoreable coverage, and their scores are not directly interchangeable. In chip
+reports, coverage counts describe retained windows within the saved canvas;
+zero uncovered-valid pixels does not establish full-TIFF coverage. Consult the
+selector logs for full input-footprint omissions, including edges outside the
+saved canvas. See [coverage definitions](../methods.md#scoring-and-coverage).
 
 Nodata, missing predictions and ignored labels remain explicit exclusions.
 Boundary scores exclude unknown/image edges by tolerance + 1 pixels for scored

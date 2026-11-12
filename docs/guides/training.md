@@ -1,5 +1,7 @@
 # Training and portable models
 
+For the scientific rationale and evaluation scopes, see [methods](../methods.md).
+
 Use the [tiny walkthrough](../quickstart.md) first. These sections provide detailed options and reusable recipes. Run steps sequentially and stop if a command fails. Use fresh output names.
 
 The selected research model is the [8-band B0 BCE+Dice epoch-16 EMA baseline](../experiments.md#current-planet-8-band-b0-baseline). Generic recipe defaults below remain supported but do not identify that selected model.

@@ -82,6 +82,9 @@ never enters the training or validation pool after adaptation.
 
 ## Splits and claims
 
+Implemented split, preprocessing and scoring details are owned by
+[methods](methods.md); the requirements below define the research claim boundary.
+
 - Preserve source TIFF, region, acquisition date, and band identity.
 - Never split chips from one source TIFF across train/validation/test.
 - Start with a temporal baseline within regions; keep acquisition-date groups

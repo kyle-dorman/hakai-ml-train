@@ -2,22 +2,22 @@
 
 ## Current status and next action
 
-Task **037E documentation cleanup and review are complete**. Task 037D is closed;
-implementation is committed as `4152cc8`, with task setup in `4799dad`.
-The current model is the [with-BC 8-band B0 BCE + Dice epoch-16 EMA baseline](experiments.md#current-planet-8-band-b0-baseline).
+Task **038 methods documentation and review are complete**. [Methods](methods.md) now owns
+the implemented scientific workflow; its [task outcome](../tasks/038_methods_documentation.md#outcome--2026-11-12)
+records the claim audit, review corrections and validation. The user approved
+committing the complete documentation, including the [paper summary](paper_methods.md).
+The selected model remains the
+[with-BC 8-band B0 BCE + Dice epoch-16 EMA baseline](experiments.md#current-planet-8-band-b0-baseline).
 
-The [037E review follow-up](../tasks/037e_documentation_cleanup.md#review-follow-up--2026-11-12)
-is complete; the user authorized committing the reviewed documentation.
-Next select [Task 038](../tasks/038_methods_documentation.md) to write the methods
-document. Do not begin it as part of 037E.
+Next select and bound **039: New-region recipes** in a separate task window.
+Task 042 remains the final researcher handoff. Neither begins in 038.
 
 ## Pending roadmap
 
 | Order | Task | Completion gate |
 |---|---|---|
-| 1 | [038: Methods documentation](../tasks/038_methods_documentation.md) | Explain split isolation, nodata/ignore/padding, overlap reconstruction and coverage from implementation |
-| 2 | 039: New-region recipes | Contract when selected; direct transfer, kelp/generic initialization and combined training with fixed held-out scopes |
-| 3 | 042: Final researcher handoff | Contract when selected; rehearse the complete workflow, reusing existing GPU setup |
+| 1 | 039: New-region recipes | Contract when selected; direct transfer, kelp/generic initialization and combined training with fixed held-out scopes |
+| 2 | 042: Final researcher handoff | Contract when selected; rehearse the complete workflow, reusing existing GPU setup |
 
 Completed 040/041 retain their numbers. 039 and 042 replace the older roadmap
 slots 038 and 039; historical task numbering is retained as evidence.
@@ -26,7 +26,7 @@ slots 038 and 039; historical task numbering is retained as evidence.
 
 - Earlier external experiment/analysis backups have not all been verified;
   [Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) records
-  the affected roots. This is not an instruction to transfer artifacts in 037E.
+  the affected roots. This is not an instruction to transfer artifacts in 038.
 - New-region recipes and the final usability rehearsal remain pending above.
   There is no documentation blocker requiring new data analysis.
 

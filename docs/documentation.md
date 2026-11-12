@@ -28,8 +28,12 @@ or substantially rewriting durable docs.
 - `docs/index.md`: read/skip router; it does not duplicate owned content.
 - `docs/product.md`: research purpose, claim boundary, success criteria, and
   non-goals.
-- `docs/architecture.md`: active technical workflow and data/evaluation
-  contracts.
+- `docs/architecture.md`: active technical workflow, interfaces and implementation
+  boundaries.
+- `docs/paper_methods.md`: concise paper-oriented study summary; detailed
+  implementation evidence remains in methods and study records.
+- `docs/methods.md`: scientific explanation of implemented preparation, isolation,
+  model inputs/selection, reconstruction, scoring and coverage.
 - `docs/data_artifacts.md`: storage roots, git policy, artifact families, and
   provenance.
 - `docs/cleanup_provenance.md`: audited collection lineage, historical cleanup
@@ -58,8 +62,8 @@ or substantially rewriting durable docs.
 - Keep the quickstart sequential and small. Extend focused guides for advanced
   options; do not append completed-study narratives to operating instructions.
   At handoff, record where a researcher needs help and fix those gaps.
-- Until Task 038 supplies a methods document, retain essential split isolation,
-  nodata/ignore, padding, reconstruction and coverage rules in architecture.
+- Methods owns detailed split isolation, nodata/ignore, padding, reconstruction
+  and coverage explanations; guides retain operating instructions and cautions.
   LORO-specific normalization provenance and claim qualifications belong in its
   task/write-up. Historical audit questions do not become current blockers.
 

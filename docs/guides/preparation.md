@@ -1,5 +1,7 @@
 # Preparation reference
 
+For the scientific rationale and evaluation scopes, see [methods](../methods.md).
+
 Use the [tiny walkthrough](../quickstart.md) first. These sections provide detailed options and reusable recipes. Run steps sequentially and stop if a command fails. Use fresh output names.
 
 ## Set paths once per machine

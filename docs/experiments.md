@@ -157,38 +157,16 @@ locally, including the difference from new fine-tuning initialization.
 
 ## Preprocessing and training policy
 
-Use raw-unit `(min(image, 5000) - mean) / std` with the exact band-named values
-in the chosen recipe and exported bundle. Detect native nodata before clipping.
-Training applies its final cap after photometric augmentation and before
-standardization; validation and prediction use the same cap and constants.
-Do not estimate replacement statistics when loading a model. Normalization
-provenance and qualifications for the completed LORO study remain in its
-[task/write-up](../tasks/037_baseline_comparisons_and_loro.md).
+[Methods](methods.md#bands-augmentation-and-normalization) owns band selection,
+fixed raw-unit normalization, native validity, augmentation and training eligibility.
+Keep the chosen recipe and exported bundle's exact band-named constants; never
+estimate replacements at model loading. LORO normalization provenance and completed
+study qualifications remain in its [task/write-up](../tasks/037_baseline_comparisons_and_loro.md).
 
-Training requires kelp-positive chips using manifest counts after split
-selection. Keep background-only chips in the canonical collection and evaluation;
-report training exclusions separately. Train/validation inputs use the same
-band selection, normalization and ignore handling as prediction.
-
-The installed trainer uses Lightning automatic optimization, CSV logging,
-checkpointing and delayed EMA (decay 0.999). Recovery checkpoints preserve
-ordinary weights and EMA state. Validation and portable exports use EMA after
-averaging begins, and ordinary weights beforehand. Optional `checkpoint_epochs`
-retains listed one-based completed epochs in addition to best/last; it does not
-change validation selection.
-
-The augmentation policy is [native Albumentations JSON](../configs/augment/baseline.json):
-D4(p=1), light Affine(p=0.5), then SomeOf(n=2, replace=False, p=1).
-All eight pool children have equal eligibility; selected operations execute in
-configured list order. Preview and training use the same stock Albumentations
-2.0.8 operations and constructor parameters, native uint16/65535 scaling,
-raw-unit restoration and final 5000 cap. Training ends with Normalize and
-ToTensorV2. Spatial holes have ignored targets. Stock clipping and zero-nodata
-boundary effects remain visible in previews; there is no custom blur/contrast
-replacement. Dropout only uses the model's selected bands. Training advances
-one seeded pipeline; fixed viewer seeds are for inspection. Smooth illumination,
-haze and misregistration are excluded. See the [diagnostic guide](guides/diagnostics.md)
-for previews and the [training guide](guides/training.md) for settings.
+[Model fitting and selection](methods.md#model-fitting-and-selection) explains
+loss pooling, delayed EMA and validation-only checkpoint selection. The
+[training guide](guides/training.md) owns configurable options, retained checkpoint
+epochs and resume; the [diagnostic guide](guides/diagnostics.md) owns previews.
 
 ## Portable prediction model
 
@@ -219,83 +197,27 @@ Bundle loading is model-only initialization and restores none of that training s
 
 ## Evaluation and comparison
 
-Use a recorded validation-selected checkpoint and a pre-test threshold. During
-training, ordinary chip validation uses the selector's non-overlapping windows
-and aggregate confusion counts, without TIFF reconstruction each epoch. Training
-chips may overlap. Keep test held out until model selection is finished;
-chip-based test applies the same disjoint-window rule.
-
-Reuse existing chips and report geometric uncovered edges/gaps, including when
-multiple crops share one original source. Do not silently replace nodata-omitted
-nominal windows with overlapping alternatives. Record input footprint, nominal
-disjoint-grid area, retained selected area and omissions separately; geometry
-alone does not count valid labels. Never call an average chip IoU a region IoU.
-
-Post-training tiled prediction/source scoring combines overlapping probabilities
-before thresholding, with one prediction per covered source pixel. Export
-georeferenced probabilities/masks and compact TIFF/region summaries as needed.
-Record coverage and ignored pixels, and distinguish these TIFF results from
-chip-scope validation/test metrics.
+Use the validation-selected checkpoint and pre-test threshold. Keep test held out
+until recipe/model selection finishes. [Methods](methods.md#scoring-and-coverage)
+owns disjoint-chip versus tiled-source support, pooled confusion metrics and
+coverage exclusions. [Temporal methods](methods.md#temporal-comparisons-on-a-common-footprint)
+owns common-footprint change comparisons and their interpretation.
 
 Compare baseline and LORO on matching source TIFFs unseen by both models;
-full-region LORO remains a separate summary. Reuse source assignments and
-training policy across spectral comparisons unless the experiment explicitly
-controls a change. No held-out results select preprocessing or model settings.
+full-region LORO is a separate summary. Spectral comparisons reuse assignments
+and training policy unless explicitly controlling a change. Compare with/without
+BC on identical evaluation-region sources; 011/012 are training-only and toggled
+together. Keep band recipe, initialization, checkpoint/threshold selection rules
+and evaluation coverage matched. Record sampling and training budgets so extra
+data and extra optimization remain distinguishable. [Partitioning methods](methods.md#partitioning-observations)
+define the current temporal directions and companion exclusions.
 
-For the current California-focused comparison, regions 001–010 (including Baja)
-provide evaluation scopes; 011/012 are a single optional training-only group.
-The run including both BC regions (`augmented`) is the primary baseline;
-without both (`base`) is the comparison. Compare inclusion versus exclusion of
-that group on identical evaluation-region source assignments, with no 011/012
-validation or held-out fold. Keep CA source
-membership, band recipe, initialization, checkpoint/threshold selection rules
-and evaluation coverage matched. Declare the sampling and training budget so
-extra BC data and extra optimization are distinguishable experiment choices;
-record these choices in the resolved recipe.
-
-`temporal-report` reads one saved labeled report. The primary
-measure is agreement with the labels' proportional canopy change, not constant
-predictions or constant absolute area error.
-
-- Default pair intervals are 1–13 days and 29–47 days inclusive, configurable in
-  the recipe. Pair only within dataset/release/region; retain same-day observations
-  separately without temporal scoring. Optional explicit pairs restrict this
-  date-based selection. Do not infer region/date metadata from filenames.
-- Measure labels and predictions at both dates on the same common valid labeled
-  and predicted footprint. Each percentage uses its own earlier kelp count:
-  `100 * (after - before) / before`. Primary error is predicted minus labeled
-  percentage change in percentage points. Equal +10% changes give zero error
-  even when a model has constant multiplicative area bias.
-- Zero earlier kelp makes that series' percentage undefined; percentage-point
-  error needs both percentages. Preserve counts/areas and absolute change/error.
-  Flag small nonzero baselines (default at most 10 pixels), without exclusions,
-  pseudocounts or clipping. Labels may change over either interval.
-- Compare only matching projected-metre grids with integer-aligned origins.
-  Report unavailable comparisons, elapsed days, coverage and both starting
-  counts. Pairwise footprints may differ; no fixed-footprint trend is inferred.
-  Regional interval summaries give support plus median signed and mean/median
-  absolute percentage-point error. Repeated pairs are not independent samples;
-  uneven region composition must not masquerade as a statewide temporal result.
-- Retain per-source/date confusion counts, scoreable area, labeled prevalence,
-  signed area bias and separate false-positive/negative counts or area. Group
-  by represented date, year, year-month and calendar month, pooling confusion
-  counts before ratios. These are observation totals, not unique geographic area
-  across acquisitions. Same-day overlapping observations are not silently mosaicked.
-  Pool the declared evaluation scope for headline results and retain region
-  identities. Preserve zero-kelp cases and undefined metrics. The [researcher recipe](guides/diagnostics.md#temporal-canopy-change)
-  describes outputs and the separate no-inference command.
-
-Do not choose favorable test dates or remove low-kelp periods to increase F1.
-Audit label support before fixing a scientifically declared split, and preserve
-its representative low/zero-kelp cases. Low F1 in low-prevalence imagery needs
-the accompanying error counts; it is not evidence by itself of temporal drift.
-Acquisition month and label counts do not establish tide, growth or annotation
-causes. Test label-based error stability, not constant predictions through time.
-
-Future-date tests and strict future-year extrapolation are distinct scopes.
-If claiming no training data from a future year, enforce that cutoff for all
-training regions, including 011/012. Region-specific later-date tests may have
-other regions' later imagery in training and must be described accordingly.
+Declare scopes before evaluating models. Do not select favorable test dates,
+remove low-kelp periods to improve F1, or infer a uniform future-year test from
+region-specific chronology. Preserve labels' low/zero-kelp cases and report
+prevalence and separate false-positive/negative counts. Saved reports and temporal
+outputs follow the [reporting](guides/prediction_reporting.md) and
+[diagnostic](guides/diagnostics.md#temporal-canopy-change) guides.
 
 ## Local-to-GPU progression
 
