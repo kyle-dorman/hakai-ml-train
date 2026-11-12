@@ -7,6 +7,7 @@ import sys
 import albumentations as A
 import numpy as np
 import pytest
+from click import unstyle
 from matplotlib import image as mpl_image
 from typer.testing import CliRunner
 
@@ -409,10 +410,11 @@ def test_missing_chip_input_reports_ordinary_file_error(tmp_path):
 def test_cli_and_preview_help_remain_lightweight(tmp_path):
     result = CliRunner().invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "preview-augmentations" in result.output
+    assert "preview-augmentations" in unstyle(result.output)
     code = """
 import importlib.abc
 import sys
+from click import unstyle
 from typer.testing import CliRunner
 class BlockWorkflowImports(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
@@ -422,11 +424,12 @@ sys.meta_path.insert(0, BlockWorkflowImports())
 from kelpseg.cli import app
 result = CliRunner().invoke(app, ['--help'])
 assert result.exit_code == 0, result.output
-assert 'preview-augmentations' in result.output
+assert 'preview-augmentations' in unstyle(result.output)
 for command in ('preview-augmentations', 'preview-pipeline'):
     result = CliRunner().invoke(app, [command, '--help'])
     assert result.exit_code == 0, result.output
-    assert '--chips' in result.output and '--positive-samples' in result.output
+    help_text = unstyle(result.output)
+    assert '--chips' in help_text and '--positive-samples' in help_text
 """
     process = subprocess.run(
         [sys.executable, "-c", code],

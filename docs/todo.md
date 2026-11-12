@@ -2,6 +2,12 @@
 
 ## Current status and next action
 
+Task **038A CI help-text checks is complete**; its
+[outcome](../tasks/038a_ci_help_text.md#outcome) records the fix and 20 passing
+checks with terminal styling forced. The user authorized committing the fix;
+push remains a user action.
+The pending roadmap is unchanged.
+
 Task **038 methods documentation and review are complete**. [Methods](methods.md) now owns
 the implemented scientific workflow; its [task outcome](../tasks/038_methods_documentation.md#outcome--2026-11-12)
 records the claim audit, review corrections and validation. The user approved

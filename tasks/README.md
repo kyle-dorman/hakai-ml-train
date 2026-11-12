@@ -85,6 +85,7 @@ are authorized by Task 024.
 | [037](037_baseline_comparisons_and_loro.md) | Comparison and cleanup | 037A–D closed |
 | [037E](037e_documentation_cleanup.md) | Documentation only | Complete; reviewed |
 | [038](038_methods_documentation.md) | Documentation only | Complete |
+| [038A](038a_ci_help_text.md) | CI test repair | Complete |
 | [040](040_shore_distance_diagnostics.md) | Preparation/reporting | Complete |
 | [041](041_distance_weighted_bce_experiment.md) | Training experiment | Complete |
 

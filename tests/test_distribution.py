@@ -13,6 +13,7 @@ import tomllib
 import zipfile
 from pathlib import Path
 
+from click import unstyle
 from organize_fixtures import make_fixture
 
 
@@ -457,10 +458,10 @@ assert Path('temporal-report/report.html').is_file()
         assert Path(identity["file"]).is_relative_to(environment)
         assert identity["version"] == version
         assert not any(identity["legacy"].values()), identity
-        assert "check-paths" in run(command, "--help", cwd=unrelated)
+        assert "check-paths" in unstyle(run(command, "--help", cwd=unrelated))
         for preview_command in ("preview-augmentations", "preview-pipeline"):
-            assert "--positive-samples" in run(
-                command, preview_command, "--help", cwd=unrelated
+            assert "--positive-samples" in unstyle(
+                run(command, preview_command, "--help", cwd=unrelated)
             )
             error = subprocess.run(
                 [
